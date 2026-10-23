@@ -1,0 +1,101 @@
+'use client';
+
+import { AnimatePresence, motion } from 'framer-motion';
+import { ListChecks, Play } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { useAccount } from '@/components/account/account-store';
+import { ErrorState } from '@/components/common/AsyncState';
+import { SearchField } from '@/components/common/SearchField';
+import { SelectionBar } from '@/components/music/SelectionBar';
+import { SongTable, trackKey } from '@/components/music/SongTable';
+import { usePlayer } from '@/components/player/player-store';
+import { Page, StickyBar } from '@/components/scroll';
+import { Button, IconButton, ListFooter } from '@/components/ui';
+import { catalogApi, type CollectionInfo } from '@/lib/catalog-client';
+import { useInfiniteList, useReachEnd } from '@/lib/hooks';
+import { useSelection } from '@/lib/selection';
+import { toTrack } from '@/lib/to-track';
+import { CollectionHeader } from './CollectionHeader';
+import styles from './CollectionView.module.css';
+
+const PAGE = 50;
+
+/** Playlist or album detail: hero, sticky toolbar (filter, multi-select), paged song table. */
+export function CollectionView({ kind, id, title }: { kind: 'playlist' | 'album'; id: string; title?: string }) {
+  const player = usePlayer();
+  const { addToPlaylist } = useAccount();
+  const [info, setInfo] = useState<CollectionInfo>();
+  const [filter, setFilter] = useState('');
+
+  const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
+    const detail = kind === 'album' ? await catalogApi.album(id, signal) : await catalogApi.playlist(id, offset, PAGE, signal);
+    setInfo(detail.info);
+    return { items: detail.tracks, total: detail.info.trackCount, hasMore: detail.hasMore };
+  }, [kind, id]);
+  const list = useInfiniteList(`${kind}:${id}`, loadPage);
+  const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
+
+  const needle = filter.trim().toLowerCase();
+  const visible = useMemo(() => (needle
+    ? list.items.filter(track => `${track.title} ${track.artist} ${track.album ?? ''}`.toLowerCase().includes(needle))
+    : list.items), [list.items, needle]);
+  const visibleKeys = useMemo(() => visible.map(trackKey), [visible]);
+  const selection = useSelection(visibleKeys);
+
+  const playTracks = (tracks: typeof visible) => {
+    const queue = tracks.map(toTrack);
+    if (queue[0]) player.play(queue[0], queue);
+  };
+  // Keep playlist order for batch actions regardless of click order.
+  const selectedTracks = () => list.items.filter(track => selection.selected.has(trackKey(track)));
+
+  if (list.error && !list.items.length) return <Page><ErrorState message={list.error} onRetry={list.retry} /></Page>;
+
+  return (
+    <Page gap="sm">
+      <CollectionHeader info={info} fallbackTitle={title} onPlayAll={() => playTracks(visible)} />
+      <StickyBar compactTitle={info?.name ?? title}>
+        <div className={styles.toolbar}>
+          <span className={styles.count}>
+            歌曲 <small>{info?.trackCount ?? '—'}</small>
+            {needle && <small className={styles.matches}>匹配 {visible.length} 首</small>}
+          </span>
+          <IconButton label="播放全部" onClick={() => playTracks(visible)} disabled={!visible.length}>
+            <Play size={16} strokeWidth={0} fill="currentColor" />
+          </IconButton>
+          <AnimatePresence initial={false} mode="wait">
+            {selection.active ? (
+              <motion.span key="selecting" className={styles.selectHint} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }}>
+                点击行勾选，Shift 连选
+              </motion.span>
+            ) : (
+              <motion.span key="idle" initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }}>
+                <Button variant="ghost" icon={<ListChecks size={15} strokeWidth={1.5} />} onClick={selection.start} disabled={!visible.length}>批量操作</Button>
+              </motion.span>
+            )}
+          </AnimatePresence>
+          <SearchField value={filter} onChange={setFilter} placeholder="在列表中搜索" label="筛选歌曲" className={styles.filter} />
+        </div>
+      </StickyBar>
+      <SongTable
+        tracks={visible}
+        loading={list.loading}
+        showAlbum={kind === 'playlist'}
+        selection={selection}
+        playlistId={kind === 'playlist' ? id : undefined}
+        onRemoved={trackId => list.removeWhere(track => track.id === trackId)}
+        animateFrom={needle ? 0 : Math.max(0, list.items.length - PAGE)}
+        emptyText={needle ? '没有匹配的歌曲' : '暂无公开歌曲'}
+      />
+      <div ref={sentinel}>
+        <ListFooter loading={list.loadingMore} loadingText="正在加载更多歌曲" done={!list.loading && !list.hasMore && list.items.length > PAGE && !needle} doneText={`已显示全部 ${list.items.length} 首`} />
+      </div>
+      <SelectionBar
+        selection={selection}
+        onPlay={() => { playTracks(selectedTracks()); selection.exit(); }}
+        onQueue={() => { player.enqueue(selectedTracks().map(toTrack)); selection.exit(); }}
+        onCollect={async playlistId => { await addToPlaylist(playlistId, selectedTracks().map(track => track.id)); selection.exit(); }}
+      />
+    </Page>
+  );
+}

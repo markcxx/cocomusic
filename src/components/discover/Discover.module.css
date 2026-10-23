@@ -1,0 +1,57 @@
+/* Web-style labelled rows, flat on the page. */
+.filters {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(111, 90, 168, 0.1);
+}
+
+.filterSkeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 4px 56px;
+}
+
+.skeletonRow {
+  width: 80%;
+  height: 22px;
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
+.chip button {
+  display: inline-flex;
+  padding: 3px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+}
+
+.chip button:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.total {
+  margin-left: auto;
+  color: var(--text-muted);
+}

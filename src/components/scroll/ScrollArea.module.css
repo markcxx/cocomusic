@@ -1,0 +1,32 @@
+.scroll {
+  position: relative;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Slim overlay-style scrollbar flush with the window edge; widens on hover. */
+.scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scroll::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(111, 90, 168, 0.22) padding-box;
+  transition: background-color 200ms ease;
+}
+
+.scroll::-webkit-scrollbar-thumb:hover {
+  border-width: 2px;
+  background-color: rgba(111, 90, 168, 0.4);
+}
+
+.scroll::-webkit-scrollbar-thumb:active {
+  background-color: rgba(111, 90, 168, 0.55);
+}

@@ -1,0 +1,61 @@
+.box {
+  position: relative;
+  margin-left: 4px;
+  -webkit-app-region: no-drag;
+}
+
+.field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 40vw;
+  height: 40px;
+  padding: 0 12px 0 16px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.42);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  color: var(--text-secondary);
+  backdrop-filter: var(--glass-blur);
+  transition: background-color 200ms ease, box-shadow 220ms ease, color 200ms ease;
+}
+
+.field[data-open='true'] {
+  background: rgba(252, 252, 255, 0.95);
+  box-shadow: inset 0 0 0 1px rgba(155, 135, 191, 0.4), 0 0 0 4px rgba(155, 135, 191, 0.14), 0 6px 18px rgba(80, 70, 150, 0.08);
+  color: var(--accent-strong);
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.field input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.field input::placeholder {
+  color: var(--text-muted);
+}
+
+.field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(120, 110, 170, 0.14);
+  color: var(--text-secondary);
+}

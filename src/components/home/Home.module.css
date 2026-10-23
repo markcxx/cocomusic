@@ -1,0 +1,104 @@
+.tabsBar {
+  margin-top: -10px;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.playlistGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 22px 24px;
+}
+
+.trackGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px 16px;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.artistGrid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px 24px;
+}
+
+/* Skeletons mirror final layout so content lands without shifting. */
+.skeletonCover {
+  aspect-ratio: 1;
+  width: 100%;
+  margin-bottom: 10px;
+  border-radius: var(--radius-cover);
+}
+
+.skeletonLine {
+  height: 12px;
+  width: 80%;
+  margin-bottom: 6px;
+}
+
+.skeletonLineShort {
+  height: 10px;
+  width: 45%;
+}
+
+.skeletonTrack {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 64px;
+  padding: 8px;
+}
+
+.skeletonTrack > div {
+  flex: 1;
+}
+
+.skeletonThumb {
+  width: 48px;
+  height: 48px;
+}
+
+.skeletonChart {
+  height: 160px;
+  border-radius: var(--radius-card);
+}
+
+.skeletonArtist {
+  aspect-ratio: 1;
+  width: 100%;
+  max-width: 150px;
+  margin: 12px auto 48px;
+  border-radius: 50%;
+}
+
+/* Narrow window (minimum 1100px): 12 playlists still fill two rows of 6 with tighter gaps. */
+@media (max-width: 1300px) {
+  .playlistGrid,
+  .artistGrid {
+    gap: 18px 16px;
+  }
+
+  .trackGrid {
+    column-gap: 10px;
+  }
+
+  .chartGrid {
+    gap: 16px;
+  }
+}

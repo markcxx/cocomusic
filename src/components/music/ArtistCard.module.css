@@ -1,0 +1,74 @@
+/* No card surface: hovering only darkens the avatar. */
+.artist {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 4px 12px;
+  border: 0;
+  background: transparent;
+}
+
+.avatar {
+  position: relative;
+  width: 100%;
+  max-width: 150px;
+  margin-bottom: 8px;
+  overflow: hidden;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(60, 54, 120, 0.12);
+  transition: box-shadow 260ms ease;
+}
+
+.cover {
+  width: 100%;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(30, 24, 60, 0.32);
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.artist:hover .avatar,
+.artist:focus-visible .avatar {
+  box-shadow: 0 12px 28px rgba(60, 54, 120, 0.2);
+}
+
+.artist:hover .cover {
+  transform: scale(1.05);
+}
+
+.artist:hover .scrim,
+.artist:focus-visible .scrim {
+  opacity: 1;
+}
+
+.artist strong,
+.artist span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.artist strong {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-strong);
+  transition: color 180ms ease;
+}
+
+.artist:hover strong {
+  color: var(--accent-strong);
+}
+
+.meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}

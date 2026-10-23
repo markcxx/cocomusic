@@ -1,0 +1,44 @@
+.wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.reserve {
+  margin-right: var(--reserve, 0);
+}
+
+.glyph {
+  display: inline-flex;
+}
+
+/*
+ * Two opaque layers combined with `exclude`: the full icon box minus a
+ * rounded-off rectangle where the digits sit. Size/position come from JS.
+ */
+.cut {
+  -webkit-mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  mask-image: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: 100% 100%, var(--cut-w, 0) var(--cut-h, 0);
+  mask-size: 100% 100%, var(--cut-w, 0) var(--cut-h, 0);
+  -webkit-mask-position: 0 0, var(--cut-x, 0) var(--cut-y, 0);
+  mask-position: 0 0, var(--cut-x, 0) var(--cut-y, 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+/* Digits start ~60% across the glyph and rise above its top edge. */
+.count {
+  position: absolute;
+  top: -4px;
+  left: 58%;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+  color: currentColor;
+  white-space: nowrap;
+  pointer-events: none;
+}

@@ -1,0 +1,45 @@
+# Packaging: the Electron shell (asar) plus the Next standalone server as an
+# unpacked resource, started by electron/main/next-server.ts.
+appId: com.markcxx.cocomusic
+productName: CoCo Music
+copyright: Copyright © 2026 markcxx
+
+directories:
+  output: release
+  buildResources: build
+
+# Only the compiled shell goes into app.asar; Next ships as extraResources.
+files:
+  - dist-electron/**/*
+  - package.json
+  - "!**/*.map"
+
+extraResources:
+  - from: .next/standalone
+    to: next
+    filter:
+      - "**/*"
+
+asar: true
+npmRebuild: false
+
+mac:
+  category: public.app-category.music
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  artifactName: ${productName}-${version}-Setup.${ext}
+
+linux:
+  category: Audio
+  target:
+    - AppImage

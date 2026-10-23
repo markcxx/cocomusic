@@ -1,0 +1,37 @@
+.tabs {
+  display: flex;
+  gap: 28px;
+}
+
+.tab {
+  position: relative;
+  padding: 2px 0 9px;
+  border: 0;
+  background: transparent;
+  font-size: 15px;
+  color: var(--text-secondary);
+  transition: color 180ms ease;
+}
+
+.small .tab {
+  font-size: 14px;
+}
+
+.tab:hover {
+  color: var(--text-strong);
+}
+
+.active,
+.active:hover {
+  color: var(--accent-strong);
+}
+
+.indicator {
+  position: absolute;
+  right: 18%;
+  bottom: 0;
+  left: 18%;
+  height: 2.5px;
+  border-radius: 2px;
+  background: var(--accent);
+}

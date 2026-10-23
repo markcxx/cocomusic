@@ -1,0 +1,46 @@
+.shell {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  height: 100vh;
+}
+
+.sidebar {
+  min-height: 0;
+  padding: 16px 0 0 16px;
+}
+
+/* No right padding: the sheet (and its scrollbar) runs to the window edge. */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px 0 0 20px;
+}
+
+.topBar {
+  padding-right: 16px;
+}
+
+/*
+ * Frosted content sheet. Rounded only on the top-left; it meets the window's
+ * right edge and the player bar so the scrollbar sits flush on the far right.
+ */
+.sheet {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--radius-sheet) 0 0 0;
+}
+
+.scroll {
+  flex: 1;
+}
+
+.player {
+  grid-column: 1 / -1;
+}

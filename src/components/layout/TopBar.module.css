@@ -1,0 +1,36 @@
+.topBar {
+  position: relative;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 56px;
+  margin-bottom: 16px;
+  padding: 0 0 0 4px;
+  /* Empty toolbar space drags the frameless window; interactive children opt out. */
+  -webkit-app-region: drag;
+}
+
+.topBar button,
+.topBar input {
+  -webkit-app-region: no-drag;
+}
+
+.history {
+  display: flex;
+  gap: 4px;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.divider {
+  width: 1px;
+  height: 18px;
+  margin: 0 6px 0 2px;
+  background: rgba(100, 92, 160, 0.16);
+}

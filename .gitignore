@@ -1,0 +1,24 @@
+# dependencies
+/node_modules
+
+# next.js
+/.next/
+/out/
+next-env.d.ts
+
+# electron
+/dist-electron/
+/release/
+
+# misc
+.DS_Store
+*.tsbuildinfo
+*.pem
+.env*
+
+# debug
+npm-debug.log*
+
+# editors
+.vscode/
+.idea/

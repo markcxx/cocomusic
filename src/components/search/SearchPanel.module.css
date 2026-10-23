@@ -1,0 +1,245 @@
+.panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  width: 480px;
+  max-width: 60vw;
+  max-height: min(560px, 70vh);
+  overflow-y: auto;
+  padding: 10px 8px 0;
+  border-radius: 18px;
+  background: rgba(250, 249, 255, 0.86);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 24px 60px rgba(60, 50, 130, 0.18), 0 4px 12px rgba(60, 50, 130, 0.06);
+  backdrop-filter: blur(30px) saturate(1.6);
+  transform-origin: top left;
+}
+
+.section {
+  padding: 4px 0 8px;
+}
+
+.section + .section {
+  border-top: 1px solid rgba(111, 90, 168, 0.08);
+  padding-top: 8px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 10px 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.groupLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.clearAll {
+  display: inline-flex;
+  padding: 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.clearAll:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 8px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(155, 135, 191, 0.1);
+  font-size: 13px;
+  color: var(--text);
+  transition: background-color 160ms ease;
+}
+
+.chip > button:first-child {
+  max-width: 160px;
+  overflow: hidden;
+  padding: 0 4px 0 12px;
+  border: 0;
+  background: transparent;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chipRemove {
+  display: inline-flex;
+  margin-right: 4px;
+  padding: 4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.chip:hover .chipRemove {
+  opacity: 1;
+}
+
+.chip:hover,
+.chipActive {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-strong);
+  text-align: left;
+  transition: background-color 140ms ease;
+}
+
+.active {
+  background: rgba(155, 135, 191, 0.16);
+}
+
+.rowIcon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.rowText {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.rowText small {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.rowText strong {
+  font-weight: 500;
+  color: var(--accent-strong);
+}
+
+.mark {
+  background: none;
+  color: var(--accent-strong);
+  font-weight: 500;
+}
+
+.hotGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.hotRow {
+  min-height: 34px;
+}
+
+.hotRank {
+  flex-shrink: 0;
+  width: 18px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.hotTop {
+  font-weight: 600;
+  color: #e0605a;
+}
+
+.hotText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.hotText strong,
+.hotText small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hotText strong {
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.hotText small {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 0 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.badge_hot {
+  background: rgba(224, 96, 90, 0.12);
+  color: #e0605a;
+}
+
+.badge_new {
+  background: rgba(63, 169, 107, 0.12);
+  color: #3fa96b;
+}
+
+.badge_up {
+  background: rgba(240, 150, 60, 0.14);
+  color: #e08a30;
+}
+
+.skeletonRow {
+  height: 30px;
+  margin: 4px 10px;
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px -8px 0;
+  padding: 8px 16px;
+  border-top: 1px solid rgba(111, 90, 168, 0.08);
+  background: rgba(250, 249, 255, 0.92);
+  font-size: 11px;
+  color: var(--text-muted);
+}

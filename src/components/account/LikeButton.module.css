@@ -1,0 +1,15 @@
+.liked,
+.liked:hover:not(:disabled) {
+  color: #e0605a;
+}
+
+.icon {
+  display: inline-flex;
+}
+
+/* Embedded digits overhang the glyph; widen the hit area to cover them. */
+.badged {
+  width: auto;
+  min-width: 34px;
+  padding: 0 8px;
+}

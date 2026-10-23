@@ -1,0 +1,120 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.coverFrame {
+  position: relative;
+  margin-bottom: 8px;
+  border-radius: var(--radius-cover);
+}
+
+.coverButton {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-cover);
+  background: transparent;
+  box-shadow: 0 6px 18px rgba(60, 54, 120, 0.1);
+  transition: box-shadow 260ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cover {
+  width: 100%;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(30, 24, 60, 0.12), rgba(30, 24, 60, 0.42));
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.plays {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(20, 16, 40, 0.32);
+  font-size: 11px;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+
+.play {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  padding: 0 0 0 3px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--accent-strong);
+  box-shadow: 0 8px 20px rgba(30, 20, 80, 0.28);
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 220ms ease, translate 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.coverFrame:hover .coverButton {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 28px rgba(60, 54, 120, 0.18);
+}
+
+.coverFrame:hover .cover {
+  transform: scale(1.05);
+}
+
+.coverFrame:hover .scrim,
+.coverFrame:focus-within .scrim {
+  opacity: 1;
+}
+
+.coverFrame:hover .play,
+.coverFrame:focus-within .play {
+  opacity: 1;
+  translate: 0 -3px;
+}
+
+.title,
+.meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.title {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--text-strong);
+  text-align: left;
+  transition: color 160ms ease;
+}
+
+.title:hover {
+  color: var(--accent-strong);
+}
+
+.meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

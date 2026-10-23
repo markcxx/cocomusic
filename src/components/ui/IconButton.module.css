@@ -1,0 +1,82 @@
+.button {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  transition: background-color 200ms ease, color 200ms ease, opacity 200ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.small {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.default {
+  color: var(--text-strong);
+}
+
+.muted {
+  color: var(--text-secondary);
+}
+
+.danger {
+  color: var(--text-strong);
+}
+
+.button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.muted:hover:not(:disabled) {
+  color: var(--accent-strong);
+}
+
+.danger:hover:not(:disabled) {
+  background: #e4564f;
+  color: #fff;
+}
+
+.active {
+  color: var(--accent-strong);
+}
+
+.button:disabled {
+  color: var(--text-muted);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.icon {
+  display: inline-flex;
+  line-height: 1;
+}
+
+/* ───────── Dark theme (lyrics page) ───────── */
+
+:global([data-theme='dark']) .default,
+:global([data-theme='dark']) .muted {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+:global([data-theme='dark']) .button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+:global([data-theme='dark']) .active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+:global([data-theme='dark']) .button:disabled {
+  color: rgba(255, 255, 255, 0.4);
+}

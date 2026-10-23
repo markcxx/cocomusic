@@ -1,0 +1,29 @@
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.titles {
+  transform-origin: left top;
+  will-change: transform, opacity;
+}
+
+.titles h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 36px;
+  color: var(--text-strong);
+}
+
+.titles p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.actions {
+  flex-shrink: 0;
+}

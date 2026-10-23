@@ -1,0 +1,35 @@
+.eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  width: 14px;
+  height: 14px;
+}
+
+.eq i {
+  flex: 1;
+  height: 100%;
+  border-radius: 1px;
+  background: currentColor;
+  transform-origin: bottom;
+  animation: bounce 900ms ease-in-out infinite;
+}
+
+.eq i:nth-child(2) {
+  animation-delay: -300ms;
+}
+
+.eq i:nth-child(3) {
+  animation-delay: -600ms;
+}
+
+@keyframes bounce {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+
+  50% {
+    transform: scaleY(1);
+  }
+}

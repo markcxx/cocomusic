@@ -1,0 +1,29 @@
+.box {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1.5px solid rgba(111, 90, 168, 0.35);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.6);
+  color: #fff;
+  transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.box:hover {
+  border-color: var(--accent);
+}
+
+.on {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.mark {
+  position: absolute;
+  display: inline-flex;
+}

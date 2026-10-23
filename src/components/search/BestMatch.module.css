@@ -1,0 +1,76 @@
+.wrap {
+  overflow: hidden;
+}
+
+.heading {
+  margin: 4px 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 14px 12px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  text-align: left;
+  transition: background-color 220ms ease, box-shadow 220ms ease;
+}
+
+.card:hover {
+  background: var(--card-hover);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 10px 26px rgba(70, 60, 140, 0.1);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.text small {
+  font-size: 11px;
+  color: var(--accent-strong);
+}
+
+.text strong,
+.text span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.text strong {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.text span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: translate 220ms ease, color 200ms ease;
+}
+
+.card:hover .chevron {
+  translate: 3px 0;
+  color: var(--accent-strong);
+}

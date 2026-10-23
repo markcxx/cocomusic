@@ -1,0 +1,177 @@
+.hero {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 6px 0 4px;
+}
+
+.cover {
+  flex-shrink: 0;
+  box-shadow: 0 10px 24px rgba(50, 40, 110, 0.18);
+}
+
+.heroMeta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.heroMeta h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 24px;
+  font-weight: 500;
+  line-height: 34px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-strong);
+}
+
+.titleSkeleton {
+  width: 40%;
+  height: 26px;
+}
+
+.artist,
+.total {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.total {
+  color: var(--text-muted);
+}
+
+.play {
+  align-self: center;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 4px;
+  border-bottom: 1px solid var(--comment-divider, rgba(111, 90, 168, 0.08));
+}
+
+.avatar {
+  flex-shrink: 0;
+}
+
+.avatarSkeleton {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+}
+
+.lineSkeleton,
+.lineSkeletonWide {
+  display: block;
+  height: 14px;
+  margin-bottom: 8px;
+}
+
+.lineSkeleton {
+  width: 120px;
+}
+
+.lineSkeletonWide {
+  width: 70%;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.nickname {
+  color: var(--accent-strong);
+}
+
+.vip {
+  padding: 0 5px;
+  border-radius: 4px;
+  background: rgba(224, 96, 90, 0.12);
+  font-size: 10px;
+  line-height: 15px;
+  color: #d4544e;
+}
+
+.content {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text-strong);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.reply {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: var(--comment-quote, rgba(255, 255, 255, 0.45));
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+.replyName {
+  color: var(--accent-strong);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.location {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.likes {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.empty {
+  margin: 48px 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--text-muted);
+}

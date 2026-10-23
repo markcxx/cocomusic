@@ -1,0 +1,136 @@
+.header {
+  position: relative;
+  margin: -22px -28px 0;
+  padding: 28px 28px 8px;
+  overflow: hidden;
+}
+
+/* Cover-coloured wash fading into the sheet. */
+.tint {
+  position: absolute;
+  inset: 0 0 -40px;
+  z-index: 0;
+  opacity: 0.55;
+  filter: blur(60px) saturate(1.3);
+  -webkit-mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 30%, transparent 100%);
+  pointer-events: none;
+}
+
+.tintCover {
+  width: 60%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.content {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 28px;
+}
+
+.coverWrap {
+  flex-shrink: 0;
+  transform-origin: left top;
+}
+
+.cover {
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  box-shadow: 0 18px 40px rgba(50, 40, 110, 0.22);
+}
+
+.meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.eyebrow {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.meta h1 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 28px;
+  font-weight: 500;
+  line-height: 38px;
+  color: var(--text-strong);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.titleSkeleton {
+  width: 50%;
+  height: 30px;
+}
+
+.owner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+}
+
+.dim {
+  color: var(--text-muted);
+}
+
+.stats {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.stats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.description {
+  max-width: 760px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  --fade-to: rgba(236, 234, 250, 0.95);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+@media (max-width: 1300px) {
+  .header {
+    margin: -18px -22px 0;
+    padding: 24px 22px 8px;
+  }
+
+  .cover {
+    width: 168px;
+    height: 168px;
+  }
+}
+
+/* Count digits sit above the heart; a little extra top room keeps them inside the pill. */
+.badgedButton {
+  padding-top: 3px;
+}

@@ -1,0 +1,58 @@
+.button {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background-color 200ms ease, color 200ms ease, box-shadow 220ms ease;
+}
+
+.icon {
+  display: inline-flex;
+}
+
+.primary {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8), 0 4px 14px rgba(111, 90, 168, 0.14);
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-tint-strong);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.85), 0 6px 18px rgba(111, 90, 168, 0.22);
+}
+
+.soft {
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+
+.soft:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.8);
+  color: var(--accent-strong);
+}
+
+.ghost {
+  height: 30px;
+  padding: 0 10px;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ghost:hover:not(:disabled) {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+/* Disabled buttons still receive hover in Chromium, so their tooltip can explain why. */
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

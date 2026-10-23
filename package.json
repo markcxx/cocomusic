@@ -1,0 +1,43 @@
+{
+  "name": "cocomusic",
+  "productName": "CoCo Music",
+  "version": "0.1.0",
+  "private": true,
+  "description": "CoCo Music desktop player: Next.js app hosted by an Electron shell",
+  "main": "dist-electron/main/index.js",
+  "scripts": {
+    "predev": "node scripts/ensure-deps.mjs && npm run build:electron",
+    "dev": "node scripts/dev.mjs",
+    "dev:web": "next dev --port 3457 --hostname 127.0.0.1",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build:next": "next build && node scripts/prepare-standalone.mjs",
+    "prebuild": "node scripts/ensure-deps.mjs",
+    "build": "npm run build:electron && npm run build:next",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder",
+    "dist:dir": "npm run build && electron-builder --dir",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\""
+  },
+  "dependencies": {
+    "clsx": "2.1.1",
+    "framer-motion": "12.26.2",
+    "lucide-react": "0.562.0",
+    "next": "16.1.2",
+    "qrcode": "1.5.4",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/qrcode": "1.5.6",
+    "@types/react": "19.2.8",
+    "@types/react-dom": "19.2.3",
+    "electron": "45.0.0",
+    "electron-builder": "26.15.3",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.1.2",
+    "typescript": "5.9.3"
+  }
+}

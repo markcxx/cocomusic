@@ -1,0 +1,198 @@
+.group {
+  margin-top: 16px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  margin: 0 0 4px;
+  padding: 0 10px 0 16px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.toggle:hover {
+  color: var(--text);
+}
+
+.count {
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.chevron {
+  display: inline-flex;
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.action:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.actionIcon {
+  display: inline-flex;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+
+/* Row = navigate button + hover "more" button; the row owns the hover/active fill. */
+.row {
+  position: relative;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: var(--text);
+  transition: background-color 180ms ease, color 180ms ease;
+}
+
+.row:hover,
+.menuOpen {
+  background: rgba(250, 249, 255, 0.42);
+}
+
+.active,
+.active:hover {
+  background: var(--nav-active);
+  color: var(--accent-strong);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  font-size: 14px;
+  color: inherit;
+  text-align: left;
+}
+
+.item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* Keep the label clear of the more button while it is shown. */
+.row:hover .item,
+.row:focus-within .item,
+.menuOpen .item {
+  padding-right: 36px;
+}
+
+.cover {
+  transition: transform 220ms ease;
+}
+
+.row:hover .cover {
+  transform: scale(1.06);
+}
+
+.more {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  opacity: 0;
+  translate: 4px -50%;
+  transition: opacity 160ms ease, translate 200ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms ease, color 160ms ease;
+}
+
+.row:hover .more,
+.menuOpen .more,
+.more:focus-visible {
+  opacity: 1;
+  translate: 0 -50%;
+}
+
+.more:hover,
+.menuOpen .more {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.more:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lock {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.empty {
+  margin: 4px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.loginHint {
+  width: calc(100% - 8px);
+  margin: 2px 4px;
+  padding: 10px 12px;
+  border: 1px dashed rgba(111, 90, 168, 0.25);
+  border-radius: 12px;
+  background: transparent;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: left;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.loginHint:hover {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--accent-strong);
+}

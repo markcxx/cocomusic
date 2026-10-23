@@ -1,0 +1,33 @@
+.gate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 520px;
+  text-align: center;
+}
+
+.gate h1 {
+  margin: 8px 0 0;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.gate p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.heart {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+}

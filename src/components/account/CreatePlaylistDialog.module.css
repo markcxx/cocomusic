@@ -1,0 +1,74 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.field {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.field input {
+  width: 100%;
+  height: 42px;
+  padding: 0 52px 0 14px;
+  border: 0;
+  border-radius: 12px;
+  outline: 0;
+  background: rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 1px rgba(111, 90, 168, 0.18);
+  font-size: 14px;
+  color: var(--text-strong);
+  transition: box-shadow 180ms ease;
+}
+
+.field input:focus {
+  box-shadow: inset 0 0 0 1.5px var(--accent), 0 0 0 4px rgba(155, 135, 191, 0.16);
+}
+
+.counter {
+  position: absolute;
+  right: 12px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.private {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: #d9534f;
+}
+
+.message {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.danger,
+.danger:hover:not(:disabled) {
+  background: #e4564f;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(228, 86, 79, 0.25);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}

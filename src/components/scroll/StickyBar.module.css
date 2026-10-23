@@ -1,0 +1,68 @@
+/* Cancels the parent's flex gap so the marker adds no visible space. */
+.marker {
+  display: block;
+  height: 0;
+  margin-bottom: calc(-1 * var(--page-gap, 0px));
+}
+
+/*
+ * Stays in the page's own layer: no card, no shadow. Once pinned it only
+ * gains the sheet's own frosted fill (so rows scroll underneath cleanly)
+ * and a hairline divider.
+ */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 -28px;
+  padding: 10px 28px;
+}
+
+.surface {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--sheet-pinned);
+  backdrop-filter: var(--glass-blur);
+  pointer-events: none;
+}
+
+.divider {
+  position: absolute;
+  right: 28px;
+  bottom: 0;
+  left: 28px;
+  height: 1px;
+  background: rgba(111, 90, 168, 0.1);
+  pointer-events: none;
+}
+
+.compactTitle {
+  flex-shrink: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 1300px) {
+  .bar {
+    margin: 0 -22px;
+    padding: 10px 22px;
+  }
+
+  .divider {
+    right: 22px;
+    left: 22px;
+  }
+}
