@@ -5,7 +5,7 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'CoCo Music',
   description: 'CoCo Music 桌面音乐播放器',
-  icons: { icon: '/images/logo.svg' },
+  icons: { icon: '/images/logo.svg?v=double-c-white' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

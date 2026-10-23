@@ -15,6 +15,8 @@ files:
   - "!**/*.map"
 
 extraResources:
+  - from: build/icon.png
+    to: icon.png
   - from: .next/standalone
     to: next
     filter:
@@ -24,12 +26,14 @@ asar: true
 npmRebuild: false
 
 mac:
+  icon: build/icon.icns
   category: public.app-category.music
   target:
     - target: dmg
       arch: [arm64, x64]
 
 win:
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -40,6 +44,7 @@ nsis:
   artifactName: ${productName}-${version}-Setup.${ext}
 
 linux:
+  icon: build/icon.png
   category: Audio
   target:
     - AppImage

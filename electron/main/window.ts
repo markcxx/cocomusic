@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { BrowserWindow, session, shell } from 'electron';
+import { app, BrowserWindow, nativeImage, session, shell } from 'electron';
 import { MATERIAL_SWITCH } from '../shared/ipc';
 import { initialBounds, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './window-state';
 
@@ -12,6 +12,12 @@ function openExternal(url: string) {
 }
 
 export async function createMainWindow(origin: string, token: string) {
+  const icon = nativeImage.createFromPath(app.isPackaged
+    ? path.join(process.resourcesPath, 'icon.png')
+    : path.join(app.getAppPath(), 'public', 'images', 'logo.png'));
+  // BrowserWindow's icon does not set the macOS Dock icon, including in development.
+  app.dock?.setIcon(icon);
+
   // Session cookie lets the renderer proxy reject requests from other local apps or web pages.
   await session.defaultSession.cookies.set({ url: origin, name: 'coco_token', value: token, httpOnly: true, sameSite: 'strict' });
 
@@ -23,6 +29,7 @@ export async function createMainWindow(origin: string, token: string) {
     minHeight: MIN_HEIGHT,
     show: false,
     title: 'CoCo Music',
+    icon,
     frame: isMac,
     // 'hidden' (not 'hiddenInset') lets the traffic lights sit tight in the corner.
     titleBarStyle: isMac ? 'hidden' : undefined,
