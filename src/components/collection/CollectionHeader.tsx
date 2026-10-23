@@ -90,10 +90,14 @@ export function CollectionHeader({ info, fallbackTitle, onPlayAll, extraActions 
             <Button variant="primary" icon={<Play size={16} strokeWidth={0} fill="currentColor" />} onClick={onPlayAll} disabled={!info}>播放全部</Button>
             {info?.kind === 'playlist' && !own && (
                 <Button
-                  icon={<BadgedIcon count={subscribeCount} reserve><Heart size={16} strokeWidth={1.5} fill={subscribed ? 'currentColor' : 'none'} /></BadgedIcon>}
+                  icon={(
+                    // Subscribed: solid red heart, count beside it (a filled shape is never cut away).
+                    <BadgedIcon count={subscribeCount} reserve solid={subscribed}>
+                      <Heart size={16} strokeWidth={1.5} fill={subscribed ? 'currentColor' : 'none'} className={subscribed ? styles.subscribedHeart : undefined} />
+                    </BadgedIcon>
+                  )}
                   onClick={() => void onSubscribe()}
                   variant={subscribed ? 'primary' : 'soft'}
-                  title={subscribeCount ? `${subscribeCount.toLocaleString('zh-CN')} 人收藏` : undefined}
                   className={subscribeCount ? styles.badgedButton : undefined}
                 >
                   {subscribed ? '已收藏' : '收藏'}

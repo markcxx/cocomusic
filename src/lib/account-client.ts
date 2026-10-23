@@ -1,8 +1,8 @@
 'use client';
 
-import type { QrLoginState, UserPlaylist, UserProfile } from '@/server/music/types';
+import type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
-export type { QrLoginState, UserPlaylist, UserProfile } from '@/server/music/types';
+export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
 const source = 'netease';
 
@@ -28,6 +28,7 @@ const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST',
 
 export const accountApi = {
   me: () => call<{ profile: UserProfile | null }>('me'),
+  detail: (signal?: AbortSignal) => call<{ detail: UserDetail | null }>('me/detail', { signal }),
   logout: () => call<{ ok: true }>('me', { method: 'DELETE' }),
   qrCreate: () => call<{ key: string; url: string; svg: string }>('login/qr', { method: 'POST' }),
   qrCheck: (key: string, signal?: AbortSignal) => call<QrLoginState>('login/qr', { query: { key }, signal }),

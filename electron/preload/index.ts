@@ -8,6 +8,7 @@ const IPC = {
   windowToggleMaximize: 'window:toggle-maximize',
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
+  miniChanged: 'window:mini-changed',
 } as const;
 const MATERIAL_SWITCH = '--coco-material=';
 
@@ -23,5 +24,12 @@ contextBridge.exposeInMainWorld('coco', {
     toggleMaximize: () => ipcRenderer.send(IPC.windowToggleMaximize),
     close: () => ipcRenderer.send(IPC.windowClose),
     toggleMini: () => ipcRenderer.send(IPC.windowToggleMini),
+    /** Subscribe to mini mode changes; returns an unsubscribe function. */
+    onMiniChange: (listener: (mini: boolean) => void) => {
+      // Wrap so the renderer never sees the IpcRendererEvent (it exposes `sender`).
+      const handler = (_event: unknown, mini: unknown) => listener(mini === true);
+      ipcRenderer.on(IPC.miniChanged, handler);
+      return () => { ipcRenderer.removeListener(IPC.miniChanged, handler); };
+    },
   },
 });

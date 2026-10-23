@@ -1,5 +1,6 @@
 'use client';
 
+import { animate } from 'framer-motion';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Spinner } from '@/components/ui';
 import { catalogApi, useCatalog, type LyricLine } from '@/lib/catalog-client';
@@ -47,35 +48,63 @@ export function LyricsPanel() {
 
   const container = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
+  const hoveringRef = useRef(false);
   const firstScroll = useRef(true);
+  const glide = useRef<ReturnType<typeof animate> | null>(null);
 
-  const center = useCallback((index: number, smooth: boolean) => {
+  /**
+   * Centre a line. Smooth moves use our own tween instead of `behavior: 'smooth'`:
+   * the native one is cancelled by the next scrollTo, so a long return (after
+   * hovering) would be cut short by the next line change and jump.
+   */
+  const center = useCallback((index: number, mode: 'instant' | 'line' | 'return') => {
     const box = container.current;
     const line = box?.querySelector<HTMLElement>(`[data-line="${Math.max(0, index)}"]`);
     if (!box || !line) return;
-    box.scrollTo({ top: line.offsetTop - box.clientHeight / 2 + line.offsetHeight / 2, behavior: smooth ? 'smooth' : 'auto' });
+    const target = Math.max(0, Math.min(box.scrollHeight - box.clientHeight, line.offsetTop - box.clientHeight / 2 + line.offsetHeight / 2));
+    glide.current?.stop();
+    if (mode === 'instant' || window.matchMedia('(prefers-reduced-motion: reduce)').matches) { box.scrollTop = target; return; }
+    // A return glide takes longer when it travels further (capped so it never drags).
+    const distance = Math.abs(target - box.scrollTop);
+    const duration = mode === 'return' ? Math.min(0.9, 0.45 + distance / 2400) : 0.5;
+    glide.current = animate(box.scrollTop, target, { duration, ease: [0.22, 1, 0.36, 1], onUpdate: value => { box.scrollTop = value; } });
   }, []);
+
+  // Browsing: stop any glide so the user's own scroll is not fought.
+  useEffect(() => {
+    hoveringRef.current = hovering;
+    if (hovering) glide.current?.stop();
+  }, [hovering]);
+  useEffect(() => () => glide.current?.stop(), []);
 
   // New song: start from the top without animation.
   useLayoutEffect(() => { firstScroll.current = true; }, [songId]);
 
+  const wasHovering = useRef(false);
   useLayoutEffect(() => {
+    const returning = wasHovering.current && !hovering;
+    wasHovering.current = hovering;
     if (hovering || !synced || !lines.length) return;
-    center(active, !firstScroll.current);
+    center(active, firstScroll.current ? 'instant' : returning ? 'return' : 'line');
     firstScroll.current = false;
   }, [active, hovering, synced, lines.length, center]);
 
-  // Re-centre when the window (and so the column) is resized.
+  // Re-centre when the window (and so the column) is resized. The observer's
+  // initial callback is skipped: it would otherwise snap over a running glide.
   const latestActive = useRef(active);
   useEffect(() => { latestActive.current = active; }, [active]);
   useEffect(() => {
     const box = container.current;
     if (!box) return;
-    const observer = new ResizeObserver(() => { if (!hovering) center(latestActive.current, false); });
+    let initial = true;
+    const observer = new ResizeObserver(() => {
+      if (initial) { initial = false; return; }
+      if (!hoveringRef.current) center(latestActive.current, 'instant');
+    });
     observer.observe(box);
     return () => observer.disconnect();
     // lines.length: the column only mounts once lyrics have loaded.
-  }, [hovering, center, lines.length]);
+  }, [center, lines.length]);
 
   // Lyric times are song-relative; a preview stream starts at trial.start.
   const onSeek = useCallback((time: number) => seek(Math.max(0, time - offset)), [seek, offset]);

@@ -2,6 +2,7 @@ import type { AccountProvider, QrLoginState, UserPlaylist, UserProfile } from '.
 import { session } from '../session';
 import { NeteaseError, neteaseEapi, neteaseRequest } from './client';
 import { image, mapPlaylist, num, record, rows, SOURCE, text, type Raw } from './mappers';
+import { userDetail } from './user-detail';
 
 // Endpoints follow multiPlatformMusicApi platforms/netease/module (eapi, desktop client identity).
 
@@ -66,6 +67,10 @@ export const neteaseAccount: AccountProvider = {
       if (error instanceof NeteaseError && error.status === 504) return current.profile ?? null;
       throw error;
     }
+  },
+
+  async detail() {
+    return userDetail(requireUser());
   },
 
   async logout() {

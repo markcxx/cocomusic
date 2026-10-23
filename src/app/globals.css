@@ -169,3 +169,16 @@ a {
     animation-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Mini player: the window shrinks to the capsule; everything else is hidden so
+ * only the capsule paints (its rounded corners stay transparent on the desktop).
+ */
+html[data-mini='true'],
+html[data-mini='true'] body {
+  background: transparent;
+}
+
+html[data-mini='true'] .backdrop {
+  display: none;
+}

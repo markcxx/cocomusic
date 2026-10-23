@@ -19,10 +19,10 @@ const ScrollContext = createContext<ScrollContextValue | null>(null);
  * Wheel input is eased toward its target (inertia-like) instead of jumping.
  * Trackpads already deliver smooth deltas, so small or fractional deltas pass through.
  */
-function useSmoothWheel(ref: React.RefObject<HTMLDivElement | null>) {
+function useSmoothWheel(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
   useEffect(() => {
     const element = ref.current;
-    if (!element || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!enabled || !element || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     let target = element.scrollTop;
     let frame = 0;
     const max = () => element.scrollHeight - element.clientHeight;
@@ -54,19 +54,24 @@ function useSmoothWheel(ref: React.RefObject<HTMLDivElement | null>) {
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('scroll', onScroll);
     };
-  }, [ref]);
+  }, [ref, enabled]);
 }
 
-export function ScrollArea({ children, className, id, onScrollTop }: {
+export function ScrollArea({ children, className, id, onScrollTop, nativeWheel = false }: {
   children: ReactNode;
   className?: string;
   id?: string;
   onScrollTop?: (top: number) => void;
+  /**
+   * Plain browser wheel scrolling, marked `data-scroll-native` so an enclosing
+   * gesture (e.g. the lyrics page snap) can take over at the scroll edges.
+   */
+  nativeWheel?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const scrollY = useMotionValue(0);
   const report = useLatest(onScrollTop);
-  useSmoothWheel(ref);
+  useSmoothWheel(ref, !nativeWheel);
 
   useEffect(() => {
     const element = ref.current;
@@ -87,7 +92,7 @@ export function ScrollArea({ children, className, id, onScrollTop }: {
 
   return (
     <ScrollContext.Provider value={{ scrollY, element, scrollTo }}>
-      <div ref={ref} id={id} className={cn(styles.scroll, className)} data-scroll-root="true">{children}</div>
+      <div ref={ref} id={id} className={cn(styles.scroll, className)} data-scroll-root="true" data-scroll-native={nativeWheel || undefined}>{children}</div>
     </ScrollContext.Provider>
   );
 }

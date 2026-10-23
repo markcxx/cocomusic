@@ -4,6 +4,8 @@ import { MotionConfig } from 'framer-motion';
 import { useEffect, type ReactNode } from 'react';
 import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
+import { MiniPlayer } from '@/components/mini/MiniPlayer';
+import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
 import { PlayerBar } from '@/components/player/PlayerBar';
 import { PlayerProvider } from '@/components/player/player-store';
@@ -11,6 +13,7 @@ import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
 import { NavigationProvider, useNavigation } from './navigation';
 import { Sidebar } from './Sidebar';
+import { useSidebarCollapsed } from './sidebar-state';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
 
@@ -34,6 +37,10 @@ function ContentSheet({ children }: { children: ReactNode }) {
 
 export function AppShell({ children }: { children: ReactNode }) {
   useWindowMaterial();
+  const collapsed = useSidebarCollapsed();
+  const mini = useMiniMode();
+  // Lets global CSS drop the window backdrop so the capsule's corners are see-through.
+  useEffect(() => { document.documentElement.dataset.mini = mini ? 'true' : 'false'; }, [mini]);
   return (
     // reducedMotion="user" disables transform/layout animations when the OS asks for it.
     <MotionConfig reducedMotion="user" transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.8 }}>
@@ -41,7 +48,8 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AccountProvider>
           <PlayerProvider>
             <div className="backdrop" aria-hidden />
-            <div className={styles.shell}>
+            {/* The full UI stays mounted under the mini bar: playback and state carry over. */}
+            <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`} inert={mini} aria-hidden={mini || undefined} style={mini ? { visibility: 'hidden' } : undefined}>
               <div className={styles.sidebar}>
                 <Sidebar />
               </div>
@@ -55,7 +63,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <PlayerBar />
               </div>
             </div>
-            <LyricsDrawer />
+            {mini ? <MiniPlayer /> : <LyricsDrawer />}
             <LoginDialog />
             <Toaster />
             <TooltipLayer />

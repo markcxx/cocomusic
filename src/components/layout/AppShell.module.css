@@ -1,12 +1,23 @@
 .shell {
+  --sidebar-width: 200px;
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  /* The column follows the sidebar cell's own (animated) width. */
+  grid-template-columns: auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr) auto;
   height: 100vh;
 }
 
+.collapsed {
+  --sidebar-width: 72px;
+}
+
+/* Width transition drives the rail ⇄ full sidebar animation. */
 .sidebar {
+  box-sizing: border-box;
+  width: var(--sidebar-width);
+  min-width: 0;
   min-height: 0;
+  transition: width 320ms cubic-bezier(0.22, 1, 0.36, 1);
   padding: 16px 0 0 16px;
 }
 

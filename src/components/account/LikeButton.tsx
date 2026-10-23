@@ -19,14 +19,14 @@ export function LikeButton({ songId, size = 'sm', iconSize = 16, count, classNam
   return (
     <IconButton
       label={label}
-      tooltip={count ? `${label} · ${count.toLocaleString('zh-CN')} 人喜欢` : label}
+      tooltip={label}
       pressed={liked}
       size={size}
       tone="muted"
       className={cn(liked && styles.liked, count !== undefined && styles.badged, className)}
       onClick={() => void toggleLike(songId)}
     >
-      <BadgedIcon count={count}>
+      <BadgedIcon count={count} solid={liked}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={String(liked)}

@@ -52,23 +52,5 @@
   color: #d9534f;
 }
 
-.message {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--text);
-}
 
-.danger,
-.danger:hover:not(:disabled) {
-  background: #e4564f;
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(228, 86, 79, 0.25);
-}
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 4px;
-}

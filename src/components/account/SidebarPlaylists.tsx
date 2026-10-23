@@ -56,16 +56,19 @@ function usePlaylistActions(onRename: (playlist: UserPlaylist) => void, onDelete
   ];
 }
 
-function Group({ title, items, action, onRename, onDelete, defaultOpen = true }: {
+function Group({ title, items, action, onRename, onDelete, collapsed, defaultOpen = true }: {
   title: string;
   items: UserPlaylist[];
   action?: React.ReactNode;
   onRename: (playlist: UserPlaylist) => void;
   onDelete: (playlist: UserPlaylist) => void;
+  /** Icon rail: covers only, names in tooltips. Groups stay open. */
+  collapsed: boolean;
   defaultOpen?: boolean;
 }) {
   const { route, navigate } = useNavigation();
-  const [open, setOpen] = useState(defaultOpen);
+  const [openState, setOpen] = useState(defaultOpen);
+  const open = collapsed || openState;
   const [menu, setMenu] = useState<MenuState | null>(null);
   const actionsFor = usePlaylistActions(onRename, onDelete);
 
@@ -80,7 +83,7 @@ function Group({ title, items, action, onRename, onDelete, defaultOpen = true }:
   };
 
   return (
-    <section className={styles.group}>
+    <section className={cn(styles.group, collapsed && styles.collapsed)}>
       <h2 className={styles.header}>
         <button type="button" className={styles.toggle} onClick={() => setOpen(value => !value)} aria-expanded={open}>
           {title}
@@ -106,7 +109,8 @@ function Group({ title, items, action, onRename, onDelete, defaultOpen = true }:
                     onClick={() => navigate({ name: 'playlist', id: playlist.id, title: playlist.name })}
                     data-tooltip={playlist.name}
                     data-tooltip-placement="right"
-                    data-tooltip-overflow
+                    // Expanded: only when the name is cut off. Rail: always (no label shown).
+                    data-tooltip-overflow={collapsed ? undefined : ''}
                     aria-current={active ? 'page' : undefined}
                   >
                     <Cover seed={`${playlist.source}:${playlist.id}`} src={playlist.cover} size={28} radius={6} className={styles.cover} />
@@ -137,7 +141,7 @@ function Group({ title, items, action, onRename, onDelete, defaultOpen = true }:
 }
 
 /** 我的歌单 / 收藏的歌单 from the logged-in account; prompts login otherwise. */
-export function SidebarPlaylists() {
+export function SidebarPlaylists({ collapsed = false }: { collapsed?: boolean }) {
   const { profile, playlists, openLogin } = useAccount();
   const [creating, setCreating] = useState(false);
   const [renaming, setRenaming] = useState<UserPlaylist | null>(null);
@@ -153,7 +157,7 @@ export function SidebarPlaylists() {
       type="button"
       className={styles.action}
       aria-label="新建歌单"
-      title="新建歌单"
+      data-tooltip="新建歌单"
       onClick={() => (profile ? setCreating(true) : openLogin())}
       initial="rest"
       whileHover="hover"
@@ -167,7 +171,7 @@ export function SidebarPlaylists() {
 
   if (!profile) {
     return (
-      <section className={styles.group}>
+      <section className={cn(styles.group, collapsed && styles.collapsed)}>
         <h2 className={styles.header}><span className={styles.toggle}>我的歌单</span>{create}</h2>
         <button type="button" className={styles.loginHint} onClick={openLogin} disabled={profile === undefined}>
           登录后同步你的歌单
@@ -178,8 +182,8 @@ export function SidebarPlaylists() {
 
   return (
     <>
-      <Group title="创建的歌单" items={own} action={create} onRename={setRenaming} onDelete={setDeleting} />
-      {subscribed.length > 0 && <Group title="收藏的歌单" items={subscribed} onRename={setRenaming} onDelete={setDeleting} />}
+      <Group title="创建的歌单" items={own} action={create} onRename={setRenaming} onDelete={setDeleting} collapsed={collapsed} />
+      {subscribed.length > 0 && <Group title="收藏的歌单" items={subscribed} onRename={setRenaming} onDelete={setDeleting} collapsed={collapsed} />}
       <CreatePlaylistDialog open={creating} onClose={() => setCreating(false)} onCreated={playlist => navigate({ name: 'playlist', id: playlist.id, title: playlist.name })} />
       <RenamePlaylistDialog playlist={renaming} onClose={() => setRenaming(null)} />
       <DeletePlaylistDialog

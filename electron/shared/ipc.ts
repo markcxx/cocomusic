@@ -8,6 +8,8 @@ export const IPC = {
   windowToggleMaximize: 'window:toggle-maximize',
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
+  /** main → renderer: mini mode entered (true) or left (false). */
+  miniChanged: 'window:mini-changed',
 } as const;
 
 /** Command-line switch carrying the window material to the preload. */

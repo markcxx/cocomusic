@@ -196,3 +196,56 @@
   background: rgba(255, 255, 255, 0.45);
   color: var(--accent-strong);
 }
+
+/* ───────── Collapsed rail: covers only ───────── */
+
+.header,
+.loginHint,
+.label,
+.lock {
+  transition: opacity 200ms ease;
+}
+
+.collapsed .header {
+  height: 1px;
+  margin: 8px 18px;
+  padding: 0;
+  overflow: hidden;
+  background: rgba(111, 90, 168, 0.12);
+}
+
+.collapsed .header > * {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.collapsed .loginHint,
+.collapsed .empty {
+  display: none;
+}
+
+.collapsed .row {
+  width: 40px;
+  margin: 0 auto;
+}
+
+.collapsed .item {
+  gap: 0;
+  padding: 0 6px;
+}
+
+.collapsed .label,
+.collapsed .lock {
+  opacity: 0;
+}
+
+/* No room for the more button in the rail; the context menu still works. */
+.collapsed .more {
+  display: none;
+}
+
+.collapsed .row:hover .item,
+.collapsed .row:focus-within .item,
+.collapsed .menuOpen .item {
+  padding-right: 6px;
+}

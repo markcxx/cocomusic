@@ -269,6 +269,39 @@ export interface UserPlaylist extends CatalogPlaylist {
   privacy?: 'public' | 'private';
 }
 
+/** Everything worth showing on the account card. Fields are absent when upstream hides them. */
+export interface UserDetail extends UserProfile {
+  /** Wide banner behind the card header. */
+  background?: string;
+  signature?: string;
+  /** Platform level (NetEase: 1–10). */
+  level?: number;
+  /** Songs the user has listened to in total. */
+  listenSongs?: number;
+  /** Days since the account was created. */
+  accountDays?: number;
+  /** Epoch ms of account creation. */
+  createdAt?: number;
+  gender?: 'male' | 'female';
+  /** Age group label derived from birthday, e.g. 00后. */
+  ageGroup?: string;
+  /** Zodiac sign from birthday, e.g. 双子座. */
+  zodiac?: string;
+  /** Region name, e.g. 广东 深圳. */
+  region?: string;
+  follows?: number;
+  followers?: number;
+  events?: number;
+  /** Playlists the user created. */
+  playlists?: number;
+  /** Subscribed playlists / albums / artists / MVs (requires login). */
+  collections?: { playlists?: number; albums?: number; artists?: number; mvs?: number };
+  /** Official verification label, e.g. 网易音乐人. */
+  verified?: string;
+  /** Public profile page on the platform. */
+  url?: string;
+}
+
 export type QrLoginState =
   | { status: 'waiting' }
   | { status: 'scanned'; nickname?: string; avatar?: string }
@@ -279,6 +312,8 @@ export interface AccountProvider {
   qrCreate(): Promise<{ key: string; url: string }>;
   qrCheck(key: string): Promise<QrLoginState>;
   profile(): Promise<UserProfile | null>;
+  /** Rich profile of the logged-in user for the account card. */
+  detail(): Promise<UserDetail>;
   logout(): Promise<void>;
   likedIds(): Promise<string[]>;
   likeSong(id: string, like: boolean): Promise<void>;

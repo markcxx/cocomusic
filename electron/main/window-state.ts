@@ -43,12 +43,13 @@ export function initialBounds(): { bounds: Partial<Rectangle> & { width: number;
   };
 }
 
-export function trackWindowState(window: BrowserWindow) {
+/** `skip` returns true while the window is in a transient layout (mini player) that must not be saved. */
+export function trackWindowState(window: BrowserWindow, skip: () => boolean = () => false) {
   let timer: NodeJS.Timeout | undefined;
   const save = () => {
     clearTimeout(timer);
     timer = setTimeout(() => {
-      if (window.isDestroyed() || window.isMinimized()) return;
+      if (window.isDestroyed() || window.isMinimized() || skip()) return;
       const state: WindowState = { bounds: window.getNormalBounds(), maximized: window.isMaximized() };
       try { writeFileSync(stateFile(), JSON.stringify(state)); } catch { /* best effort */ }
     }, 400);

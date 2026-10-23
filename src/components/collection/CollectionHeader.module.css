@@ -134,3 +134,8 @@
 .badgedButton {
   padding-top: 3px;
 }
+
+/* 已收藏: the heart is always the like red, whatever the button colour. */
+.subscribedHeart {
+  color: #e0605a;
+}

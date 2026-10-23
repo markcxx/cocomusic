@@ -42,3 +42,12 @@
   white-space: nowrap;
   pointer-events: none;
 }
+
+/*
+ * Solid glyphs (filled heart): cutting the fill would look chewed, so the digits
+ * sit just outside the shape's top-right corner instead, without a mask.
+ */
+.solid .count {
+  top: -6px;
+  left: calc(100% - 1px);
+}

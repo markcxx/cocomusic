@@ -1,117 +1,110 @@
 'use client';
 
-import { AnimatePresence, motion, useMotionValueEvent, useTransform } from 'framer-motion';
+import { AnimatePresence, motion, useTransform, type MotionValue } from 'framer-motion';
 import { ChevronDown, ChevronsDown, ChevronsUp } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { CommentList, commentSortKey, commentSorts, type CommentSortLabel } from '@/components/comments/CommentsView';
 import { Cover } from '@/components/common/Cover';
 import { fadeSwap } from '@/components/common/motion';
 import { Tabs } from '@/components/common/Tabs';
-import { ScrollArea, useScrollArea } from '@/components/scroll';
+import { ScrollArea } from '@/components/scroll';
 import { cn } from '@/lib/cn';
 import { LyricsPanel } from './LyricsPanel';
 import { LyricsPlayerBar } from './LyricsPlayerBar';
 import { usePlayer } from './player-store';
+import { usePageSnap } from './use-page-snap';
 import { useSongStats } from './use-song-stats';
 import styles from './LyricsDrawer.module.css';
 
-/**
- * Comments below the lyrics stage. The header pins to the top of the page's
- * scroller (CSS sticky) and gains a frosted fill once it is actually stuck.
- */
-function CommentsSection({ songId, total, sectionRef }: { songId: string; total?: number; sectionRef: React.RefObject<HTMLElement | null> }) {
+/** Page 1: comment header (title + sort) fixed at the top, list scrolling beneath it. */
+function CommentsPage({ songId, total }: { songId: string; total?: number }) {
   const [sort, setSort] = useState<CommentSortLabel>('推荐');
   const [loaded, setLoaded] = useState<number>();
   const count = loaded ?? total;
-  const [stuck, setStuck] = useState(false);
-  const { scrollY } = useScrollArea();
-
-  // The header (sticky, top 0) is pinned once the section's top reaches the scroller's top.
-  useMotionValueEvent(scrollY, 'change', value => {
-    const section = sectionRef.current;
-    if (section) setStuck(value >= section.offsetTop - 1);
-  });
-
   return (
-    <section ref={sectionRef} className={styles.comments} aria-label="评论">
-      <div className={cn(styles.commentsHeader, stuck && styles.commentsHeaderStuck)}>
+    <section className={styles.comments} aria-label="评论">
+      <div className={styles.commentsHeader}>
         <h3>评论{count ? <small>{count.toLocaleString('zh-CN')}</small> : null}</h3>
         <Tabs items={commentSorts} value={sort} onChange={setSort} label="评论排序" size="sm" />
       </div>
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div key={`${songId}:${sort}`} className={styles.commentsBody} {...fadeSwap}>
-          <CommentList songId={songId} sort={commentSortKey[sort]} onTotal={setLoaded} />
-        </motion.div>
-      </AnimatePresence>
+      {/* Own scroller: the page snap only takes over once this reaches its top. */}
+      <ScrollArea className={styles.commentsScroll} nativeWheel>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div key={`${songId}:${sort}`} className={styles.commentsBody} {...fadeSwap}>
+            <CommentList songId={songId} sort={commentSortKey[sort]} onTotal={setLoaded} />
+          </motion.div>
+        </AnimatePresence>
+      </ScrollArea>
     </section>
   );
 }
 
-/** Everything inside the page's scroller; needs the ScrollArea context. */
-function LyricsPageBody({ commentsRef, onScrolled }: { commentsRef: React.RefObject<HTMLElement | null>; onScrolled: (past: boolean) => void }) {
+/** Page 0 recedes and fades as the comments page slides over it. */
+function Stage({ progress }: { progress: MotionValue<number> }) {
   const { track, playing, trial } = usePlayer();
-  const stats = useSongStats(track.songId);
-  const { scrollY, element } = useScrollArea();
-  // Stage fades and recedes as comments slide up over it.
-  const stageOpacity = useTransform(scrollY, value => 1 - Math.min(1, value / ((element()?.clientHeight ?? 800) * 0.7)));
-  const stageScale = useTransform(stageOpacity, [0, 1], [0.94, 1]);
-  useMotionValueEvent(scrollY, 'change', value => onScrolled(value > 80));
-
+  const opacity = useTransform(progress, [0, 0.8], [1, 0]);
+  const scale = useTransform(progress, [0, 1], [1, 0.94]);
   return (
-    <>
-      <motion.div className={styles.stage} style={{ opacity: stageOpacity, scale: stageScale }}>
-        <motion.div className={styles.art} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 24 }}>
-          <Cover seed={track.coverSeed} src={track.cover} className={cn(styles.artCover, !playing && styles.artPaused)} radius={18} />
-        </motion.div>
-        <motion.div className={styles.lyrics} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
-          <header className={styles.heading}>
-            <h2 data-tooltip={track.title} data-tooltip-overflow>{track.title}</h2>
-            <p>{track.artist}{track.album ? ` · ${track.album}` : ''}{trial ? <span className={styles.trialTag}>试听</span> : null}</p>
-          </header>
-          <LyricsPanel />
-        </motion.div>
+    <motion.div className={styles.stage} style={{ opacity, scale }}>
+      <motion.div className={styles.art} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 24 }}>
+        <Cover seed={track.coverSeed} src={track.cover} className={cn(styles.artCover, !playing && styles.artPaused)} radius={18} />
       </motion.div>
-      {track.songId && <CommentsSection songId={track.songId} total={stats.commentCount} sectionRef={commentsRef} />}
-    </>
+      <motion.div className={styles.lyrics} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
+        <header className={styles.heading}>
+          <h2 data-tooltip={track.title} data-tooltip-overflow>{track.title}</h2>
+          <p>{track.artist}{track.album ? ` · ${track.album}` : ''}{trial ? <span className={styles.trialTag}>试听</span> : null}</p>
+        </header>
+        <LyricsPanel />
+      </motion.div>
+    </motion.div>
   );
 }
 
 /**
- * Full-window lyrics page. One scroller holds the lyrics stage (exactly one
- * viewport tall) and the comments below it, so scrolling the page reveals
- * comments; their header sticks to the top. A dedicated dark player bar
- * replaces the main one while open.
+ * Full-window lyrics page with two snapping pages: lyrics, then comments.
+ * Wheel/trackpad pulls the comments up with resistance; a short pull springs
+ * back, a long pull (or flick) slides the comments page up to the top.
+ * A dedicated dark player bar replaces the main one while open.
  */
 export function LyricsDrawer() {
   const { lyricsOpen, closeLyrics, track } = usePlayer();
-  const scrollHost = useRef<HTMLDivElement>(null);
-  const commentsRef = useRef<HTMLElement>(null);
-  const [scrolled, setScrolled] = useState(false);
+  const stats = useSongStats(track.songId);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewport = useCallback(() => viewportRef.current, []);
+  const snap = usePageSnap(viewport, lyricsOpen && Boolean(track.songId));
+  const { goTo, onWheel } = snap;
+  // 0 → 1 as the track moves from the lyrics page to the comments page.
+  const progress = useTransform(snap.y, value => Math.min(1, Math.max(0, -value / (viewportRef.current?.clientHeight || 1))));
+  const compactOpacity = useTransform(progress, [0.4, 0.9], [0, 1]);
+  const onComments = snap.page === 1;
 
   useEffect(() => {
     if (!lyricsOpen) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') closeLyrics(); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      // Escape steps back: comments → lyrics → closed.
+      if (onComments) goTo(0); else closeLyrics();
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [lyricsOpen, closeLyrics]);
+  }, [lyricsOpen, closeLyrics, onComments, goTo]);
 
-  // New song while open: back to the lyrics.
+  // Native listener: React's wheel handlers are passive and cannot preventDefault.
+  const [drawer, setDrawer] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    scrollHost.current?.querySelector<HTMLElement>('[data-scroll-root]')?.scrollTo({ top: 0 });
-  }, [track.id]);
+    if (!drawer) return;
+    drawer.addEventListener('wheel', onWheel, { passive: false });
+    return () => drawer.removeEventListener('wheel', onWheel);
+  }, [drawer, onWheel]);
 
-  const scroller = () => scrollHost.current?.querySelector<HTMLElement>('[data-scroll-root]');
-  const toComments = () => {
-    const root = scroller();
-    const section = commentsRef.current;
-    if (root && section) root.scrollTo({ top: section.offsetTop, behavior: 'smooth' });
-  };
-  const toLyrics = () => scroller()?.scrollTo({ top: 0, behavior: 'smooth' });
+  // New song: back to its lyrics.
+  useEffect(() => { goTo(0); }, [track.id, goTo]);
 
   return (
-    <AnimatePresence onExitComplete={() => setScrolled(false)}>
+    <AnimatePresence>
       {lyricsOpen && (
         <motion.section
+          ref={setDrawer}
           className={styles.drawer}
           data-theme="dark"
           data-player-surface
@@ -131,29 +124,30 @@ export function LyricsDrawer() {
             <motion.button type="button" className={styles.close} onClick={closeLyrics} aria-label="收起歌词" data-tooltip="收起" data-tooltip-placement="right" data-tooltip-shortcut="Esc" whileHover={{ y: 2 }} whileTap={{ scale: 0.9 }}>
               <ChevronDown size={24} strokeWidth={1.5} />
             </motion.button>
-            <AnimatePresence>
-              {scrolled && (
-                <motion.div className={styles.compact} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
-                  <Cover seed={track.coverSeed} src={track.cover} size={32} radius={6} />
-                  <span><strong>{track.title}</strong><small>{track.artist}</small></span>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.div className={styles.compact} style={{ opacity: compactOpacity }} aria-hidden={!onComments}>
+              <Cover seed={track.coverSeed} src={track.cover} size={32} radius={6} />
+              <span><strong>{track.title}</strong><small>{track.artist}</small></span>
+            </motion.div>
             {track.songId && (
-              <button type="button" className={styles.jump} onClick={scrolled ? toLyrics : toComments}>
-                {scrolled ? <ChevronsUp size={15} strokeWidth={1.6} /> : <ChevronsDown size={15} strokeWidth={1.6} />}
-                {scrolled ? '回到歌词' : '查看评论'}
+              <button type="button" className={styles.jump} onClick={() => goTo(onComments ? 0 : 1)}>
+                {onComments ? <ChevronsUp size={15} strokeWidth={1.6} /> : <ChevronsDown size={15} strokeWidth={1.6} />}
+                {onComments ? '回到歌词' : '查看评论'}
               </button>
             )}
           </div>
 
-          <div ref={scrollHost} className={styles.scrollHost}>
-            <ScrollArea className={styles.scroll}>
-              <LyricsPageBody commentsRef={commentsRef} onScrolled={setScrolled} />
-            </ScrollArea>
+          <div ref={viewportRef} className={styles.viewport}>
+            <motion.div className={styles.track} style={{ y: snap.y }}>
+              <div className={styles.page} inert={onComments}>
+                <Stage progress={progress} />
+              </div>
+              <div className={styles.page} inert={!onComments}>
+                {track.songId && <CommentsPage songId={track.songId} total={stats.commentCount} />}
+              </div>
+            </motion.div>
           </div>
 
-          <LyricsPlayerBar onComments={toComments} />
+          <LyricsPlayerBar onComments={() => goTo(1)} />
         </motion.section>
       )}
     </AnimatePresence>

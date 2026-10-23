@@ -32,3 +32,95 @@
   top: 14px;
   right: 14px;
 }
+
+/* ───────── Body / footer shared by form and confirm dialogs ───────── */
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.message {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.error {
+  margin: 0;
+  font-size: 12px;
+  color: #d9534f;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+/* One size for both buttons so the pair lines up exactly. */
+.action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 84px;
+  height: 36px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+  white-space: nowrap;
+  transition: background-color 180ms ease, color 180ms ease, box-shadow 200ms ease, transform 120ms ease;
+}
+
+.action:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.cancel {
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(111, 90, 168, 0.16);
+}
+
+.cancel:hover:not(:disabled) {
+  background: #fff;
+  color: var(--accent-strong);
+}
+
+.confirm {
+  background: var(--accent-tint);
+  color: var(--accent-strong);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.8), 0 4px 14px rgba(111, 90, 168, 0.14);
+}
+
+.confirm:hover:not(:disabled) {
+  background: var(--accent-tint-strong);
+}
+
+.danger {
+  background: #e4564f;
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(228, 86, 79, 0.25);
+}
+
+.danger:hover:not(:disabled) {
+  background: #d84a43;
+  box-shadow: 0 6px 18px rgba(228, 86, 79, 0.32);
+}

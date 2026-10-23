@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Dialog } from '@/components/ui';
+import { ConfirmDialog, Dialog, DialogActions } from '@/components/ui';
 import type { UserPlaylist } from '@/lib/account-client';
 import { useAccount } from './account-store';
 import styles from './CreatePlaylistDialog.module.css';
@@ -44,45 +44,31 @@ function RenameForm({ playlist, onClose }: { playlist: UserPlaylist; onClose: ()
         <span className={styles.counter}>{name.length}/{MAX}</span>
       </label>
       {error && <p className={styles.error}>{error}</p>}
-      <div className={styles.actions}>
-        <Button variant="ghost" onClick={onClose}>取消</Button>
-        <Button variant="primary" onClick={() => void submit()} disabled={!value || unchanged || busy}>{busy ? '保存中…' : '保存'}</Button>
-      </div>
+      <DialogActions onCancel={onClose} onConfirm={() => void submit()} confirmLabel={busy ? '保存中…' : '保存'} busy={busy} disabled={!value || unchanged} />
     </form>
   );
 }
 
+/** Built on the shared ConfirmDialog; errors stay inline and the dialog remains open. */
 export function DeletePlaylistDialog({ playlist, onClose, onDeleted }: { playlist: UserPlaylist | null; onClose: () => void; onDeleted?: (id: string) => void }) {
   const { deletePlaylist } = useAccount();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const close = () => { if (busy) return; setError(''); onClose(); };
-  const confirm = async () => {
-    if (!playlist || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      await deletePlaylist(playlist.id);
-      onDeleted?.(playlist.id);
-      onClose();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '删除失败');
-    } finally {
-      setBusy(false);
-    }
-  };
+  // Keep the name while the close animation plays (playlist becomes null first).
+  const [shown, setShown] = useState(playlist);
+  if (playlist && playlist !== shown) setShown(playlist);
 
   return (
-    <Dialog open={Boolean(playlist)} onClose={close} title="删除歌单" width={400}>
-      <div className={styles.form}>
-        <p className={styles.message}>确定删除歌单「{playlist?.name}」吗？歌单内的歌曲不会被删除，但此操作无法撤销。</p>
-        {error && <p className={styles.error}>{error}</p>}
-        <div className={styles.actions}>
-          <Button variant="ghost" onClick={close}>取消</Button>
-          <Button variant="primary" className={styles.danger} onClick={() => void confirm()} disabled={busy}>{busy ? '删除中…' : '删除'}</Button>
-        </div>
-      </div>
-    </Dialog>
+    <ConfirmDialog
+      open={Boolean(playlist)}
+      onClose={onClose}
+      title="删除歌单"
+      tone="danger"
+      confirmLabel="删除"
+      message={<>确定删除歌单「{shown?.name}」吗？歌单内的歌曲不会被删除，但此操作无法撤销。</>}
+      onConfirm={async () => {
+        if (!playlist) return;
+        await deletePlaylist(playlist.id);
+        onDeleted?.(playlist.id);
+      }}
+    />
   );
 }

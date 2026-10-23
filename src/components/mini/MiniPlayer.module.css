@@ -1,0 +1,245 @@
+/* The window itself is the capsule: transparent window, rounded dark glass inside. */
+.shell {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px 0 14px;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #241e3a;
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  -webkit-app-region: drag;
+}
+
+.shell button {
+  -webkit-app-region: no-drag;
+}
+
+.backdrop {
+  position: absolute;
+  inset: -40%;
+  filter: blur(36px) saturate(1.4) brightness(0.55);
+  pointer-events: none;
+}
+
+.backdropCover {
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+/* ───────── Spinning record (click to restore) ───────── */
+
+.record {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+/* Vinyl: grooves around the artwork label. */
+.disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 9px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 54%, rgba(255, 255, 255, 0.06) 55%, transparent 56%, transparent 63%, rgba(255, 255, 255, 0.05) 64%, transparent 65%),
+    radial-gradient(circle at 30% 25%, #3b3550, #121018 70%);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: spin 12s linear infinite;
+  animation-play-state: paused;
+}
+
+.spinning {
+  animation-play-state: running;
+}
+
+.discCover {
+  width: 100%;
+  height: 100%;
+}
+
+.recordHint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(20, 16, 36, 0.5);
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.record:hover .recordHint,
+.record:focus-visible .recordHint {
+  opacity: 1;
+}
+
+/* ───────── Title + live lyric ───────── */
+
+.meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.meta strong {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ticker {
+  position: relative;
+  display: block;
+  height: 18px;
+  overflow: hidden;
+}
+
+.tickerLine {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tickerLyric {
+  color: #e7defc;
+}
+
+/* ───────── Controls: play always visible, others slide in on hover ───────── */
+
+.controls {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.secondary {
+  display: inline-flex;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-width 260ms cubic-bezier(0.22, 1, 0.36, 1), opacity 200ms ease;
+}
+
+.shell:hover .secondary,
+.shell:focus-within .secondary {
+  max-width: 40px;
+  opacity: 1;
+}
+
+.ringPlay {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+}
+
+.ring {
+  position: absolute;
+  inset: 0;
+  rotate: -90deg;
+}
+
+.ringTrack,
+.ringFill {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.ringTrack {
+  stroke: rgba(255, 255, 255, 0.16);
+}
+
+.ringFill {
+  stroke: #fff;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 200ms linear;
+}
+
+.ringGlyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background-color 160ms ease;
+}
+
+.ringPlay:hover .ringGlyph {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+/* ───────── Window buttons (top-right, on hover) ───────── */
+
+.windowButtons {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 0;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.windowButtons button {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.shell:hover .windowButtons,
+.windowButtons:focus-within {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc {
+    animation: none;
+  }
+}

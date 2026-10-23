@@ -4,6 +4,7 @@ export { IconButton } from './IconButton';
 export { Slider } from './Slider';
 export { ListFooter, Spinner } from './Spinner';
 export { Dialog } from './Dialog';
+export { ConfirmDialog, DialogActions } from './ConfirmDialog';
 export { Menu, type MenuItem } from './Menu';
 export { TooltipLayer } from './Tooltip';
 export { toast, Toaster } from './toast';

@@ -23,9 +23,17 @@ const GAP = 1.5;
  * cut away underneath them with a CSS mask, so the number reads as part of the icon.
  *
  * The mask hole is sized from the rendered digits (font-independent).
+ * Filled glyphs (`solid`) are never cut: the digits move just outside the corner.
  * `reserve` adds the overflow as right margin, for icons followed by text.
  */
-export function BadgedIcon({ count, children, reserve = false, className }: { count?: number; children: ReactNode; reserve?: boolean; className?: string }) {
+export function BadgedIcon({ count, children, reserve = false, solid = false, className }: {
+  count?: number;
+  children: ReactNode;
+  reserve?: boolean;
+  /** Filled glyph: place the digits beside the corner instead of cutting into the shape. */
+  solid?: boolean;
+  className?: string;
+}) {
   const wrap = useRef<HTMLSpanElement>(null);
   const glyph = useRef<HTMLSpanElement>(null);
   const digits = useRef<HTMLSpanElement>(null);
@@ -37,9 +45,16 @@ export function BadgedIcon({ count, children, reserve = false, className }: { co
     const text = digits.current;
     if (!box || !icon) return;
     if (!text) {
-      icon.style.removeProperty('--cut-w');
       box.style.removeProperty('--reserve');
       return;
+    }
+    if (solid) {
+      // No cut; still reserve room for the digits that hang past the glyph.
+      const reserveOnly = () => box.style.setProperty('--reserve', `${Math.max(0, text.offsetLeft + text.offsetWidth - icon.offsetWidth)}px`);
+      reserveOnly();
+      const observer = new ResizeObserver(reserveOnly);
+      observer.observe(text);
+      return () => observer.disconnect();
     }
     const measure = () => {
       // Offsets share the wrapper as offset parent, so they are in the glyph's coordinates.
@@ -54,11 +69,11 @@ export function BadgedIcon({ count, children, reserve = false, className }: { co
     const observer = new ResizeObserver(measure);
     observer.observe(text);
     return () => observer.disconnect();
-  }, [label]);
+  }, [label, solid]);
 
   return (
-    <span ref={wrap} className={cn(styles.wrap, reserve && styles.reserve, className)}>
-      <span ref={glyph} className={cn(styles.glyph, label && styles.cut)}>{children}</span>
+    <span ref={wrap} className={cn(styles.wrap, reserve && styles.reserve, solid && styles.solid, className)}>
+      <span ref={glyph} className={cn(styles.glyph, label && !solid && styles.cut)}>{children}</span>
       {label && <span ref={digits} className={styles.count} aria-hidden>{label}</span>}
     </span>
   );

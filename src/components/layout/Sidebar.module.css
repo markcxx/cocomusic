@@ -1,16 +1,57 @@
 .sidebar {
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dur: 320ms;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .brand {
+  position: relative;
   display: flex;
   align-items: center;
   height: 56px;
   padding: 0 16px;
   -webkit-app-region: drag;
+}
+
+.brandMark {
+  display: inline-flex;
+  transition: opacity 200ms ease, transform var(--dur) var(--ease);
+}
+
+/* Toggle sits at the brand row's right; in the rail it takes the brand's place. */
+.toggle {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-muted);
+  opacity: 0;
+  translate: 0 -50%;
+  transition: opacity 180ms ease, background-color 160ms ease, color 160ms ease, right var(--dur) var(--ease);
+  -webkit-app-region: no-drag;
+}
+
+.sidebar:hover .toggle,
+.toggle:focus-visible,
+.collapsed .toggle {
+  opacity: 1;
+}
+
+.toggle:hover {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
 }
 
 /* Traffic lights occupy the top-left 14px inset row; drop the brand just below them. */
@@ -38,6 +79,9 @@
 }
 
 .groupLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  transition: opacity 200ms ease, height var(--dur) var(--ease), margin var(--dur) var(--ease);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -71,6 +115,7 @@
 .navItem,
 .playlistItem {
   position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -124,6 +169,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  transition: opacity 200ms ease;
 }
 
 .playlistItem {
@@ -140,6 +186,40 @@
   transform: scale(1.06);
 }
 
-.footer {
-  padding: 8px 0 12px;
+
+/* ───────── Collapsed rail ───────── */
+
+/* Brand fades out; the toggle slides into the centre of the rail. */
+.collapsed .brandMark {
+  opacity: 0;
+  transform: scale(0.8);
+  pointer-events: none;
+}
+
+.collapsed .toggle {
+  right: calc(50% - 15px);
+}
+
+/* Group titles fold away; a hairline marks the section break instead. */
+.collapsed .groupLabel {
+  height: 1px;
+  margin: 8px 18px;
+  padding: 0;
+  background: rgba(111, 90, 168, 0.12);
+  opacity: 1;
+}
+
+.collapsed .groupLabel span {
+  opacity: 0;
+}
+
+/* Icons stay put (same left padding as expanded) while the column narrows around them. */
+.collapsed .label {
+  opacity: 0;
+}
+
+.collapsed .navItem {
+  width: 40px;
+  margin: 0 auto;
+  padding: 0 11px;
 }

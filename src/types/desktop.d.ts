@@ -10,8 +10,10 @@ interface CocoDesktopBridge {
     minimize(): void;
     toggleMaximize(): void;
     close(): void;
-    /** Shrink to a compact always-on-top window, or restore. */
+    /** Morph into the floating mini player bar, or restore the full window. */
     toggleMini(): void;
+    /** Mini mode entered/left (main process decides). Returns an unsubscribe function. */
+    onMiniChange(listener: (mini: boolean) => void): () => void;
   };
 }
 

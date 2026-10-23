@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Button, Checkbox, Dialog } from '@/components/ui';
+import { Checkbox, Dialog, DialogActions } from '@/components/ui';
 import type { UserPlaylist } from '@/lib/account-client';
 import { useAccount } from './account-store';
 import styles from './CreatePlaylistDialog.module.css';
@@ -52,10 +52,7 @@ function CreatePlaylistForm({ onClose, onCreated }: { onClose: () => void; onCre
         设为隐私歌单（仅自己可见）
       </div>
       {error && <p className={styles.error}>{error}</p>}
-      <div className={styles.actions}>
-        <Button variant="ghost" onClick={onClose}>取消</Button>
-        <Button variant="primary" onClick={() => void submit()} disabled={!name.trim() || busy}>{busy ? '创建中…' : '创建'}</Button>
-      </div>
+      <DialogActions onCancel={onClose} onConfirm={() => void submit()} confirmLabel={busy ? '创建中…' : '创建'} busy={busy} disabled={!name.trim()} />
     </form>
   );
 }
