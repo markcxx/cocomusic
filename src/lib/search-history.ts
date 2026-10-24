@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { settings as appSettings } from './settings';
 
 // Recent searches persist across launches (renderer origin is stable per install).
 const KEY = 'coco:search-history';
@@ -27,6 +28,8 @@ function write(next: string[]) {
 
 export const searchHistory = {
   add(keyword: string) {
+    // 设置 › 隐私 › 记录搜索历史.
+    if (!appSettings.get().rememberSearches) return;
     const value = keyword.trim();
     if (value) write([value, ...read().filter(item => item !== value)].slice(0, LIMIT));
   },

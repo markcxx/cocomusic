@@ -39,6 +39,7 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
 
   handle(IPC.windowMinimize, window => window.minimize());
   handle(IPC.windowToggleMaximize, window => (window.isMaximized() ? window.unmaximize() : window.maximize()));
+  invoke(IPC.windowIsMaximized, window => window?.isMaximized() ?? false);
   handle(IPC.windowClose, window => {
     // The lyrics window's × only hides lyrics; the app keeps running.
     if (lyrics()?.isLyricsWindow(window)) lyrics()?.set(false);

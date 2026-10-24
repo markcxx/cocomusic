@@ -108,7 +108,6 @@
   max-width: 760px;
   font-size: 13px;
   color: var(--text-secondary);
-  --fade-to: rgba(var(--surface-pinned-rgb), 0.95);
 }
 
 .actions {

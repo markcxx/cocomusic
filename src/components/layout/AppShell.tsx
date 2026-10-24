@@ -51,6 +51,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="backdrop" aria-hidden />
             {/* The full UI stays mounted under the mini bar: playback and state carry over. */}
             <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`} inert={mini} aria-hidden={mini || undefined} style={mini ? { visibility: 'hidden' } : undefined}>
+              {/* The window's top edge (padding above the toolbar) drags the window too. */}
+              <div className={styles.dragStrip} aria-hidden />
               <div className={styles.sidebar}>
                 <Sidebar />
               </div>

@@ -30,14 +30,14 @@ export function ExpandableText({ text, lines = 2, lineHeight = 22, className }: 
   return (
     <div className={cn(styles.wrap, className)}>
       <motion.div
-        className={styles.clip}
+        className={cn(styles.clip, overflows && !open && styles.faded)}
         initial={false}
         animate={{ height: open || !overflows ? full || 'auto' : collapsed }}
         transition={{ type: 'spring', stiffness: 260, damping: 32 }}
         style={{ lineHeight: `${lineHeight}px` }}
       >
+        {/* The last clamped line fades out through a mask, so no coloured layer sits over glass backgrounds. */}
         <div ref={inner} className={styles.text}>{text}</div>
-        {overflows && <motion.span className={styles.fade} animate={{ opacity: open ? 0 : 1 }} aria-hidden />}
       </motion.div>
       {overflows && (
         <button type="button" className={styles.toggle} onClick={() => setOpen(value => !value)} aria-expanded={open}>

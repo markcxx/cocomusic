@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { parseHex, toHex } from './color';
 import type { AudioQuality } from '@/server/music/types';
 
 /**
@@ -18,6 +19,8 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 /** OS material behind a see-through window. mica: Windows 11 only. */
 export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
+/** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
+export type DesktopColor = LyricColorId | 'custom';
 export type DoubleClickAction = 'replace' | 'insert';
 
 export interface Settings {
@@ -56,6 +59,12 @@ export interface Settings {
   skipOnError: boolean;
   /** Double-click on a song in a list: replace the queue with the list, or insert after the current song. */
   doubleClick: DoubleClickAction;
+  /** Toast when only a preview clip is available. */
+  trialNotice: boolean;
+  /** Show the VIP tag next to paid songs in lists. */
+  showVipBadge: boolean;
+  /** Window / taskbar title follows the playing song. */
+  titleShowsTrack: boolean;
 
   /* 歌词页 */
   lyricsFontSize: number;
@@ -67,10 +76,14 @@ export interface Settings {
   /** Seconds added to playback time when matching lines (+ = earlier lyrics). */
   lyricsOffset: number;
   lyricsSpinCover: boolean;
+  /** Keep the display awake while the lyrics page is open and playing. */
+  lyricsKeepAwake: boolean;
 
   /* 桌面歌词 */
   desktopFontSize: number;
-  desktopColor: LyricColorId;
+  desktopColor: DesktopColor;
+  /** Hex used when desktopColor is 'custom'. */
+  desktopCustomColor: string;
   desktopShowTranslation: boolean;
   /** Second line: translation (if any) or the next lyric line. */
   desktopSecondLine: 'translation' | 'next' | 'none';
@@ -86,6 +99,12 @@ export interface Settings {
   /* 快捷键 */
   /** In-app: Space play/pause, ⌘/Ctrl+←/→ previous/next, ⌘/Ctrl+↑/↓ volume. */
   appShortcuts: boolean;
+  /** Seconds that ← / → skip within the song (0 = off). */
+  seekStep: number;
+
+  /* 隐私 */
+  /** Remember search keywords on this machine. */
+  rememberSearches: boolean;
 
   /* 通知 */
   toastOnTrackChange: boolean;
@@ -110,6 +129,9 @@ export const DEFAULT_SETTINGS: Settings = {
   resumePosition: true,
   skipOnError: true,
   doubleClick: 'replace',
+  trialNotice: true,
+  showVipBadge: true,
+  titleShowsTrack: true,
 
   lyricsFontSize: 18,
   lyricsShowTranslation: true,
@@ -118,9 +140,11 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricsBackground: 'cover',
   lyricsOffset: 0,
   lyricsSpinCover: false,
+  lyricsKeepAwake: true,
 
   desktopFontSize: 34,
   desktopColor: 'lavender',
+  desktopCustomColor: '#c9b4ff',
   desktopShowTranslation: true,
   desktopSecondLine: 'translation',
   desktopKaraoke: true,
@@ -132,6 +156,8 @@ export const DEFAULT_SETTINGS: Settings = {
   miniSpinRecord: true,
 
   appShortcuts: true,
+  seekStep: 5,
+  rememberSearches: true,
 
   toastOnTrackChange: false,
 };
@@ -157,6 +183,16 @@ export const LYRIC_COLORS: Record<LyricColorId, { label: string; from: string; t
   white: { label: '纯白', from: '#ffffff', to: '#e6e6f0' },
 };
 
+/** Gradient for the desktop lyric fill: a preset, or the custom colour fading up from a near-white tint of itself. */
+export function desktopLyricColor(prefs: Pick<Settings, 'desktopColor' | 'desktopCustomColor'>): { from: string; to: string } {
+  if (prefs.desktopColor !== 'custom') return LYRIC_COLORS[prefs.desktopColor];
+  const to = prefs.desktopCustomColor;
+  const rgb = parseHex(to);
+  if (!rgb) return LYRIC_COLORS.lavender;
+  const tint = (c: number) => c + (255 - c) * 0.82;
+  return { from: toHex({ r: tint(rgb.r), g: tint(rgb.g), b: tint(rgb.b) }), to };
+}
+
 /* ───────── Validation: stored data is untrusted (older versions, hand edits). ───────── */
 
 type Rule = { type: 'number'; min: number; max: number } | { type: 'boolean' } | { type: 'enum'; values: readonly unknown[] } | { type: 'string'; max: number } | { type: 'hex' };
@@ -171,10 +207,11 @@ const RULES: Record<keyof Settings, Rule> = {
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
-  desktopFontSize: num(20, 64), desktopColor: oneOf(...Object.keys(LYRIC_COLORS)), desktopShowTranslation: bool, desktopSecondLine: oneOf('translation', 'next', 'none'),
+  desktopFontSize: num(20, 64), desktopColor: oneOf(...Object.keys(LYRIC_COLORS), 'custom'), desktopCustomColor: { type: 'hex' }, desktopShowTranslation: bool, desktopSecondLine: oneOf('translation', 'next', 'none'),
   desktopKaraoke: bool, desktopStroke: bool, desktopAlign: oneOf('left', 'center', 'right'), desktopFontWeight: oneOf(500, 700, 900),
   miniShowLyrics: bool, miniSpinRecord: bool,
-  appShortcuts: bool,
+  appShortcuts: bool, seekStep: oneOf(0, 5, 10, 15, 30), rememberSearches: bool,
+  trialNotice: bool, showVipBadge: bool, titleShowsTrack: bool, lyricsKeepAwake: bool,
   toastOnTrackChange: bool,
 };
 

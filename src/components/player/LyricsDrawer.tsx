@@ -75,9 +75,24 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
  * A dedicated dark player bar replaces the main one while open.
  */
 export function LyricsDrawer() {
-  const { lyricsOpen, closeLyrics, track } = usePlayer();
+  const { lyricsOpen, closeLyrics, track, playing } = usePlayer();
   const stats = useSongStats(track.songId, track.source);
-  const lyricsBackground = useSettings().lyricsBackground;
+  const { lyricsBackground, lyricsKeepAwake } = useSettings();
+
+  // 设置 › 歌词页 › 保持屏幕常亮: hold a screen wake lock while lyrics are open and playing.
+  useEffect(() => {
+    if (!lyricsOpen || !playing || !lyricsKeepAwake || !('wakeLock' in navigator)) return;
+    let lock: WakeLockSentinel | null = null;
+    let released = false;
+    const acquire = () => {
+      if (document.visibilityState !== 'visible') return;
+      navigator.wakeLock.request('screen').then(sentinel => { if (released) void sentinel.release(); else lock = sentinel; }).catch(() => undefined);
+    };
+    acquire();
+    // The OS drops the lock when the window is hidden; take it again on return.
+    document.addEventListener('visibilitychange', acquire);
+    return () => { released = true; document.removeEventListener('visibilitychange', acquire); void lock?.release().catch(() => undefined); };
+  }, [lyricsOpen, playing, lyricsKeepAwake]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const viewport = useCallback(() => viewportRef.current, []);
   const snap = usePageSnap(viewport, lyricsOpen && Boolean(track.songId));

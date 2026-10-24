@@ -9,6 +9,8 @@ const IPC = {
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
   miniChanged: 'window:mini-changed',
+  maximizedChanged: 'window:maximized-changed',
+  windowIsMaximized: 'window:is-maximized',
   pickFolder: 'files:pick-folder',
   pickAudioFiles: 'files:pick-audio',
   revealFile: 'files:reveal',
@@ -48,6 +50,9 @@ contextBridge.exposeInMainWorld('coco', {
     toggleMaximize: () => ipcRenderer.send(IPC.windowToggleMaximize),
     close: () => ipcRenderer.send(IPC.windowClose),
     toggleMini: () => ipcRenderer.send(IPC.windowToggleMini),
+    isMaximized: () => ipcRenderer.invoke(IPC.windowIsMaximized).then(value => value === true),
+    /** Subscribe to maximize/restore; returns an unsubscribe function. */
+    onMaximizeChange: (listener: (maximized: boolean) => void) => listen(IPC.maximizedChanged, value => value === true, listener),
     /** Subscribe to mini mode changes; returns an unsubscribe function. */
     onMiniChange: (listener: (mini: boolean) => void) => listen(IPC.miniChanged, value => value === true, listener),
   },

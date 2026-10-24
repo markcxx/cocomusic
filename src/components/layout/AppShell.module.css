@@ -55,3 +55,24 @@
 .player {
   grid-column: 1 / -1;
 }
+
+/*
+ * Frameless window: the toolbar and brand row are drag regions, but the 16px
+ * padding above them is not, so grabbing the very top edge did nothing (macOS
+ * users expect the title-bar strip to move the window).
+ */
+.dragStrip {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 1;
+  height: 16px;
+  -webkit-app-region: drag;
+}
+
+/* Windows/Linux resize from the top edge: leave a few pixels outside the drag region. */
+:global(html:not([data-platform='darwin'])) .dragStrip {
+  top: 4px;
+  height: 12px;
+}

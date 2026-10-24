@@ -28,6 +28,10 @@ type PlayerState = {
   duration: number;
   /** Set when only a preview clip plays; lyric time = position + trial.start. */
   trial?: SongSource['trial'];
+  /** Quality level of the loaded online stream (standard / exhigh / lossless…). */
+  level?: string;
+  /** Re-fetch the current song's stream (e.g. after changing quality), keeping the position. */
+  reloadStream: () => void;
   volume: number;
   mode: PlayMode;
   lyricsOpen: boolean;
@@ -144,6 +148,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [position, setPosition] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number>();
   const [trial, setTrial] = useState<SongSource['trial']>();
+  const [level, setLevel] = useState<string>();
   const [volume, setVolumeState] = useState(0.62);
   const lastVolume = useRef(0.62);
   const [mode, setMode] = useState<PlayMode>('loop');
@@ -166,6 +171,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
+    setLevel(undefined);
     setStatus(isPlayable(next) ? 'loading' : 'idle');
     setPlaying(options.autoplay !== false && isPlayable(next));
     recorded.current = null;
@@ -293,7 +299,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       .then(source => {
         if (controller.signal.aborted) return;
         setTrial(source.trial);
-        if (source.trial) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
+        setLevel(source.level);
+        if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
         attach(source.url);
       })
       .catch(error => {
@@ -415,7 +422,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const audio = () => audioRef.current;
     const currentIndex = () => queue.findIndex(item => item.id === track.id);
     return {
-      track, queue, playing, status, trial, volume, mode, lyricsOpen, queueOpen,
+      track, queue, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
+      reloadStream: () => {
+        const element = audio();
+        if (!isPlayable(track) || track.localId) return;
+        if (element && element.currentTime > 0) resumeAt.current = element.currentTime;
+        setLoadKey(value => value + 1);
+      },
       duration: mediaDuration ?? (trial ? trial.end - trial.start : track.duration ?? 0),
       togglePlay: () => {
         if (!isPlayable(track)) { toast.info('从歌单、排行榜、本地音乐或搜索中选一首歌开始播放'); return; }
@@ -508,7 +521,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     // select/step/stop only read refs and setters; they are recreated each render but behave identically.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, track, playing, status, trial, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
+  }, [queue, track, playing, status, trial, level, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
   // System media controls (keyboard media keys, OS now-playing panels).
   const controls = useLatest(value);
@@ -533,6 +546,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // Desktop lyrics window and other views follow playback over a broadcast channel.
   useEffect(() => { broadcastPlayer.publishTrack(track, trial); }, [track, trial]);
+
+  // 设置 › 系统 › 窗口标题显示歌曲: taskbar / Dock window menu show what is playing.
+  const titleShowsTrack = prefs.titleShowsTrack;
+  useEffect(() => {
+    document.title = titleShowsTrack && isPlayable(track) ? `${track.title} - ${track.artist} · CoCo Music` : 'CoCo Music';
+  }, [titleShowsTrack, track]);
   useEffect(() => { broadcastPlayer.publishClock(position, playing); }, [position, playing]);
   useEffect(() => broadcastPlayer.onCommand(command => {
     if (command === 'toggle') controls.current.togglePlay();
@@ -558,6 +577,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         };
         const action = actions[event.key];
         if (action) { event.preventDefault(); action(); }
+        return;
+      }
+      // ← / → (no modifier): skip within the song by 设置 › 快捷键 › 快进快退.
+      const step = appSettings.get().seekStep;
+      if (step && !typing && !event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
+        if (target?.closest('[role="slider"], [role="menu"], [role="listbox"], [role="radiogroup"]')) return;
+        const audio = audioRef.current;
+        if (!audio?.getAttribute('src')) return;
+        event.preventDefault();
+        controls.current.seek(audio.currentTime + (event.key === 'ArrowRight' ? step : -step));
         return;
       }
       if (event.code !== 'Space' || event.metaKey || event.ctrlKey) return;

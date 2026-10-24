@@ -131,7 +131,7 @@ function Picker({ value, onChange }: { value: string; onChange: (hex: string) =>
  * Theme colour control: crisp preset swatches plus a "custom" swatch that
  * opens a full colour picker (any colour). The picked colour applies live.
  */
-export function ThemeColorControl({ value, presets, onChange }: { value: string; presets: Array<{ label: string; color: string }>; onChange: (hex: string) => void }) {
+export function ThemeColorControl({ value, presets, onChange, label = '主题色' }: { value: string; presets: Array<{ label: string; color: string }>; onChange: (hex: string) => void; label?: string }) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -162,7 +162,7 @@ export function ThemeColorControl({ value, presets, onChange }: { value: string;
 
   return (
     <div className={styles.control}>
-      <div className={styles.swatches} role="radiogroup" aria-label="主题色">
+      <div className={styles.swatches} role="radiogroup" aria-label={label}>
         {presets.map(preset => {
           const active = preset.color.toLowerCase() === value.toLowerCase();
           return (
@@ -203,7 +203,7 @@ export function ThemeColorControl({ value, presets, onChange }: { value: string;
               ref={panel}
               className={styles.popover}
               role="dialog"
-              aria-label="自定义主题色"
+              aria-label={`自定义${label}`}
               style={{ top: position?.top ?? -9999, left: position?.left ?? -9999 }}
               initial={{ opacity: 0, scale: 0.96, y: -4 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}

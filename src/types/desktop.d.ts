@@ -10,6 +10,9 @@ interface CocoDesktopBridge {
     minimize(): void;
     toggleMaximize(): void;
     close(): void;
+    isMaximized(): Promise<boolean>;
+    /** Maximized/restored. Returns an unsubscribe function. */
+    onMaximizeChange(listener: (maximized: boolean) => void): () => void;
     /** Morph into the floating mini player bar, or restore the full window. */
     toggleMini(): void;
     /** Mini mode entered/left (main process decides). Returns an unsubscribe function. */

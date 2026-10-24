@@ -14,6 +14,7 @@ import { DownloadButton } from '@/components/downloads/DownloadButton';
 import { Checkbox } from '@/components/ui';
 import type { CatalogTrack } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
 import type { Selection } from '@/lib/selection';
 import { toTrack } from '@/lib/to-track';
 import { Equalizer } from './Equalizer';
@@ -48,6 +49,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
 }) {
   const player = usePlayer();
   const { navigate } = useNavigation();
+  const showVip = useSettings().showVipBadge;
   const queue = useMemo(() => tracks.map(toTrack), [tracks]);
   const selecting = Boolean(selection?.active);
 
@@ -111,7 +113,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
               <span role="cell" className={styles.identity}>
                 {showCover && <Cover seed={track.coverSeed} src={track.cover} size={40} radius={6} />}
                 <span className={styles.names}>
-                  <strong data-tooltip={track.title} data-tooltip-overflow>{track.title}{item.vip && <em className={styles.vip}>VIP</em>}</strong>
+                  <strong data-tooltip={track.title} data-tooltip-overflow>{track.title}{item.vip && showVip && <em className={styles.vip}>VIP</em>}</strong>
                   <span data-tooltip={track.artist} data-tooltip-overflow>
                     {item.artists?.length && !selecting
                       ? item.artists.map((artist, i) => (

@@ -142,7 +142,6 @@
 .row + .row,
 .row + .shortcuts,
 .shortcuts + .row,
-.glassPreview + .row,
 .lyricPreview + .row,
 .facts + .row {
   border-top: 1px solid var(--divider);
@@ -362,64 +361,9 @@
 
 /* ───────── Glass preview ───────── */
 
-.glassPreview {
-  position: relative;
-  height: 112px;
-  margin: 16px 20px 6px;
-  overflow: hidden;
-  border-radius: 14px;
-  background: linear-gradient(120deg, color-mix(in srgb, var(--accent-tint) 80%, var(--shell)), color-mix(in srgb, #dfeafc 50%, var(--shell)) 50%, color-mix(in srgb, #fbe6ea 50%, var(--shell)));
-}
-
-.glassBlob {
-  position: absolute;
-  top: 14px;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  opacity: 0.85;
-  animation: float 9s ease-in-out infinite alternate;
-}
-
-.glassBlob:nth-child(2) {
-  animation-delay: -3s;
-}
-
-.glassBlob:nth-child(3) {
-  animation-delay: -6s;
-}
-
 @keyframes float {
   from { transform: translate(-10px, -6px); }
   to { transform: translate(18px, 10px); }
-}
-
-.glassPane {
-  position: absolute;
-  inset: 22px 18% 22px 18%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  border-radius: 14px;
-  background: var(--sheet);
-  box-shadow: inset 1px 1px 0 var(--glass-edge), 0 10px 30px rgba(var(--ink-rgb), 0.1);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  text-align: center;
-}
-
-.glassPane strong {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-strong);
-}
-
-.glassPane span {
-  padding: 0 12px;
-  font-size: 11.5px;
-  color: var(--text-secondary);
 }
 
 /* ───────── Desktop lyric preview ───────── */
@@ -606,10 +550,6 @@
 }
 
 .groupLabel + .row,
-.groupLabel + .glassPreview {
-  border-top: 0;
-}
-
 .hexTag {
   display: inline-block;
   margin-left: 4px;

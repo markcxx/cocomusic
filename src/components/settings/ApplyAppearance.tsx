@@ -9,9 +9,9 @@ import { useSettings, type WindowEffect } from '@/lib/settings';
  * Applies appearance settings as CSS variables / data attributes on <html>:
  * - colour scheme (light / dark / follow system) → html[data-color-scheme]
  * - theme colour (any hex) → accent tokens, tuned per scheme for contrast
- * - panel glass: opacity scales each surface's alpha; blur sets --glass-blur
- * - window: effect (OS material) + window opacity → how much of the app's own
- *   backdrop is drawn over the blurred desktop
+ * - window: effect (OS material) + window opacity → how much of the app (backdrop
+ *   and panels) is drawn over the OS-blurred desktop
+ * - panel glass: opacity scales each surface's alpha relative to the window; blur sets --glass-blur
  */
 const SURFACES: Array<[name: string, rgbVar: string, alpha: number]> = [
   ['--sheet', '--surface-rgb', 0.5],
@@ -57,12 +57,6 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
   }, [scheme, s.themeMode]);
 
   useEffect(() => {
-    const root = document.documentElement.style;
-    for (const [name, rgbVar, alpha] of SURFACES) root.setProperty(name, `rgba(var(${rgbVar}), ${scale(alpha, s.glassOpacity).toFixed(3)})`);
-    root.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-  }, [s.glassOpacity, s.glassBlur]);
-
-  useEffect(() => {
     const palette = accentPalette(s.accent, scheme);
     const root = document.documentElement.style;
     root.setProperty('--accent', palette.accent);
@@ -74,15 +68,24 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
     root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
   }, [s.accent, scheme]);
 
-  // Whole window: OS material (desktop only) + how much app backdrop is painted over it.
+  // Whole window: OS material (desktop only) + how much the app paints over it.
+  // Window opacity scales the drawn backdrop *and* every panel, so lowering it
+  // really lets the (OS-blurred) desktop through the whole window, not just the gaps.
   useEffect(() => {
     const effect = supportedEffect(s.windowEffect, window.coco?.platform);
     window.coco?.app?.setMaterial(effect);
-    document.documentElement.dataset.material = effect;
+    const html = document.documentElement;
+    html.dataset.material = effect;
     // Without a material there is nothing behind the window to reveal; stay opaque.
     const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
-    document.documentElement.style.setProperty('--window-opacity', String(opacity));
-  }, [s.windowEffect, s.windowOpacity]);
+    html.style.setProperty('--window-opacity', String(opacity));
+    // Panels keep a little body even at 0 so their edges and text stay legible.
+    const panelFactor = effect === 'none' ? 1 : 0.12 + 0.88 * opacity;
+    for (const [name, rgbVar, alpha] of SURFACES) {
+      html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * panelFactor).toFixed(3)})`);
+    }
+    html.style.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
+  }, [s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';

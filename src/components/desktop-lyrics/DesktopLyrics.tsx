@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { playerFollower, type PlayerMessage } from '@/components/player/player-broadcast';
 import { useTrackLyrics } from '@/components/player/use-track-lyrics';
 import { cn } from '@/lib/cn';
-import { LYRIC_COLORS, settings as appSettings, useSettings } from '@/lib/settings';
+import { desktopLyricColor, settings as appSettings, useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
 import styles from './DesktopLyrics.module.css';
 
@@ -127,7 +127,7 @@ export function DesktopLyrics() {
   const next = synced ? lines[index + 1] : undefined;
   // Karaoke-style fill across the active line, based on time until the next line.
   const lineProgress = line && next ? Math.min(1, Math.max(0, (time - line.time) / Math.max(0.6, next.time - line.time))) : line ? 1 : 0;
-  const color = LYRIC_COLORS[prefs.desktopColor];
+  const color = desktopLyricColor(prefs);
 
   const primary = !track ? 'CoCo Music' : line?.text || (lyrics.loading ? track.title : lines.length && !synced ? lines[0].text : track.title);
   const translation = prefs.desktopShowTranslation ? line?.translation : undefined;

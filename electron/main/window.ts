@@ -53,6 +53,9 @@ export async function createMainWindow(origin: string, token: string) {
   });
 
   trackWindowState(window, () => isMini(window));
+  // Custom Windows/Linux controls swap the maximize ⇄ restore icon from this.
+  window.on('maximize', () => window.webContents.send(IPC.maximizedChanged, true));
+  window.on('unmaximize', () => window.webContents.send(IPC.maximizedChanged, false));
   window.once('ready-to-show', () => {
     if (initial.maximized) window.maximize();
     window.show();

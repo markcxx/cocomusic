@@ -15,15 +15,10 @@
   white-space: pre-line;
 }
 
-/* Soft fade on the last clamped line instead of a hard cut. */
-.fade {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 22px;
-  background: linear-gradient(180deg, transparent, var(--fade-to, rgba(var(--surface-pinned-rgb), 0.95)));
-  pointer-events: none;
+/* Soft fade on the last clamped line instead of a hard cut (mask, not an overlay). */
+.faded {
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - var(--fade-size, 22px)), transparent);
+  mask-image: linear-gradient(180deg, #000 calc(100% - var(--fade-size, 22px)), transparent);
 }
 
 .toggle {

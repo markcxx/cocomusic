@@ -8,6 +8,10 @@ export const IPC = {
   windowToggleMaximize: 'window:toggle-maximize',
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
+  /** main → renderer: window maximized (true) or restored (false). */
+  maximizedChanged: 'window:maximized-changed',
+  /** renderer → main (invoke): current maximized state. */
+  windowIsMaximized: 'window:is-maximized',
   /** main → renderer: mini mode entered (true) or left (false). */
   miniChanged: 'window:mini-changed',
 
