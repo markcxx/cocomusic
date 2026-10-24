@@ -12,10 +12,11 @@ import { useAccount } from '@/components/account/account-store';
 import { Button, toast } from '@/components/ui';
 import { formatCount, type CollectionInfo } from '@/lib/catalog-client';
 import styles from './CollectionHeader.module.css';
+import { shareUrl } from '@/lib/share-links';
 
 /** Copies the platform's public page URL. */
 async function copyLink(info: CollectionInfo) {
-  const url = `https://music.163.com/#/${info.kind}?id=${info.id}`;
+  const url = shareUrl(info.source, info.kind, info.id);
   try {
     await navigator.clipboard.writeText(url);
     toast.success('链接已复制');

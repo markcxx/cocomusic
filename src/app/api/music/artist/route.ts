@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { cached, catalog, CatalogError, intParam, respond } from '@/server/music';
+import { validId } from '@/server/music/ids';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,7 @@ export function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const provider = catalog(params.get('source'));
     const id = params.get('id') ?? '';
-    if (!/^\d{1,20}$/.test(id)) throw new CatalogError('歌手 ID 格式不正确', 400);
+    if (!validId(provider.source, 'artist', id)) throw new CatalogError('歌手 ID 格式不正确', 400);
     const section = params.get('section') ?? 'info';
     const offset = intParam(params.get('offset'), 0, 0, 5000);
     const limit = intParam(params.get('limit'), 50, 1, 100);

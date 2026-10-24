@@ -67,13 +67,15 @@
   color: rgba(var(--accent-strong-rgb), 0.4);
 }
 
-:global([data-theme='dark']) .empty {
+:global([data-theme='dark']) .empty,
+:global(html[data-color-scheme='dark']) .empty {
   background:
     radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.16), transparent 60%),
     linear-gradient(140deg, #3a3354, #2a2440);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-:global([data-theme='dark']) .empty .glyph {
+:global([data-theme='dark']) .empty .glyph,
+:global(html[data-color-scheme='dark']) .empty .glyph {
   color: rgba(255, 255, 255, 0.35);
 }

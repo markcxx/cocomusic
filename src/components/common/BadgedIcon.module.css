@@ -44,10 +44,11 @@
 }
 
 /*
- * Solid glyphs (filled heart): cutting the fill would look chewed, so the digits
- * sit just outside the shape's top-right corner instead, without a mask.
+ * Filled glyphs (liked heart) use exactly the same position and cut as the
+ * outline: the mask clears a rounded slot behind the digits, so they stay
+ * crisp on the solid fill and nothing moves when the state toggles.
  */
-.solid .count {
-  top: -6px;
-  left: calc(100% - 1px);
+.solid .cut {
+  -webkit-mask-size: 100% 100%, calc(var(--cut-w, 0px) + 1px) calc(var(--cut-h, 0px) + 1px);
+  mask-size: 100% 100%, calc(var(--cut-w, 0px) + 1px) calc(var(--cut-h, 0px) + 1px);
 }

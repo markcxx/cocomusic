@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { BrowserWindow, screen, session, shell } from 'electron';
+import { BrowserWindow, nativeTheme, screen, session, shell } from 'electron';
 import { IPC, MATERIAL_SWITCH } from '../shared/ipc';
 import { initialBounds, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './window-state';
 
@@ -27,7 +27,9 @@ export async function createMainWindow(origin: string, token: string) {
     // 'hidden' (not 'hiddenInset') lets the traffic lights sit tight in the corner.
     titleBarStyle: isMac ? 'hidden' : undefined,
     trafficLightPosition: isMac ? { x: 14, y: 14 } : undefined,
-    backgroundColor: isWindows || isMac ? '#00000000' : '#dfe2f6',
+    // See-through from the start on Windows/macOS so the OS material can show; the
+    // renderer then applies the saved window effect (or turns it off) via setWindowMaterial.
+    backgroundColor: isWindows || isMac ? '#00000000' : nativeTheme.shouldUseDarkColors ? '#15131f' : '#dfe1f5',
     backgroundMaterial: isWindows ? 'acrylic' : undefined,
     vibrancy: isMac ? 'under-window' : undefined,
     visualEffectState: isMac ? 'active' : undefined,
@@ -61,19 +63,42 @@ export async function createMainWindow(origin: string, token: string) {
 
 /* ───────── Mini player ───────── */
 
-/** User setting: OS material behind the window (off = the app's own drawn backdrop only). */
-const materialEnabled = new WeakMap<BrowserWindow, boolean>();
+/**
+ * 设置 › 外观 › 窗口效果. The window is created see-through; the OS blurs what
+ * is behind it (Windows acrylic / mica, macOS vibrancy) and the page draws its
+ * own backdrop on top at the chosen window opacity. 'none' = opaque window.
+ */
+export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
+const windowEffect = new WeakMap<BrowserWindow, WindowEffect>();
 
-export function setWindowMaterial(window: BrowserWindow, enabled: boolean) {
-  materialEnabled.set(window, enabled);
-  if (miniState.has(window)) return; // mini mode manages its own surface; applied on exit
-  applyMaterial(window, enabled);
+/** What this OS can actually do; unsupported picks fall back sensibly. */
+function supported(effect: WindowEffect): WindowEffect {
+  if (effect === 'none') return 'none';
+  if (isMac) return 'vibrancy';
+  if (isWindows) return effect === 'vibrancy' ? 'acrylic' : effect;
+  return 'none';
 }
 
-function applyMaterial(window: BrowserWindow, enabled: boolean) {
-  if (isWindows) window.setBackgroundMaterial(enabled ? 'acrylic' : 'none');
-  if (isMac) window.setVibrancy(enabled ? 'under-window' : null);
-  window.setBackgroundColor(enabled && (isWindows || isMac) ? '#00000000' : '#dfe2f6');
+export function setWindowMaterial(window: BrowserWindow, effect: WindowEffect) {
+  windowEffect.set(window, supported(effect));
+  if (miniState.has(window)) return; // mini mode manages its own surface; applied on exit
+  applyMaterial(window, supported(effect));
+}
+
+function applyMaterial(window: BrowserWindow, effect: WindowEffect) {
+  if (isWindows) window.setBackgroundMaterial(effect === 'mica' ? 'mica' : effect === 'acrylic' ? 'acrylic' : 'none');
+  if (isMac) window.setVibrancy(effect === 'vibrancy' ? 'under-window' : null);
+  const dark = nativeTheme.shouldUseDarkColors;
+  window.setBackgroundColor(effect !== 'none' ? '#00000000' : dark ? '#15131f' : '#dfe1f5');
+}
+
+/** 设置 › 外观 › 主题: tints the OS material and native chrome to match. */
+export function setColorScheme(mode: 'system' | 'light' | 'dark') {
+  nativeTheme.themeSource = mode;
+  for (const window of BrowserWindow.getAllWindows()) {
+    const effect = windowEffect.get(window);
+    if (effect && !miniState.has(window)) applyMaterial(window, effect);
+  }
 }
 
 /** Compact floating bar. Width fits the mini layout; height includes the hover-expanded lyric row. */
@@ -101,7 +126,7 @@ const MINI_SURFACE = '#241e3a';
  */
 function setMiniSurface(window: BrowserWindow, mini: boolean) {
   if (isMac) window.setWindowButtonVisibility(!mini);
-  if (!mini) { applyMaterial(window, materialEnabled.get(window) ?? true); return; }
+  if (!mini) { applyMaterial(window, windowEffect.get(window) ?? supported('acrylic')); return; }
   if (isWindows) window.setBackgroundMaterial('none');
   if (isMac) window.setVibrancy(null);
   window.setBackgroundColor(MINI_SURFACE);

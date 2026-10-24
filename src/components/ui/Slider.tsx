@@ -11,7 +11,7 @@ import styles from './Slider.module.css';
  * - Drag: thumb grows, fill follows the pointer instantly; onCommit fires on release.
  * - Keyboard: arrows/Page/Home/End, same as a native range input.
  */
-export function Slider({ value, max, onChange, onCommit, label, formatValue, step, className, size = 'md' }: {
+export function Slider({ value, max, onChange, onCommit, label, formatValue, step, className, size = 'md', orientation = 'horizontal' }: {
   value: number;
   max: number;
   /** Fires continuously while dragging. */
@@ -23,7 +23,10 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
   step?: number;
   className?: string;
   size?: 'md' | 'sm';
+  /** Vertical: fills bottom → top (volume popovers). */
+  orientation?: 'horizontal' | 'vertical';
 }) {
+  const vertical = orientation === 'vertical';
   const track = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState(false);
   const [hover, setHover] = useState<number | null>(null);
@@ -37,23 +40,27 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
   useEffect(() => { fill.set(ratio); if (dragging) smooth.jump(ratio); }, [ratio, dragging, fill, smooth]);
   const width = useTransform(smooth, v => `${v * 100}%`);
 
-  const valueAt = useCallback((clientX: number) => {
+  /** Pointer → value along the active axis (vertical: bottom = 0). */
+  const valueAt = useCallback((event: { clientX: number; clientY: number }) => {
     const rect = track.current?.getBoundingClientRect();
-    if (!rect || rect.width === 0) return 0;
-    const raw = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width)) * max;
+    if (!rect) return 0;
+    const fraction = vertical
+      ? (rect.height ? (rect.bottom - event.clientY) / rect.height : 0)
+      : (rect.width ? (event.clientX - rect.left) / rect.width : 0);
+    const raw = Math.min(1, Math.max(0, fraction)) * max;
     return step ? Math.round(raw / step) * step : raw;
-  }, [max, step]);
+  }, [max, step, vertical]);
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    const next = valueAt(event.clientX);
+    const next = valueAt(event);
     setDragging(true);
     setDragValue(next);
     onChange?.(next);
   };
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const next = valueAt(event.clientX);
+    const next = valueAt(event);
     setHover(next);
     if (!dragging) return;
     setDragValue(next);
@@ -61,7 +68,7 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
   };
   const finish = (event: PointerEvent<HTMLDivElement>) => {
     if (!dragging) return;
-    const next = valueAt(event.clientX);
+    const next = valueAt(event);
     setDragging(false);
     setDragValue(null);
     onChange?.(next);
@@ -87,7 +94,7 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
   return (
     <div
       ref={track}
-      className={cn(styles.slider, size === 'sm' && styles.small, dragging && styles.dragging, className)}
+      className={cn(styles.slider, size === 'sm' && styles.small, dragging && styles.dragging, vertical && styles.vertical, className)}
       role="slider"
       tabIndex={0}
       aria-label={label}
@@ -95,6 +102,7 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
       aria-valuemax={max}
       aria-valuenow={Math.round(shown)}
       aria-valuetext={format(shown)}
+      aria-orientation={orientation}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={finish}
@@ -104,15 +112,15 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
       style={{ '--ratio': ratio } as CSSProperties}
     >
       <div className={styles.rail}>
-        {hoverRatio !== null && !dragging && <div className={styles.ghost} style={{ width: `${hoverRatio * 100}%` }} />}
-        <motion.div className={styles.fill} style={{ width }} />
+        {hoverRatio !== null && !dragging && <div className={styles.ghost} style={vertical ? { height: `${hoverRatio * 100}%` } : { width: `${hoverRatio * 100}%` }} />}
+        <motion.div className={styles.fill} style={vertical ? { height: width } : { width }} />
       </div>
-      <motion.div className={styles.thumb} style={{ left: width }} />
+      <motion.div className={styles.thumb} style={vertical ? { bottom: width } : { left: width }} />
       <AnimatePresence>
         {(hoverRatio !== null || dragging) && (
           <motion.div
             className={styles.tooltip}
-            style={{ left: `${(dragging ? ratio : hoverRatio ?? 0) * 100}%` }}
+            style={vertical ? { bottom: `${(dragging ? ratio : hoverRatio ?? 0) * 100}%` } : { left: `${(dragging ? ratio : hoverRatio ?? 0) * 100}%` }}
             initial={{ opacity: 0, y: 4, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.9 }}

@@ -12,19 +12,30 @@ import type { AudioQuality } from '@/server/music/types';
  * Only settings that are actually wired up belong here.
  */
 
-export type AccentId = 'lavender' | 'ocean' | 'mint' | 'sakura' | 'sunset' | 'graphite';
+/** Theme colour: any "#rrggbb" (presets are just suggestions in the picker). */
+export type AccentColor = string;
+export type ThemeMode = 'system' | 'light' | 'dark';
+/** OS material behind a see-through window. mica: Windows 11 only. */
+export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 export type DoubleClickAction = 'replace' | 'insert';
 
 export interface Settings {
+  /* 曲库 */
+  /** Platform for browsing, search and the account (songs already queued keep their own). */
+  catalogSource: 'netease' | 'qq' | 'kugou';
+
   /* 外观 */
+  themeMode: ThemeMode;
+  /** System material behind the window; 'none' = opaque window. */
+  windowEffect: WindowEffect;
+  /** 0–100: how much of the app's own background is drawn over the material (lower = more desktop shows through). */
+  windowOpacity: number;
   /** 0–100: how opaque the frosted panels are (lower = more see-through). */
   glassOpacity: number;
   /** 0–60 px backdrop blur behind panels. */
   glassBlur: number;
-  /** Show the OS material (Windows acrylic / macOS vibrancy) behind the window. */
-  systemMaterial: boolean;
-  accent: AccentId;
+  accent: AccentColor;
   /** Turn off non-essential animation regardless of the OS setting. */
   reduceMotion: boolean;
   /** UI zoom, percent. */
@@ -81,10 +92,13 @@ export interface Settings {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
+  catalogSource: 'netease',
+  themeMode: 'system',
+  windowEffect: 'acrylic',
+  windowOpacity: 100,
   glassOpacity: 50,
   glassBlur: 36,
-  systemMaterial: true,
-  accent: 'lavender',
+  accent: '#9b87bf',
   reduceMotion: false,
   zoom: 100,
 
@@ -122,15 +136,16 @@ export const DEFAULT_SETTINGS: Settings = {
   toastOnTrackChange: false,
 };
 
-/** Accent palettes: [accent, strong, tint, tint-strong]. */
-export const ACCENTS: Record<AccentId, { label: string; accent: string; strong: string; tint: string; tintStrong: string }> = {
-  lavender: { label: '薰衣草', accent: '#9b87bf', strong: '#6f5aa8', tint: '#e6dff5', tintStrong: '#d8cdef' },
-  ocean: { label: '海盐蓝', accent: '#7f9fd4', strong: '#4a6fb3', tint: '#dfe8f7', tintStrong: '#cddbf2' },
-  mint: { label: '薄荷绿', accent: '#6fb7a0', strong: '#3d8a72', tint: '#dcf0e9', tintStrong: '#c8e7dc' },
-  sakura: { label: '樱花粉', accent: '#d695b4', strong: '#b05a85', tint: '#f6e1eb', tintStrong: '#efcfde' },
-  sunset: { label: '落日橘', accent: '#e0a070', strong: '#bf6f37', tint: '#f8e6d8', tintStrong: '#f2d6c1' },
-  graphite: { label: '石墨灰', accent: '#8d90a3', strong: '#555a72', tint: '#e4e5ec', tintStrong: '#d4d6e0' },
-};
+/** Quick picks shown next to the colour picker. */
+export const ACCENT_PRESETS: Array<{ label: string; color: string }> = [
+  { label: '薰衣草', color: '#9b87bf' },
+  { label: '网易红', color: '#e5473e' },
+  { label: '海盐蓝', color: '#4a7fd4' },
+  { label: '薄荷绿', color: '#3faa86' },
+  { label: '樱花粉', color: '#e07aa8' },
+  { label: '落日橘', color: '#ec8a3c' },
+  { label: '石墨灰', color: '#6b6f86' },
+];
 
 /** Desktop lyric fill gradients for the sung part. */
 export const LYRIC_COLORS: Record<LyricColorId, { label: string; from: string; to: string }> = {
@@ -144,13 +159,15 @@ export const LYRIC_COLORS: Record<LyricColorId, { label: string; from: string; t
 
 /* ───────── Validation: stored data is untrusted (older versions, hand edits). ───────── */
 
-type Rule = { type: 'number'; min: number; max: number } | { type: 'boolean' } | { type: 'enum'; values: readonly unknown[] } | { type: 'string'; max: number };
+type Rule = { type: 'number'; min: number; max: number } | { type: 'boolean' } | { type: 'enum'; values: readonly unknown[] } | { type: 'string'; max: number } | { type: 'hex' };
 const num = (min: number, max: number): Rule => ({ type: 'number', min, max });
 const bool: Rule = { type: 'boolean' };
 const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values });
 
 const RULES: Record<keyof Settings, Rule> = {
-  glassOpacity: num(0, 100), glassBlur: num(0, 60), systemMaterial: bool, accent: oneOf(...Object.keys(ACCENTS)), reduceMotion: bool, zoom: num(80, 130),
+  catalogSource: oneOf('netease', 'qq', 'kugou'),
+  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'none'), windowOpacity: num(0, 100),
+  glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
@@ -168,12 +185,23 @@ function valid<K extends keyof Settings>(key: K, value: unknown): value is Setti
     case 'boolean': return typeof value === 'boolean';
     case 'enum': return rule.values.includes(value);
     case 'string': return typeof value === 'string' && value.length <= rule.max;
+    case 'hex': return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
   }
 }
 
-function sanitize(raw: unknown): Settings {
+/** Values from earlier versions of the settings object. */
+const LEGACY_ACCENTS: Record<string, string> = { lavender: '#9b87bf', ocean: '#4a6fb3', mint: '#3d8a72', sakura: '#b05a85', sunset: '#bf6f37', graphite: '#555a72' };
+function migrate(raw: Record<string, unknown>) {
+  const next = { ...raw };
+  if (typeof next.accent === 'string' && LEGACY_ACCENTS[next.accent]) next.accent = LEGACY_ACCENTS[next.accent];
+  if (typeof next.systemMaterial === 'boolean' && next.windowEffect === undefined) next.windowEffect = next.systemMaterial ? 'acrylic' : 'none';
+  return next;
+}
+
+function sanitize(input: unknown): Settings {
   const next = { ...DEFAULT_SETTINGS };
-  if (!raw || typeof raw !== 'object') return next;
+  if (!input || typeof input !== 'object') return next;
+  const raw = migrate(input as Record<string, unknown>);
   for (const key of Object.keys(DEFAULT_SETTINGS) as Array<keyof Settings>) {
     const value = (raw as Record<string, unknown>)[key];
     if (valid(key, value)) (next as Record<string, unknown>)[key] = value;

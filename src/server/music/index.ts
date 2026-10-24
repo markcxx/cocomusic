@@ -1,10 +1,16 @@
+import { CatalogError } from './errors';
+import { SOURCE_NAMES } from './ids';
+import { kugouProvider } from './kugou/provider';
 import { neteaseProvider } from './netease/provider';
 import { NeteaseError } from './netease/client';
+import { qqProvider } from './qq/provider';
 import type { AccountProvider, CatalogProvider, CatalogSource } from './types';
 
-// QQ/Kugou providers plug in here once implemented; the settings page will choose.
-const providers: Partial<Record<CatalogSource, CatalogProvider>> = {
+// The UI picks one in 设置 › 曲库; queued songs keep their own platform.
+const providers: Record<CatalogSource, CatalogProvider> = {
   netease: neteaseProvider,
+  qq: qqProvider,
+  kugou: kugouProvider,
 };
 
 export const DEFAULT_SOURCE: CatalogSource = 'netease';
@@ -12,7 +18,7 @@ export const DEFAULT_SOURCE: CatalogSource = 'netease';
 /** Account API of the chosen platform; throws if that platform has no login support. */
 export function account(source: string | null | undefined): AccountProvider {
   const provider = catalog(source);
-  if (!provider.account) throw new CatalogError('该曲库暂不支持账号登录', 400);
+  if (!provider.account) throw new CatalogError(`${SOURCE_NAMES[provider.source]}暂不支持账号登录`, 400);
   return provider.account;
 }
 
@@ -31,15 +37,11 @@ export function invalidate(prefix: string) {
 export function catalog(source: string | null | undefined): CatalogProvider {
   const key = (source || DEFAULT_SOURCE) as CatalogSource;
   const provider = providers[key];
-  if (!provider) throw new CatalogError(key === 'qq' || key === 'kugou' ? '该曲库暂未接入，请在设置中切换回网易云音乐' : '未知的曲库来源', 400);
+  if (!provider) throw new CatalogError('未知的曲库来源', 400);
   return provider;
 }
 
-export class CatalogError extends Error {
-  constructor(message: string, public readonly status = 502) {
-    super(message);
-  }
-}
+export { CatalogError } from './errors';
 
 // Short-lived cache collapses duplicate requests (e.g. React strict mode, quick tab flips). Failures are never cached.
 const cache = new Map<string, { expires: number; value: Promise<unknown> }>();

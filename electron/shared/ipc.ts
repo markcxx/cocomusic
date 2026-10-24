@@ -37,8 +37,10 @@ export const IPC = {
   appGetSettings: 'app:get-settings',
   /** renderer → main (invoke): update main-process settings; resolves to the new settings. */
   appSetSettings: 'app:set-settings',
-  /** renderer → main: OS material (acrylic / vibrancy) on or off. */
+  /** renderer → main: window effect 'acrylic' | 'mica' | 'vibrancy' | 'none'. */
   appSetMaterial: 'app:set-material',
+  /** renderer → main: colour scheme 'system' | 'light' | 'dark' (tints OS material and native UI). */
+  appSetColorScheme: 'app:set-color-scheme',
   /** renderer → main: open the app's data folder in Finder / Explorer. */
   appOpenDataFolder: 'app:open-data-folder',
   /** main → renderer: a global media shortcut fired ('toggle' | 'next' | 'previous' | 'volume-up' | 'volume-down' | 'lyrics'). */

@@ -116,7 +116,7 @@
 
 .danger {
   background: var(--danger-fill);
-  color: #fff;
+  color: var(--text-on-accent);
   box-shadow: 0 4px 14px rgba(228, 86, 79, 0.25);
 }
 

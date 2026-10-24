@@ -47,8 +47,9 @@
   /* Text */
   --text-strong: #25294a;
   --text: #353342;
-  --text-secondary: #777487;
-  --text-muted: #8f92a8;
+  /* Tuned for ≥4.5:1 on the lavender backdrop (muted is still visibly quieter than secondary). */
+  --text-secondary: #57546a;
+  --text-muted: #5f627a;
   --text-on-accent: #ffffff;
 
   /* Accent: soft lavender family (overridden by the theme colour setting) */
@@ -108,8 +109,8 @@ html[data-color-scheme='dark'] {
 
   --text-strong: #f1effa;
   --text: #d9d6e6;
-  --text-secondary: #a5a1b8;
-  --text-muted: #7f7b94;
+  --text-secondary: #b3afc6;
+  --text-muted: #9b97b0;
 
   --trend-up: #f07a70;
   --trend-new: #5cc58a;

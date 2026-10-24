@@ -1,23 +1,39 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { settings as appSettings } from './settings';
 import { useLatest } from './use-latest';
 import type {
-  ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
+  ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongSource, SongStats,
 } from '@/server/music/types';
 
 export type {
-  ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort,
+  ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogSource, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort,
   LyricLine, Lyrics, PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
 } from '@/server/music/types';
 
-// Settings will make this switchable (qq/kugou) once those providers exist.
-let source = 'netease';
-export const setCatalogSource = (value: string) => { source = value; };
+/**
+ * Browsing goes to the platform chosen in 设置 › 曲库; song-scoped calls
+ * (url, lyrics, stats, comments) pass the song's own platform so a queued
+ * NetEase song keeps playing after switching to QQ, and vice versa.
+ */
+let source: CatalogSource = 'netease';
+let synced = false;
+/** Explicit override (tests); normally the source follows the setting. */
+export const setCatalogSource = (value: CatalogSource) => { source = value; synced = true; };
+export const currentSource = (): CatalogSource => {
+  // Read lazily from settings so the very first request already uses the saved platform.
+  if (!synced && typeof window !== 'undefined') {
+    synced = true;
+    source = appSettings.get().catalogSource;
+    appSettings.subscribe(() => { source = appSettings.get().catalogSource; });
+  }
+  return source;
+};
 
-async function get<T>(path: string, params: Record<string, string | number | undefined> = {}, signal?: AbortSignal): Promise<T> {
-  const query = new URLSearchParams({ source });
+async function get<T>(path: string, params: Record<string, string | number | undefined> = {}, signal?: AbortSignal, from: CatalogSource = currentSource()): Promise<T> {
+  const query = new URLSearchParams({ source: from });
   for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== '') query.set(key, String(value));
   const response = await fetch(`/api/music/${path}?${query}`, { signal: signal ?? AbortSignal.timeout(30000) });
   const data = await response.json().catch(() => ({ error: '曲库返回了无法解析的数据' }));
@@ -42,10 +58,10 @@ export const catalogApi = {
   artistSongs: (id: string, offset = 0, limit = 50, signal?: AbortSignal) => get<{ items: CatalogTrack[]; total: number; hasMore: boolean }>('artist', { id, section: 'songs', offset, limit }, signal),
   artistAlbums: (id: string, offset = 0, limit = 30, signal?: AbortSignal) => get<{ items: CatalogAlbum[]; total: number; hasMore: boolean }>('artist', { id, section: 'albums', offset, limit }, signal),
   searchDiscovery: (signal?: AbortSignal) => get<SearchDiscovery>('search/hot', {}, signal),
-  songSource: (id: string, signal?: AbortSignal, quality?: AudioQuality) => get<SongSource>('song', { id, section: 'url', quality }, signal),
-  lyrics: (id: string, signal?: AbortSignal) => get<Lyrics>('song', { id, section: 'lyrics' }, signal),
-  songStats: (id: string, signal?: AbortSignal) => get<SongStats>('song', { id, section: 'stats' }, signal),
-  comments: (id: string, sort: CommentSort, cursor?: string, signal?: AbortSignal) => get<CommentPage>('song', { id, section: 'comments', sort, cursor, limit: 20 }, signal),
+  songSource: (id: string, signal?: AbortSignal, quality?: AudioQuality, from?: CatalogSource) => get<SongSource>('song', { id, section: 'url', quality }, signal, from),
+  lyrics: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<Lyrics>('song', { id, section: 'lyrics' }, signal, from),
+  songStats: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<SongStats>('song', { id, section: 'stats' }, signal, from),
+  comments: (id: string, sort: CommentSort, cursor?: string, signal?: AbortSignal, from?: CatalogSource) => get<CommentPage>('song', { id, section: 'comments', sort, cursor, limit: 20 }, signal, from),
 };
 
 export type Resource<T> = { data: T | null; loading: boolean; error: string; retry: () => void };

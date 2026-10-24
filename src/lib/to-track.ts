@@ -6,6 +6,7 @@ export function toTrack(item: CatalogTrack): Track {
   return {
     id: `${item.source}:${item.id}`,
     songId: item.id,
+    source: item.source,
     title: item.title,
     artist: item.artist,
     album: item.album,

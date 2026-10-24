@@ -1,23 +1,25 @@
 'use client';
 
 import { MotionConfig } from 'framer-motion';
-import { useEffect, type ReactNode } from 'react';
-import { ACCENTS, useSettings } from '@/lib/settings';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { accentPalette } from '@/lib/color';
+import { useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
- * Applies appearance settings as CSS variables on <html>, so every surface that
- * uses the glass tokens (sheet, player, cards, menus) follows the sliders live.
- *
- * Glass opacity scales each surface's alpha relative to its designed value
- * (50 = as designed). Blur sets --glass-blur.
+ * Applies appearance settings as CSS variables / data attributes on <html>:
+ * - colour scheme (light / dark / follow system) → html[data-color-scheme]
+ * - theme colour (any hex) → accent tokens, tuned per scheme for contrast
+ * - panel glass: opacity scales each surface's alpha; blur sets --glass-blur
+ * - window: effect (OS material) + window opacity → how much of the app's own
+ *   backdrop is drawn over the blurred desktop
  */
-const SURFACES: Array<[name: string, rgb: string, alpha: number]> = [
-  ['--sheet', '246, 246, 255', 0.5],
-  ['--sheet-pinned', '238, 237, 252', 0.9],
-  ['--card', '255, 255, 255', 0.46],
-  ['--card-hover', '255, 255, 255', 0.72],
-  ['--player', '244, 244, 255', 0.58],
-  ['--nav-active', '255, 255, 255', 0.7],
+const SURFACES: Array<[name: string, rgbVar: string, alpha: number]> = [
+  ['--sheet', '--surface-rgb', 0.5],
+  ['--sheet-pinned', '--surface-pinned-rgb', 0.9],
+  ['--card', '--raised-rgb', 0.46],
+  ['--card-hover', '--raised-rgb', 0.72],
+  ['--player', '--player-rgb', 0.58],
+  ['--nav-active', '--raised-rgb', 0.7],
 ];
 
 /** opacity 0 → ×0.15, 50 → ×1, 100 → fully opaque. Never fully invisible (text must stay readable). */
@@ -26,41 +28,70 @@ function scale(alpha: number, opacity: number) {
   return alpha + (1 - alpha) * ((opacity - 50) / 50);
 }
 
-const hexToRgb = (hex: string) => {
-  const value = Number.parseInt(hex.slice(1), 16);
-  return `${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}`;
-};
+const darkQuery = () => window.matchMedia('(prefers-color-scheme: dark)');
+function useSystemDark() {
+  return useSyncExternalStore(
+    listener => { const query = darkQuery(); query.addEventListener('change', listener); return () => query.removeEventListener('change', listener); },
+    () => darkQuery().matches,
+    () => false,
+  );
+}
+
+/** Effects this platform can render (main falls back the same way). */
+export function supportedEffect(effect: WindowEffect, platform: string | undefined): WindowEffect {
+  if (effect === 'none' || !platform) return 'none';
+  if (platform === 'darwin') return 'vibrancy';
+  if (platform === 'win32') return effect === 'vibrancy' ? 'acrylic' : effect;
+  return 'none';
+}
 
 export function ApplyAppearance({ children }: { children: ReactNode }) {
   const s = useSettings();
+  const systemDark = useSystemDark();
+  const scheme = s.themeMode === 'system' ? (systemDark ? 'dark' : 'light') : s.themeMode;
+
+  // Scheme first: surface tokens below read the per-scheme base RGB values.
+  useEffect(() => {
+    document.documentElement.dataset.colorScheme = scheme;
+    window.coco?.app?.setColorScheme(s.themeMode);
+  }, [scheme, s.themeMode]);
 
   useEffect(() => {
     const root = document.documentElement.style;
-    for (const [name, rgb, alpha] of SURFACES) root.setProperty(name, `rgba(${rgb}, ${scale(alpha, s.glassOpacity).toFixed(3)})`);
+    for (const [name, rgbVar, alpha] of SURFACES) root.setProperty(name, `rgba(var(${rgbVar}), ${scale(alpha, s.glassOpacity).toFixed(3)})`);
     root.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-    // Backdrop strength follows the slider too: a very clear glass shows more of it.
-    root.setProperty('--glass-opacity', String(s.glassOpacity / 100));
-    const accent = ACCENTS[s.accent];
-    root.setProperty('--accent', accent.accent);
-    root.setProperty('--accent-strong', accent.strong);
-    root.setProperty('--accent-tint', accent.tint);
-    root.setProperty('--accent-tint-strong', accent.tintStrong);
-    root.setProperty('--accent-soft', `rgba(${hexToRgb(accent.accent)}, 0.16)`);
-    root.setProperty('--accent-rgb', hexToRgb(accent.accent));
-    root.setProperty('--accent-strong-rgb', hexToRgb(accent.strong));
+  }, [s.glassOpacity, s.glassBlur]);
+
+  useEffect(() => {
+    const palette = accentPalette(s.accent, scheme);
+    const root = document.documentElement.style;
+    root.setProperty('--accent', palette.accent);
+    root.setProperty('--accent-strong', palette.strong);
+    root.setProperty('--accent-tint', palette.tint);
+    root.setProperty('--accent-tint-strong', palette.tintStrong);
+    root.setProperty('--accent-rgb', palette.accentRgb);
+    root.setProperty('--accent-strong-rgb', palette.strongRgb);
+    root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
+  }, [s.accent, scheme]);
+
+  // Whole window: OS material (desktop only) + how much app backdrop is painted over it.
+  useEffect(() => {
+    const effect = supportedEffect(s.windowEffect, window.coco?.platform);
+    window.coco?.app?.setMaterial(effect);
+    document.documentElement.dataset.material = effect;
+    // Without a material there is nothing behind the window to reveal; stay opaque.
+    const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
+    document.documentElement.style.setProperty('--window-opacity', String(opacity));
+  }, [s.windowEffect, s.windowOpacity]);
+
+  useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';
-  }, [s.glassOpacity, s.glassBlur, s.accent, s.reduceMotion]);
+  }, [s.reduceMotion]);
 
   // UI zoom: Chromium's `zoom` keeps layout crisp (no transform blur) and fixed elements in place.
   useEffect(() => {
     document.documentElement.style.setProperty('zoom', s.zoom === 100 ? '' : String(s.zoom / 100));
   }, [s.zoom]);
-
-  // OS material behind the transparent window (desktop only).
-  useEffect(() => {
-    window.coco?.app?.setMaterial(s.systemMaterial);
-    document.documentElement.dataset.material = s.systemMaterial ? (window.coco?.material ?? 'none') : 'none';
-  }, [s.systemMaterial]);
 
   return (
     <MotionConfig reducedMotion={s.reduceMotion ? 'always' : 'user'} transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.8 }}>

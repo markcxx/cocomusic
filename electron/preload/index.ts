@@ -22,6 +22,7 @@ const IPC = {
   appGetSettings: 'app:get-settings',
   appSetSettings: 'app:set-settings',
   appSetMaterial: 'app:set-material',
+  appSetColorScheme: 'app:set-color-scheme',
   appOpenDataFolder: 'app:open-data-folder',
   appShortcut: 'app:shortcut',
 } as const;
@@ -66,7 +67,8 @@ contextBridge.exposeInMainWorld('coco', {
   app: {
     getSettings: () => ipcRenderer.invoke(IPC.appGetSettings),
     setSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke(IPC.appSetSettings, patch),
-    setMaterial: (enabled: boolean) => ipcRenderer.send(IPC.appSetMaterial, enabled),
+    setMaterial: (effect: string) => ipcRenderer.send(IPC.appSetMaterial, effect),
+    setColorScheme: (mode: string) => ipcRenderer.send(IPC.appSetColorScheme, mode),
     openDataFolder: () => ipcRenderer.send(IPC.appOpenDataFolder),
     onShortcut: (listener: (action: string) => void) => listen(IPC.appShortcut, value => (typeof value === 'string' ? value : ''), listener),
   },

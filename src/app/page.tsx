@@ -33,7 +33,7 @@ function View({ route }: { route: Route }) {
     case 'downloads': return <DownloadsView />;
     case 'settings': return <SettingsView />;
     case 'search': return <SearchResultsView keyword={route.keyword} type={route.type ?? 'song'} />;
-    case 'comments': return <CommentsView songId={route.songId} title={route.title} artist={route.artist} cover={route.cover} />;
+    case 'comments': return <CommentsView songId={route.songId} source={route.source} title={route.title} artist={route.artist} cover={route.cover} />;
     default: {
       // Every route has a page; this fails to compile if a new route is added without one.
       const unhandled: never = route;

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { NextRequest } from 'next/server';
 import { CatalogError, readJson, respond } from '@/server/music';
+import { isSource, validId } from '@/server/music/ids';
 import type { CatalogTrack } from '@/server/music/types';
 import { cancel, clearFinished, enqueue, listDownloads, removeJob, retry, setFolder, updateSettings } from '@/server/local/downloads';
 
@@ -23,11 +24,12 @@ function toTracks(value: unknown): CatalogTrack[] {
   return value.map(item => {
     const raw = (item ?? {}) as Record<string, unknown>;
     const id = String(raw.id ?? '');
-    if (!/^\d{1,20}$/.test(id) || typeof raw.title !== 'string') throw new CatalogError('歌曲信息无效', 400);
+    const source = isSource(raw.source) ? raw.source : 'netease';
+    if (!validId(source, 'song', id) || typeof raw.title !== 'string') throw new CatalogError('歌曲信息无效', 400);
     const text = (field: unknown, max = 200) => (typeof field === 'string' ? field.slice(0, max) : undefined);
     return {
       id,
-      source: 'netease',
+      source,
       title: raw.title.slice(0, 200),
       artist: text(raw.artist) ?? '未知歌手',
       album: text(raw.album),

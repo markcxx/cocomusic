@@ -10,8 +10,9 @@ import { Button, ConfirmDialog, toast } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { downloadsApi } from '@/lib/local-client';
 import { recentPlays } from '@/lib/recent-plays';
-import { ACCENTS, LYRIC_COLORS, settings, useSettings, type Settings } from '@/lib/settings';
+import { ACCENT_PRESETS, LYRIC_COLORS, settings, useSettings, type Settings } from '@/lib/settings';
 import type { AudioQuality } from '@/server/music/types';
+import { ThemeColorControl } from './ColorPicker';
 import { Range, Row, Section, Segmented, Select, Switch } from './controls';
 import styles from './Settings.module.css';
 
@@ -164,37 +165,46 @@ export function SettingsView() {
 
         <div className={styles.sections}>
           {/* ───────── 外观 ───────── */}
-          <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="亚克力毛玻璃、主题色与动画" onReset={() => settings.reset(keysOf('glassOpacity', 'glassBlur', 'systemMaterial', 'accent', 'reduceMotion', 'zoom'))}>
-            <GlassPreview />
-            <Row title="毛玻璃不透明度" description="数值越低越通透，越高越接近实色面板，适合在复杂壁纸下保持可读性">
-              <Range value={s.glassOpacity} max={100} onChange={set('glassOpacity')} label="毛玻璃不透明度" format={value => `${value}%`} />
+          <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口透明、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
+            <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步">
+              <Segmented value={s.themeMode} onChange={set('themeMode')} label="外观模式" options={[{ value: 'system', label: '跟随系统' }, { value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} />
             </Row>
-            <Row title="模糊强度" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
-              <Range value={s.glassBlur} max={60} step={2} onChange={set('glassBlur')} label="模糊强度" format={value => `${value}px`} />
-            </Row>
+
+            <div className={styles.groupLabel}>窗口</div>
             <Row
-              title={isMac() ? '系统毛玻璃（Vibrancy）' : '系统亚克力（Acrylic）'}
-              description={desktop ? '让窗口背后透出桌面，由系统渲染真实的亚克力材质；关闭后使用应用自带的渐变背景' : '需要在桌面客户端中使用'}
+              title="窗口效果"
+              description={!desktop ? '需要在桌面客户端中使用' : isMac() ? '毛玻璃：窗口背后的桌面由系统实时模糊透出' : '亚克力：背后桌面强模糊并带噪点；云母：取桌面壁纸的柔和色调（Windows 11）'}
               disabled={!desktop}
             >
-              <Switch checked={s.systemMaterial} onChange={set('systemMaterial')} label="系统材质" disabled={!desktop} />
+              <Segmented
+                value={s.windowEffect === 'none' ? 'none' : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect}
+                onChange={set('windowEffect')}
+                label="窗口效果"
+                options={isMac()
+                  ? [{ value: 'vibrancy', label: '毛玻璃' }, { value: 'none', label: '不透明' }]
+                  : [{ value: 'acrylic', label: '亚克力' }, { value: 'mica', label: '云母' }, { value: 'none', label: '不透明' }]}
+              />
             </Row>
-            <Row title="主题色" description="按钮、进度条、高亮等强调色">
-              <div className={styles.swatches} role="radiogroup" aria-label="主题色">
-                {(Object.keys(ACCENTS) as Array<keyof typeof ACCENTS>).map(id => (
-                  <button
-                    key={id}
-                    type="button"
-                    role="radio"
-                    aria-checked={s.accent === id}
-                    className={cn(styles.swatch, s.accent === id && styles.swatchActive)}
-                    style={{ '--swatch': ACCENTS[id].accent, '--swatch-strong': ACCENTS[id].strong } as React.CSSProperties}
-                    onClick={() => settings.set('accent', id)}
-                    data-tooltip={ACCENTS[id].label}
-                    aria-label={ACCENTS[id].label}
-                  />
-                ))}
-              </div>
+            <Row
+              title="窗口不透明度"
+              description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先开启窗口效果，降低后即可透过窗口看到模糊的桌面' : '降低后整个窗口变得通透，可以看到背后模糊的桌面和其他窗口'}
+              disabled={!desktop || s.windowEffect === 'none'}
+            >
+              <Range value={s.windowOpacity} max={100} step={5} onChange={set('windowOpacity')} label="窗口不透明度" format={value => `${value}%`} />
+            </Row>
+
+            <div className={styles.groupLabel}>面板毛玻璃</div>
+            <GlassPreview />
+            <Row title="面板不透明度" description="内容区、播放栏和卡片的透明程度">
+              <Range value={s.glassOpacity} max={100} onChange={set('glassOpacity')} label="面板不透明度" format={value => `${value}%`} />
+            </Row>
+            <Row title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
+              <Range value={s.glassBlur} max={60} step={2} onChange={set('glassBlur')} label="面板模糊" format={value => `${value}px`} />
+            </Row>
+
+            <div className={styles.groupLabel}>颜色与显示</div>
+            <Row title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>
+              <ThemeColorControl value={s.accent} presets={ACCENT_PRESETS} onChange={set('accent')} />
             </Row>
             <Row title="界面缩放" description="整体放大或缩小界面">
               <Segmented value={s.zoom} onChange={set('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />

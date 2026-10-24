@@ -10,6 +10,7 @@ import { Tabs } from '@/components/common/Tabs';
 import { ScrollArea } from '@/components/scroll';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
+import type { Track } from '@/types/music';
 import { LyricsPanel } from './LyricsPanel';
 import { LyricsPlayerBar } from './LyricsPlayerBar';
 import { usePlayer } from './player-store';
@@ -18,7 +19,7 @@ import { useSongStats } from './use-song-stats';
 import styles from './LyricsDrawer.module.css';
 
 /** Page 1: comment header (title + sort) fixed at the top, list scrolling beneath it. */
-function CommentsPage({ songId, total }: { songId: string; total?: number }) {
+function CommentsPage({ songId, source, total }: { songId: string; source?: Track['source']; total?: number }) {
   const [sort, setSort] = useState<CommentSortLabel>('推荐');
   const [loaded, setLoaded] = useState<number>();
   const count = loaded ?? total;
@@ -32,7 +33,7 @@ function CommentsPage({ songId, total }: { songId: string; total?: number }) {
       <ScrollArea className={styles.commentsScroll} nativeWheel>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={`${songId}:${sort}`} className={styles.commentsBody} {...fadeSwap}>
-            <CommentList songId={songId} sort={commentSortKey[sort]} onTotal={setLoaded} />
+            <CommentList songId={songId} source={source} sort={commentSortKey[sort]} onTotal={setLoaded} />
           </motion.div>
         </AnimatePresence>
       </ScrollArea>
@@ -75,7 +76,7 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
  */
 export function LyricsDrawer() {
   const { lyricsOpen, closeLyrics, track } = usePlayer();
-  const stats = useSongStats(track.songId);
+  const stats = useSongStats(track.songId, track.source);
   const lyricsBackground = useSettings().lyricsBackground;
   const viewportRef = useRef<HTMLDivElement>(null);
   const viewport = useCallback(() => viewportRef.current, []);
@@ -151,7 +152,7 @@ export function LyricsDrawer() {
                 <Stage progress={progress} />
               </div>
               <div className={styles.page} inert={!onComments}>
-                {track.songId && <CommentsPage songId={track.songId} total={stats.commentCount} />}
+                {track.songId && <CommentsPage songId={track.songId} source={track.source} total={stats.commentCount} />}
               </div>
             </motion.div>
           </div>

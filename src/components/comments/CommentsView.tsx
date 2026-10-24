@@ -10,7 +10,7 @@ import { Tabs } from '@/components/common/Tabs';
 import { usePlayer } from '@/components/player/player-store';
 import { Page, StickyBar } from '@/components/scroll';
 import { Button, ListFooter } from '@/components/ui';
-import { catalogApi, formatCount, type CommentSort, type SongComment } from '@/lib/catalog-client';
+import { catalogApi, formatCount, type CatalogSource, type CommentSort, type SongComment } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
 import styles from './CommentsView.module.css';
 
@@ -62,17 +62,17 @@ function CommentItem({ comment }: { comment: SongComment }) {
 }
 
 /** Infinite comment list; needs an enclosing ScrollArea (main sheet or lyrics page). */
-export function CommentList({ songId, sort, onTotal }: { songId: string; sort: CommentSort; onTotal: (total: number) => void }) {
+export function CommentList({ songId, source, sort, onTotal }: { songId: string; source?: CatalogSource; sort: CommentSort; onTotal: (total: number) => void }) {
   // The list hook pages by offset; map each offset to the cursor upstream gave us for it.
   const cursors = useRef(new Map<number, string | undefined>([[0, undefined]]));
   const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
     if (offset === 0) cursors.current = new Map([[0, undefined]]);
-    const page = await catalogApi.comments(songId, sort, cursors.current.get(offset), signal);
+    const page = await catalogApi.comments(songId, sort, cursors.current.get(offset), signal, source);
     cursors.current.set(offset + page.items.length, page.cursor);
     onTotal(page.total);
     return { items: page.items, total: page.total, hasMore: page.hasMore && Boolean(page.cursor) };
-  }, [songId, sort, onTotal]);
-  const list = useInfiniteList<SongComment>(`comments:${songId}:${sort}`, loadPage);
+  }, [songId, source, sort, onTotal]);
+  const list = useInfiniteList<SongComment>(`comments:${source ?? ''}:${songId}:${sort}`, loadPage);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
 
   if (list.error && !list.items.length) return <ErrorState message={list.error} onRetry={list.retry} />;
@@ -102,7 +102,7 @@ export function CommentList({ songId, sort, onTotal }: { songId: string; sort: C
 }
 
 /** Song comments in the main sheet: song header, sort tabs, infinite list. */
-export function CommentsView({ songId, title, artist, cover }: { songId: string; title?: string; artist?: string; cover?: string }) {
+export function CommentsView({ songId, source, title, artist, cover }: { songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string }) {
   const player = usePlayer();
   const [sort, setSort] = useState<SortLabel>('推荐');
   const [total, setTotal] = useState<number>();
@@ -111,7 +111,7 @@ export function CommentsView({ songId, title, artist, cover }: { songId: string;
   return (
     <Page gap="sm">
       <header className={styles.hero}>
-        <Cover seed={`netease:${songId}`} src={cover} size={96} radius={12} className={styles.cover} />
+        <Cover seed={`${source ?? 'netease'}:${songId}`} src={cover} size={96} radius={12} className={styles.cover} />
         <div className={styles.heroMeta}>
           <span className={styles.eyebrow}>歌曲评论</span>
           <h1>{title ?? <SkeletonBlock className={styles.titleSkeleton} />}</h1>
@@ -127,7 +127,7 @@ export function CommentsView({ songId, title, artist, cover }: { songId: string;
       </StickyBar>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={sort} {...fadeSwap}>
-          <CommentList songId={songId} sort={sortKey[sort]} onTotal={setTotal} />
+          <CommentList songId={songId} source={source} sort={sortKey[sort]} onTotal={setTotal} />
         </motion.div>
       </AnimatePresence>
     </Page>

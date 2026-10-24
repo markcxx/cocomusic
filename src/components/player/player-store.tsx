@@ -289,7 +289,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       attach(localAudioUrl(track.localId));
       return () => controller.abort();
     }
-    catalogApi.songSource(track.songId!, controller.signal, appSettings.get().quality)
+    catalogApi.songSource(track.songId!, controller.signal, appSettings.get().quality, track.source)
       .then(source => {
         if (controller.signal.aborted) return;
         setTrial(source.trial);

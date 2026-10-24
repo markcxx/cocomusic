@@ -23,7 +23,8 @@ const GAP = 1.5;
  * cut away underneath them with a CSS mask, so the number reads as part of the icon.
  *
  * The mask hole is sized from the rendered digits (font-independent).
- * Filled glyphs (`solid`) are never cut: the digits move just outside the corner.
+ * Filled glyphs (`solid`) use the same position and cut (slightly roomier), so
+ * both states occupy identical space and neighbouring buttons never move.
  * `reserve` adds the overflow as right margin, for icons followed by text.
  */
 export function BadgedIcon({ count, children, reserve = false, solid = false, className }: {
@@ -48,14 +49,6 @@ export function BadgedIcon({ count, children, reserve = false, solid = false, cl
       box.style.removeProperty('--reserve');
       return;
     }
-    if (solid) {
-      // No cut; still reserve room for the digits that hang past the glyph.
-      const reserveOnly = () => box.style.setProperty('--reserve', `${Math.max(0, text.offsetLeft + text.offsetWidth - icon.offsetWidth)}px`);
-      reserveOnly();
-      const observer = new ResizeObserver(reserveOnly);
-      observer.observe(text);
-      return () => observer.disconnect();
-    }
     const measure = () => {
       // Offsets share the wrapper as offset parent, so they are in the glyph's coordinates.
       icon.style.setProperty('--cut-x', `${text.offsetLeft - GAP}px`);
@@ -73,7 +66,7 @@ export function BadgedIcon({ count, children, reserve = false, solid = false, cl
 
   return (
     <span ref={wrap} className={cn(styles.wrap, reserve && styles.reserve, solid && styles.solid, className)}>
-      <span ref={glyph} className={cn(styles.glyph, label && !solid && styles.cut)}>{children}</span>
+      <span ref={glyph} className={cn(styles.glyph, label && styles.cut)}>{children}</span>
       {label && <span ref={digits} className={styles.count} aria-hidden>{label}</span>}
     </span>
   );

@@ -38,6 +38,12 @@ app.on('second-instance', (_event, argv, workingDirectory) => {
 });
 
 app.whenReady().then(async () => {
+  // Always a regular app on macOS: Dock icon + menu bar (guards against anything
+  // that switched the process to an accessory/UIElement app).
+  if (process.platform === 'darwin') {
+    app.setActivationPolicy('regular');
+    void app.dock?.show();
+  }
   registerIpc(() => server?.origin, () => lyrics);
   try {
     server = await startNextServer();

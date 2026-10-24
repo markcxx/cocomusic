@@ -15,6 +15,7 @@ import { useAccount } from './account-store';
 import { CreatePlaylistDialog } from './CreatePlaylistDialog';
 import { DeletePlaylistDialog, RenamePlaylistDialog } from './PlaylistDialogs';
 import styles from './SidebarPlaylists.module.css';
+import { shareUrl } from '@/lib/share-links';
 
 type MenuState = { playlist: UserPlaylist; anchor: HTMLElement; align: 'start' | 'end' };
 
@@ -36,7 +37,7 @@ function usePlaylistActions(onRename: (playlist: UserPlaylist) => void, onDelete
 
   const copyLink = async (playlist: UserPlaylist) => {
     try {
-      await navigator.clipboard.writeText(`https://music.163.com/#/playlist?id=${playlist.id}`);
+      await navigator.clipboard.writeText(shareUrl(playlist.source, 'playlist', playlist.id));
       toast.success('链接已复制');
     } catch {
       toast.error('复制失败');

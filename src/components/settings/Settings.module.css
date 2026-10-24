@@ -145,7 +145,7 @@
 .glassPreview + .row,
 .lyricPreview + .row,
 .facts + .row {
-  border-top: 1px solid rgba(var(--accent-strong-rgb), 0.08);
+  border-top: 1px solid var(--divider);
 }
 
 .rowVertical {
@@ -347,8 +347,8 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--swatch-strong), var(--swatch));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(var(--ink-rgb), 0.18);
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
 }
 
@@ -357,7 +357,7 @@
 }
 
 .swatchActive {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--swatch), 0 2px 8px rgba(var(--ink-rgb), 0.2);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--popover-solid), 0 0 0 4px var(--text-strong);
 }
 
 /* ───────── Glass preview ───────── */
@@ -368,7 +368,7 @@
   margin: 16px 20px 6px;
   overflow: hidden;
   border-radius: 14px;
-  background: linear-gradient(120deg, #e8e2fb, #dfeafc 50%, #fbe6ea);
+  background: linear-gradient(120deg, color-mix(in srgb, var(--accent-tint) 80%, var(--shell)), color-mix(in srgb, #dfeafc 50%, var(--shell)) 50%, color-mix(in srgb, #fbe6ea 50%, var(--shell)));
 }
 
 .glassBlob {
@@ -593,4 +593,30 @@
   .range {
     width: 220px;
   }
+}
+
+/* Sub-heading inside a section card. */
+.groupLabel {
+  padding: 14px 20px 4px;
+  border-top: 1px solid var(--divider);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+}
+
+.groupLabel + .row,
+.groupLabel + .glassPreview {
+  border-top: 0;
+}
+
+.hexTag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: var(--chip);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
 }

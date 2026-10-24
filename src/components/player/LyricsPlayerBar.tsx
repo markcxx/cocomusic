@@ -28,7 +28,7 @@ function Progress() {
  */
 export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
   const { track, queueOpen, setQueueOpen } = usePlayer();
-  const stats = useSongStats(track.songId);
+  const stats = useSongStats(track.songId, track.source);
   const desktopLyrics = useDesktopLyrics();
   return (
     <footer className={styles.bar} aria-label="播放控制">

@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { cached, catalog, CatalogError, intParam, respond } from '@/server/music';
+import { validId } from '@/server/music/ids';
 import { AUDIO_QUALITIES, type AudioQuality, type CommentSort } from '@/server/music/types';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export function GET(request: NextRequest) {
     const params = request.nextUrl.searchParams;
     const provider = catalog(params.get('source'));
     const id = params.get('id') ?? '';
-    if (!/^\d{1,20}$/.test(id)) throw new CatalogError('歌曲 ID 格式不正确', 400);
+    if (!validId(provider.source, 'song', id)) throw new CatalogError('歌曲 ID 格式不正确', 400);
     const section = params.get('section') ?? 'url';
     const prefix = `${provider.source}:song:${id}`;
     switch (section) {

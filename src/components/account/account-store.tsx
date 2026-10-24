@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { accountApi, type UserPlaylist, type UserProfile } from '@/lib/account-client';
 import { useLatest } from '@/lib/use-latest';
 import { toast } from '@/components/ui/toast';
+import { useSettings } from '@/lib/settings';
 
 type AccountState = {
   /** undefined while the stored session is being checked. */
@@ -45,11 +46,16 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (lists.status === 'fulfilled') setPlaylists(lists.value.playlists);
   }, []);
 
+  // Each platform has its own login: re-check whenever 设置 › 曲库 changes.
+  const platform = useSettings().catalogSource;
   useEffect(() => {
+    let cancelled = false;
+    const reset = setTimeout(() => { if (!cancelled) { setProfile(undefined); setLiked(new Set()); setPlaylists([]); } }, 0);
     accountApi.me()
-      .then(({ profile: current }) => { setProfile(current); if (current) void loadLibrary(); })
-      .catch(() => setProfile(null));
-  }, [loadLibrary]);
+      .then(({ profile: current }) => { if (cancelled) return; setProfile(current); if (current) void loadLibrary(); })
+      .catch(() => { if (!cancelled) setProfile(null); });
+    return () => { cancelled = true; clearTimeout(reset); };
+  }, [loadLibrary, platform]);
 
   const requireLogin = useCallback(() => {
     if (profileRef.current) return true;

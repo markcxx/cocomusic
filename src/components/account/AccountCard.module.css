@@ -16,7 +16,7 @@
   position: relative;
   height: 104px;
   overflow: hidden;
-  background: linear-gradient(135deg, #d8cdef 0%, #c4d4f5 55%, #efd6ea 100%);
+  background: linear-gradient(135deg, var(--accent-tint-strong) 0%, color-mix(in srgb, var(--accent-tint) 60%, #c4d4f5) 55%, color-mix(in srgb, var(--accent-tint) 60%, #efd6ea) 100%);
 }
 
 .banner img {
@@ -112,7 +112,7 @@
 
 .verified {
   background: rgba(224, 96, 90, 0.12);
-  color: #d4544e;
+  color: var(--danger);
 }
 
 .signature {
@@ -262,4 +262,8 @@
 /* VIP: warm gold glow along the card's top edge. */
 .cardVip {
   box-shadow: inset 0 0 0 1px rgba(226, 168, 75, 0.35), 0 24px 64px rgba(var(--ink-rgb), 0.24);
+}
+
+:global(html[data-color-scheme='dark']) .banner {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 45%, #1d1a2b), #23304a 55%, #3a2438);
 }

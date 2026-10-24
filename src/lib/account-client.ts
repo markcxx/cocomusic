@@ -1,10 +1,10 @@
 'use client';
 
+import { currentSource } from './catalog-client';
 import type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
 export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
-const source = 'netease';
 
 export class AccountError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -13,7 +13,8 @@ export class AccountError extends Error {
 }
 
 async function call<T>(path: string, init: RequestInit & { query?: Record<string, string> } = {}): Promise<T> {
-  const query = new URLSearchParams({ source, ...(init.query ?? {}) });
+  // The account belongs to whichever platform is selected in 设置 › 曲库.
+  const query = new URLSearchParams({ source: currentSource(), ...(init.query ?? {}) });
   const response = await fetch(`/api/account/${path}?${query}`, {
     ...init,
     headers: init.body ? { 'Content-Type': 'application/json' } : undefined,

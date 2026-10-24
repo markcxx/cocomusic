@@ -12,6 +12,7 @@ import { formatCount } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
 import { useAccount } from './account-store';
 import styles from './AccountCard.module.css';
+import { shareUrl } from '@/lib/share-links';
 
 const VIP_LABELS: Record<number, string> = { 10: '音乐包', 11: '黑胶VIP' };
 
@@ -108,7 +109,7 @@ function CardBody({ profile, detail, error, onClose }: { profile: UserProfile; d
         <Action
           icon={<ExternalLink size={15} strokeWidth={1.6} />}
           label="个人主页"
-          onClick={go(() => { window.open(detail?.url ?? `https://music.163.com/#/user/home?id=${profile.id}`, '_blank', 'noopener'); })}
+          onClick={go(() => { window.open(detail?.url ?? shareUrl(profile.source, 'user', profile.id), '_blank', 'noopener'); })}
         />
         <Action icon={<LogOut size={15} strokeWidth={1.6} />} label="退出登录" danger onClick={go(() => void logout())} />
       </div>

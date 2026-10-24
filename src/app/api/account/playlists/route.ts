@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { account, CatalogError, invalidate, readJson, respond } from '@/server/music';
+import { isSource, validId } from '@/server/music/ids';
 
 export const dynamic = 'force-dynamic';
 
@@ -26,7 +27,7 @@ export function PATCH(request: NextRequest) {
     const body = await readJson<{ id?: unknown; name?: unknown }>(request);
     const id = String(body.id ?? '');
     const name = typeof body.name === 'string' ? body.name.trim() : '';
-    if (!/^\d{1,20}$/.test(id)) throw new CatalogError('歌单 ID 格式不正确', 400);
+    if (!validId(isSource(source) ? source : 'netease', 'playlist', id)) throw new CatalogError('歌单 ID 格式不正确', 400);
     if (!name || name.length > 40) throw new CatalogError('歌单名称需为 1-40 个字符', 400);
     await account(source).renamePlaylist(id, name);
     invalidate(`${source || 'netease'}:playlist:${id}:`);
@@ -39,7 +40,8 @@ export function DELETE(request: NextRequest) {
   return respond(async () => {
     const params = request.nextUrl.searchParams;
     const id = params.get('id') ?? '';
-    if (!/^\d{1,20}$/.test(id)) throw new CatalogError('歌单 ID 格式不正确', 400);
+    const source = params.get('source');
+    if (!validId(isSource(source) ? source : 'netease', 'playlist', id)) throw new CatalogError('歌单 ID 格式不正确', 400);
     await account(params.get('source')).deletePlaylist(id);
     invalidate(`${params.get('source') || 'netease'}:playlist:${id}:`);
     return { ok: true };

@@ -30,8 +30,10 @@ interface CocoDesktopBridge {
   app: {
     getSettings(): Promise<CocoAppSettingsResult>;
     setSettings(patch: Partial<CocoAppSettings>): Promise<CocoAppSettingsResult>;
-    /** OS material (acrylic / vibrancy) behind the main window. */
-    setMaterial(enabled: boolean): void;
+    /** OS material behind the main window (unsupported values fall back per platform). */
+    setMaterial(effect: 'acrylic' | 'mica' | 'vibrancy' | 'none'): void;
+    /** Light/dark for native chrome and the OS material tint. */
+    setColorScheme(mode: 'system' | 'light' | 'dark'): void;
     openDataFolder(): void;
     /** Global media shortcut fired (only while enabled in settings). */
     onShortcut(listener: (action: 'toggle' | 'next' | 'previous' | 'volume-up' | 'volume-down' | 'lyrics' | string) => void): () => void;

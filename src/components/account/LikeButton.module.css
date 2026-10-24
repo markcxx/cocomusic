@@ -7,9 +7,12 @@
   display: inline-flex;
 }
 
-/* Embedded digits overhang the glyph; widen the hit area to cover them. */
+/*
+ * Embedded digits overhang the glyph. A fixed width that fits the widest label
+ * ("10w+") keeps neighbours (上一曲) still when the count or liked state changes.
+ */
 .badged {
-  width: auto;
-  min-width: 34px;
-  padding: 0 8px;
+  justify-content: flex-start;
+  width: 52px;
+  padding: 0 0 0 8px;
 }

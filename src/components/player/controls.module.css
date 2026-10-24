@@ -72,21 +72,70 @@
   to { transform: rotate(360deg); }
 }
 
-/* Embedded digits overhang the glyph; widen the hit area to cover them. */
+/* Same fixed slot as the like button: the count never resizes the button. */
 .badged {
-  width: auto;
-  min-width: 34px;
-  padding: 0 8px;
+  justify-content: flex-start;
+  width: 52px;
+  padding: 0 0 0 8px;
 }
 
 .volume {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
 }
 
-.volumeSlider {
-  width: 96px;
+/* Floating vertical slider above the speaker button. The invisible padding
+   below it bridges the gap so moving the pointer up never closes it. */
+.volumePopover {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 44px;
+  margin-left: -22px;
+  padding: 10px 0 12px;
+  border-radius: 14px;
+  background: var(--popover-solid);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--shadow-pop);
+  transform-origin: center bottom;
+}
+
+.volumePopover::after {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: 0;
+  height: 8px;
+  content: '';
+}
+
+.volumeValue {
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.volumeTrack {
+  display: flex;
+  justify-content: center;
+  height: 112px;
+}
+
+/* Lyrics page: dark glass popover. */
+:global([data-theme='dark']) .volumePopover {
+  background: rgba(30, 26, 46, 0.92);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 16px 40px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+}
+
+:global([data-theme='dark']) .volumeValue {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 /* ───────── Dark theme (lyrics page) ───────── */

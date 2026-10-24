@@ -1,10 +1,11 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { FolderCog, FolderOpen, Play, RotateCw, Trash2, X } from 'lucide-react';
+import { ArrowDownToLine, CheckCircle2, FolderCog, FolderOpen, Play, RotateCw, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Cover } from '@/components/common/Cover';
 import { Tabs } from '@/components/common/Tabs';
+import { useNavigation } from '@/components/layout/navigation';
 import { usePlayer } from '@/components/player/player-store';
 import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
 import { Button, ConfirmDialog, IconButton, toast } from '@/components/ui';
@@ -12,7 +13,6 @@ import { downloadsApi, localToTrack, type DownloadJob } from '@/lib/local-client
 import { cn } from '@/lib/cn';
 import type { Track } from '@/types/music';
 import { downloads, useDownloads } from './download-store';
-import { DownloadsEmpty } from './DownloadsEmpty';
 import styles from './Downloads.module.css';
 
 const tabs = ['下载中', '已下载'] as const;
@@ -55,7 +55,8 @@ function JobState({ job }: { job: DownloadJob }) {
 /** 下载管理: active queue and finished files. Downloads run in the app server and survive page changes. */
 export function DownloadsView() {
   const player = usePlayer();
-  const { jobs, folder, loaded, settings: dlSettings } = useDownloads();
+  const { jobs, folder, loaded } = useDownloads();
+  const { navigate } = useNavigation();
   const bridge = typeof window === 'undefined' ? undefined : window.coco?.files;
   const [tab, setTab] = useState<Tab>('下载中');
   const [removing, setRemoving] = useState<DownloadJob | null>(null);
@@ -123,7 +124,14 @@ export function DownloadsView() {
           </AnimatePresence>
         </ul>
       ) : (
-        <DownloadsEmpty firstTime={loaded && !jobs.length} tab={tab} settings={dlSettings} folder={folder} onChangeFolder={bridge ? () => void changeFolder() : undefined} />
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon} aria-hidden>
+            {tab === '下载中' ? <ArrowDownToLine size={26} strokeWidth={1.6} /> : <CheckCircle2 size={26} strokeWidth={1.6} />}
+          </span>
+          <p>{tab === '下载中' ? (jobs.length ? '下载任务都已完成' : '暂无下载任务') : '还没有下载过歌曲'}</p>
+          <span>在歌曲列表点击下载按钮，或在歌单、专辑页一键下载全部</span>
+          <button type="button" className={styles.emptyLink} onClick={() => navigate({ name: 'settings' })}>下载设置</button>
+        </div>
       )}
 
       <ConfirmDialog

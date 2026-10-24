@@ -117,7 +117,7 @@
   background: rgba(224, 96, 90, 0.12);
   font-size: 10px;
   line-height: 15px;
-  color: #d4544e;
+  color: var(--danger);
 }
 
 .content {
@@ -134,7 +134,7 @@
   margin: 8px 0 0;
   padding: 8px 12px;
   border-radius: 10px;
-  background: var(--comment-quote, rgba(255, 255, 255, 0.45));
+  background: var(--comment-quote, var(--chip));
   box-shadow: inset 0 0 0 1px var(--glass-edge);
   font-size: 13px;
   line-height: 1.6;

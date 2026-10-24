@@ -20,13 +20,13 @@ export function PlayerBar() {
   const player = usePlayer();
   const { route, navigate } = useNavigation();
   const { track } = player;
-  const stats = useSongStats(track.songId);
+  const stats = useSongStats(track.songId, track.source);
   const desktopLyrics = useDesktopLyrics();
-  const viewingComments = route.name === 'comments' && route.songId === track.songId;
+  const viewingComments = route.name === 'comments' && route.songId === track.songId && (route.source ?? 'netease') === (track.source ?? 'netease');
 
   const openComments = () => {
     if (!track.songId) return;
-    navigate({ name: 'comments', songId: track.songId, title: track.title, artist: track.artist, cover: track.cover });
+    navigate({ name: 'comments', songId: track.songId, source: track.source, title: track.title, artist: track.artist, cover: track.cover });
   };
 
   return (

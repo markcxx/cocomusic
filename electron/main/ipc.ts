@@ -6,7 +6,7 @@ import { AUDIO_EXTENSIONS, IPC } from '../shared/ipc';
 import { getAppSettings, setAppSettings } from './app-settings';
 import type { DesktopLyrics } from './desktop-lyrics';
 import { handedOut, markOpenFilesReady } from './open-files';
-import { setWindowMaterial, toggleMini } from './window';
+import { setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
 
 /** Paths the user picked through a system dialog; only these (or opened files) may be revealed. */
 const picked = new Set<string>();
@@ -76,8 +76,12 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
 
   invoke(IPC.appGetSettings, () => getAppSettings());
   invoke(IPC.appSetSettings, (_window, patch) => (patch && typeof patch === 'object' ? setAppSettings(patch as Record<string, unknown>) : getAppSettings()));
-  handle(IPC.appSetMaterial, (window, enabled) => {
-    if (typeof enabled === 'boolean' && !lyrics()?.isLyricsWindow(window)) setWindowMaterial(window, enabled);
+  handle(IPC.appSetMaterial, (window, effect) => {
+    const effects: WindowEffect[] = ['acrylic', 'mica', 'vibrancy', 'none'];
+    if (effects.includes(effect as WindowEffect) && !lyrics()?.isLyricsWindow(window)) setWindowMaterial(window, effect as WindowEffect);
+  });
+  handle(IPC.appSetColorScheme, (_window, mode) => {
+    if (mode === 'system' || mode === 'light' || mode === 'dark') setColorScheme(mode);
   });
   handle(IPC.appOpenDataFolder, () => { void shell.openPath(app.getPath('userData')); });
 

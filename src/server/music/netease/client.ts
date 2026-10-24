@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { CatalogError } from '../errors';
 import { session } from '../session';
 import { eapiCheckToken } from './check-token';
 import { eapi, eapiDecrypt, weapi } from './crypto';
@@ -9,9 +10,9 @@ const WEB_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KH
 const DESKTOP_UA = 'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36 Chrome/91.0.4472.164 NeteaseMusicDesktop/3.1.19.204510';
 const TIMEOUT_MS = 12000;
 
-export class NeteaseError extends Error {
-  constructor(message: string, public readonly status = 502, public readonly code?: number) {
-    super(message);
+export class NeteaseError extends CatalogError {
+  constructor(message: string, status = 502, public readonly code?: number) {
+    super(message, status);
   }
 }
 

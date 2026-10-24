@@ -11,7 +11,7 @@ import type { Track } from '@/types/music';
  */
 
 export type PlayerMessage =
-  | { type: 'track'; track: Pick<Track, 'id' | 'title' | 'artist' | 'songId' | 'localId'>; trialStart: number }
+  | { type: 'track'; track: Pick<Track, 'id' | 'title' | 'artist' | 'songId' | 'localId' | 'source' | 'trialClip'>; trialStart: number }
   /** Song position at `at` (performance.timeOrigin + now), so followers can extrapolate smoothly. */
   | { type: 'clock'; position: number; playing: boolean; at: number }
   | { type: 'command'; command: PlayerCommand };
@@ -35,7 +35,7 @@ export const broadcastPlayer = {
     const key = `${track.id}|${trial?.start ?? 0}`;
     if (!force && key === lastTrackKey) return;
     lastTrackKey = key;
-    open()?.postMessage({ type: 'track', track: { id: track.id, title: track.title, artist: track.artist, songId: track.songId, localId: track.localId }, trialStart: trial?.start ?? 0 } satisfies PlayerMessage);
+    open()?.postMessage({ type: 'track', track: { id: track.id, title: track.title, artist: track.artist, songId: track.songId, localId: track.localId, source: track.source, trialClip: track.trialClip }, trialStart: trial?.start ?? 0 } satisfies PlayerMessage);
   },
   /** Throttled: followers extrapolate between ticks, so ~4/s is plenty (plus on every play/pause or seek). */
   publishClock(position: number, playing: boolean) {

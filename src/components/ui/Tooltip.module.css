@@ -19,6 +19,13 @@
   -webkit-backdrop-filter: blur(12px) saturate(1.4);
 }
 
+/* Dark theme: a raised grey-violet bubble with a hairline, still above the surface tone. */
+:global(html[data-color-scheme='dark']) .tooltip:not(.inverted) {
+  --bg: rgba(62, 57, 86, 0.96);
+  --fg: #f1effa;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+
 /* Over the dark lyrics page: frosted light bubble. */
 .inverted {
   --bg: var(--popover);
