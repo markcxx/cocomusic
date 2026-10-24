@@ -18,12 +18,13 @@
     "dist:dir": "npm run build && electron-builder --dir",
     "lint": "eslint",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
-    "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\""
+    "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\""
   },
   "dependencies": {
     "clsx": "2.1.1",
     "framer-motion": "12.26.2",
     "lucide-react": "0.562.0",
+    "music-metadata": "12.2.3",
     "next": "16.1.2",
     "qrcode": "1.5.4",
     "react": "19.2.3",

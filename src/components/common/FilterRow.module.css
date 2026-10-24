@@ -66,7 +66,7 @@
 }
 
 .option:hover:not([data-active='true']) {
-  background: rgba(155, 135, 191, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   color: var(--text-strong);
 }
 

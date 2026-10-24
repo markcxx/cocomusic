@@ -3,12 +3,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLatest } from './use-latest';
 import type {
-  ArtistInfo, BestMatch, CatalogAlbum, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
+  ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongSource, SongStats,
 } from '@/server/music/types';
 
 export type {
-  ArtistInfo, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort,
+  ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort,
   LyricLine, Lyrics, PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
 } from '@/server/music/types';
 
@@ -42,7 +42,7 @@ export const catalogApi = {
   artistSongs: (id: string, offset = 0, limit = 50, signal?: AbortSignal) => get<{ items: CatalogTrack[]; total: number; hasMore: boolean }>('artist', { id, section: 'songs', offset, limit }, signal),
   artistAlbums: (id: string, offset = 0, limit = 30, signal?: AbortSignal) => get<{ items: CatalogAlbum[]; total: number; hasMore: boolean }>('artist', { id, section: 'albums', offset, limit }, signal),
   searchDiscovery: (signal?: AbortSignal) => get<SearchDiscovery>('search/hot', {}, signal),
-  songSource: (id: string, signal?: AbortSignal) => get<SongSource>('song', { id, section: 'url' }, signal),
+  songSource: (id: string, signal?: AbortSignal, quality?: AudioQuality) => get<SongSource>('song', { id, section: 'url', quality }, signal),
   lyrics: (id: string, signal?: AbortSignal) => get<Lyrics>('song', { id, section: 'lyrics' }, signal),
   songStats: (id: string, signal?: AbortSignal) => get<SongStats>('song', { id, section: 'stats' }, signal),
   comments: (id: string, sort: CommentSort, cursor?: string, signal?: AbortSignal) => get<CommentPage>('song', { id, section: 'comments', sort, cursor, limit: 20 }, signal),

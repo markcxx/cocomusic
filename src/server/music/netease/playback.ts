@@ -1,5 +1,5 @@
 import { buildLyrics } from '../lrc';
-import type { CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
+import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
 import { NeteaseError, neteaseEapi } from './client';
 import { image, num, record, rows, text, type Raw } from './mappers';
 
@@ -7,8 +7,8 @@ import { image, num, record, rows, text, type Raw } from './mappers';
 // song_url_v1, lyric_new, song_red_count, comment_new.
 
 /** song_url_v1. Uses the stored login when present so VIP members get full tracks. */
-export async function songSource(id: string): Promise<SongSource> {
-  const data = await neteaseEapi<Raw>('/api/song/enhance/player/url/v1', { ids: `[${id}]`, level: 'exhigh', encodeType: 'flac' });
+export async function songSource(id: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
+  const data = await neteaseEapi<Raw>('/api/song/enhance/player/url/v1', { ids: `[${id}]`, level: quality, encodeType: 'flac' });
   const item = rows(data.data).find(row => text(row.id) === id) ?? rows(data.data)[0];
   const url = text(item?.url).replace(/^http:/, 'https:');
   if (!item || !url) {

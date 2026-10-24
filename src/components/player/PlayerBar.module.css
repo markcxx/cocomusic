@@ -161,3 +161,21 @@
   font-size: 15px;
   line-height: 1;
 }
+
+/* Nothing chosen yet: not a button, no hover lift. */
+.trackButton[data-empty],
+.trackButton[data-empty]:hover {
+  background: transparent;
+  box-shadow: none;
+  cursor: default;
+}
+
+.trackButton[data-empty] .thumb {
+  box-shadow: none;
+  transform: none;
+}
+
+.emptyTitle,
+.trackButton[data-empty]:hover .meta strong {
+  color: var(--text-secondary);
+}

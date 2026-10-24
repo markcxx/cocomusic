@@ -17,7 +17,6 @@ export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload
   onQueue: () => void;
   /** Add the selected songs to one of the user's playlists. */
   onCollect?: (playlistId: string) => void;
-  /** Omitted until the download service exists; the button shows disabled. */
   onDownload?: () => void;
 }) {
   const { profile, playlists, openLogin } = useAccount();
@@ -62,7 +61,7 @@ export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload
               <Button icon={<FolderPlus size={15} strokeWidth={1.5} />} onClick={() => (profile ? setCollecting(value => !value) : openLogin())} disabled={empty}>收藏到歌单</Button>
             </span>
           )}
-          <Button icon={<Download size={15} strokeWidth={1.5} />} onClick={onDownload} disabled={empty || !onDownload} title={onDownload ? undefined : '下载功能即将接入'}>下载</Button>
+          {onDownload && <Button icon={<Download size={15} strokeWidth={1.5} />} onClick={onDownload} disabled={empty}>下载</Button>}
           <span className={styles.divider} aria-hidden />
           <IconButton label="退出多选" onClick={selection.exit} iconHover={{ rotate: 90 }}>
             <X size={17} strokeWidth={1.5} />

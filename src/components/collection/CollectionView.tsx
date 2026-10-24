@@ -15,6 +15,7 @@ import { catalogApi, type CollectionInfo } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
 import { useSelection } from '@/lib/selection';
 import { toTrack } from '@/lib/to-track';
+import { downloads } from '@/components/downloads/download-store';
 import { CollectionHeader } from './CollectionHeader';
 import styles from './CollectionView.module.css';
 
@@ -46,6 +47,18 @@ export function CollectionView({ kind, id, title }: { kind: 'playlist' | 'album'
     const queue = tracks.map(toTrack);
     if (queue[0]) player.play(queue[0], queue);
   };
+  /** Every track of the collection (albums are complete; playlists may need more pages). */
+  const downloadAll = async () => {
+    if (kind === 'album' || !list.hasMore) { await downloads.add(list.items); return; }
+    const all = [...list.items];
+    while (all.length < (info?.trackCount ?? 0) && all.length < 1000) {
+      const page = await catalogApi.playlist(id, all.length, 200).catch(() => null);
+      if (!page?.tracks.length) break;
+      all.push(...page.tracks);
+      if (!page.hasMore) break;
+    }
+    await downloads.add(all);
+  };
   // Keep playlist order for batch actions regardless of click order.
   const selectedTracks = () => list.items.filter(track => selection.selected.has(trackKey(track)));
 
@@ -53,7 +66,7 @@ export function CollectionView({ kind, id, title }: { kind: 'playlist' | 'album'
 
   return (
     <Page gap="sm">
-      <CollectionHeader info={info} fallbackTitle={title} onPlayAll={() => playTracks(visible)} />
+      <CollectionHeader info={info} fallbackTitle={title} onPlayAll={() => playTracks(visible)} onDownloadAll={() => void downloadAll()} />
       <StickyBar compactTitle={info?.name ?? title}>
         <div className={styles.toolbar}>
           <span className={styles.count}>
@@ -95,6 +108,7 @@ export function CollectionView({ kind, id, title }: { kind: 'playlist' | 'album'
         onPlay={() => { playTracks(selectedTracks()); selection.exit(); }}
         onQueue={() => { player.enqueue(selectedTracks().map(toTrack)); selection.exit(); }}
         onCollect={async playlistId => { await addToPlaylist(playlistId, selectedTracks().map(track => track.id)); selection.exit(); }}
+        onDownload={() => { void downloads.add(selectedTracks()); selection.exit(); }}
       />
     </Page>
   );

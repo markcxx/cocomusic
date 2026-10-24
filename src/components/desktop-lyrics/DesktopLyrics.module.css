@@ -1,0 +1,227 @@
+/* The window is transparent; only text, its outline and the hover strip paint. */
+.root {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 24px 12px;
+  border-radius: 18px;
+  color: #fff;
+  transition: background-color 220ms ease, box-shadow 220ms ease;
+  /* Dragging is done by the main process (see DesktopLyrics.tsx), not a drag region. */
+  cursor: grab;
+  user-select: none;
+}
+
+.root:active {
+  cursor: grabbing;
+}
+
+/* Unlocked hover: a faint pane shows the draggable/resizable area. */
+.hovering {
+  background: rgba(24, 18, 44, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(10px);
+}
+
+.locked {
+  cursor: default;
+}
+
+/* Hover strip: no pill of its own. The transport sits in the exact centre
+   (equal side columns); extras flank it. Each button has its own soft glass
+   chip so it stays legible over the lyrics and any wallpaper. */
+.controlsWrap {
+  position: absolute;
+  top: 6px;
+  right: 14px;
+  left: 14px;
+  cursor: default;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.side {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sideEnd {
+  justify-content: flex-end;
+}
+
+.transport {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.92);
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.tool:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+}
+
+.tool:active:not(:disabled) {
+  transform: scale(0.92);
+}
+
+.tool:disabled {
+  opacity: 0.4;
+}
+
+.play {
+  width: 34px;
+  height: 34px;
+  background: rgba(255, 255, 255, 0.92);
+  color: #2b2540;
+}
+
+.play:hover:not(:disabled) {
+  background: #fff;
+  color: #2b2540;
+}
+
+.playGlyph {
+  margin-left: 2px;
+}
+
+.on {
+  background: color-mix(in srgb, var(--to) 38%, transparent);
+  color: #fff;
+}
+
+/* A− / A+: serif-free capital with a raised sign, sized to sit with the 15px icons. */
+.fontGlyph {
+  display: inline-flex;
+  align-items: flex-start;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+.fontGlyph sup {
+  margin-left: 1px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: 0;
+}
+
+.divider {
+  width: 1px;
+  height: 14px;
+  margin: 0 2px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: calc(var(--size) * 1.35 + var(--size) * 0.6);
+}
+
+.primary,
+.secondary {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+}
+
+/* Stroke + shadow keep the text readable on light and dark wallpapers. */
+.primary {
+  position: relative;
+  font-size: var(--size);
+  font-weight: var(--weight, 700);
+  line-height: 1.35;
+  letter-spacing: 0.5px;
+}
+
+.base {
+  color: rgba(255, 255, 255, 0.42);
+  -webkit-text-stroke: 3px rgba(20, 14, 40, 0.45);
+  paint-order: stroke fill;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, var(--from), var(--to));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--to) 55%, transparent));
+  transition: clip-path 120ms linear;
+}
+
+.secondary {
+  font-size: calc(var(--size) * 0.52);
+  font-weight: 500;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.82);
+  -webkit-text-stroke: 2px rgba(20, 14, 40, 0.4);
+  paint-order: stroke fill;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+}
+
+/* ───────── 设置 › 桌面歌词 ───────── */
+
+.noStroke .base,
+.noStroke .secondary {
+  -webkit-text-stroke: 0;
+}
+
+.align-left .stage {
+  align-items: flex-start;
+}
+
+.align-left .primary,
+.align-left .secondary {
+  text-align: left;
+}
+
+.align-right .stage {
+  align-items: flex-end;
+}
+
+.align-right .primary,
+.align-right .secondary {
+  text-align: right;
+}

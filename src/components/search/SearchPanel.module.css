@@ -20,7 +20,7 @@
 }
 
 .section + .section {
-  border-top: 1px solid rgba(111, 90, 168, 0.08);
+  border-top: 1px solid rgba(var(--accent-strong-rgb), 0.08);
   padding-top: 8px;
 }
 
@@ -65,7 +65,7 @@
   align-items: center;
   height: 28px;
   border-radius: 999px;
-  background: rgba(155, 135, 191, 0.1);
+  background: rgba(var(--accent-rgb), 0.1);
   font-size: 13px;
   color: var(--text);
   transition: background-color 160ms ease;
@@ -120,7 +120,7 @@
 }
 
 .active {
-  background: rgba(155, 135, 191, 0.16);
+  background: rgba(var(--accent-rgb), 0.16);
 }
 
 .rowIcon {
@@ -238,7 +238,7 @@
   gap: 6px;
   margin: 4px -8px 0;
   padding: 8px 16px;
-  border-top: 1px solid rgba(111, 90, 168, 0.08);
+  border-top: 1px solid rgba(var(--accent-strong-rgb), 0.08);
   background: rgba(250, 249, 255, 0.92);
   font-size: 11px;
   color: var(--text-muted);

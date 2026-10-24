@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { cached, catalog, CatalogError, intParam, respond } from '@/server/music';
-import type { CommentSort } from '@/server/music/types';
+import { AUDIO_QUALITIES, type AudioQuality, type CommentSort } from '@/server/music/types';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,7 +8,7 @@ const sorts: CommentSort[] = ['recommend', 'hot', 'latest'];
 
 /**
  * GET /api/music/song?id=&section=url|lyrics|stats|comments
- * - url: playable stream (never cached: links expire and depend on the login)
+ * - url: playable stream (&quality=standard|higher|exhigh|lossless|hires) (never cached: links expire and depend on the login)
  * - lyrics: synced lines with translations
  * - stats: like (红心) and comment counts
  * - comments: &sort=recommend|hot|latest&cursor=&limit=
@@ -22,7 +22,11 @@ export function GET(request: NextRequest) {
     const section = params.get('section') ?? 'url';
     const prefix = `${provider.source}:song:${id}`;
     switch (section) {
-      case 'url': return provider.songSource(id);
+      case 'url': {
+        const quality = (params.get('quality') ?? 'exhigh') as AudioQuality;
+        if (!AUDIO_QUALITIES.includes(quality)) throw new CatalogError('未知的音质', 400);
+        return provider.songSource(id, quality);
+      }
       case 'lyrics': return cached(`${prefix}:lyrics`, () => provider.lyrics(id), 60 * 60_000);
       case 'stats': return cached(`${prefix}:stats`, () => provider.songStats(id), 5 * 60_000);
       case 'comments': {

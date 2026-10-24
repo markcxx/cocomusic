@@ -1,6 +1,7 @@
 'use client';
 
 import { ListMusic } from 'lucide-react';
+import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics';
 import { useNavigation } from '@/components/layout/navigation';
 import { IconButton } from '@/components/ui';
 import { CommentButton, Transport, VolumeControl } from './controls';
@@ -20,6 +21,7 @@ export function PlayerBar() {
   const { route, navigate } = useNavigation();
   const { track } = player;
   const stats = useSongStats(track.songId);
+  const desktopLyrics = useDesktopLyrics();
   const viewingComments = route.name === 'comments' && route.songId === track.songId;
 
   const openComments = () => {
@@ -41,10 +43,22 @@ export function PlayerBar() {
       <div className={styles.tools}>
         <CommentButton count={stats.commentCount} onClick={openComments} disabled={!track.songId} active={viewingComments} />
         <VolumeControl />
-        <IconButton label="歌词" className={styles.lyricButton} onClick={player.openLyrics}>词</IconButton>
-        <IconButton label="播放队列" tooltip="播放队列（即将接入）">
-          <ListMusic size={19} strokeWidth={1.4} />
+        <IconButton
+          label={desktopLyrics.available ? (desktopLyrics.visible ? '关闭桌面歌词' : '打开桌面歌词') : '桌面歌词'}
+          tooltip={desktopLyrics.available ? undefined : '桌面歌词需要在桌面客户端中使用'}
+          className={styles.lyricButton}
+          onClick={desktopLyrics.toggle}
+          disabled={!desktopLyrics.available}
+          active={desktopLyrics.visible}
+          pressed={desktopLyrics.visible}
+        >
+          词
         </IconButton>
+        <span data-queue-toggle style={{ display: 'inline-flex' }}>
+          <IconButton label="播放列表" tooltip={`播放列表${player.queue.length ? ` · ${player.queue.length} 首` : ''}`} onClick={() => player.setQueueOpen(!player.queueOpen)} active={player.queueOpen} pressed={player.queueOpen}>
+            <ListMusic size={19} strokeWidth={1.4} />
+          </IconButton>
+        </span>
       </div>
     </footer>
   );

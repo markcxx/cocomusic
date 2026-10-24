@@ -36,7 +36,7 @@
   bottom: 0;
   left: 28px;
   height: 1px;
-  background: rgba(111, 90, 168, 0.1);
+  background: rgba(var(--accent-strong-rgb), 0.1);
   pointer-events: none;
 }
 

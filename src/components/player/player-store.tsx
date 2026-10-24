@@ -3,9 +3,13 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
 import { catalogApi, type SongSource } from '@/lib/catalog-client';
-import { initialTrack } from '@/lib/mock-data';
+import { localAudioUrl } from '@/lib/local-client';
+import { emptyTrack } from '@/lib/mock-data';
+import { recentPlays } from '@/lib/recent-plays';
+import { settings as appSettings, useSettings } from '@/lib/settings';
 import { useLatest } from '@/lib/use-latest';
-import type { Track } from '@/types/music';
+import { isPlayable, type Track } from '@/types/music';
+import { broadcastPlayer } from './player-broadcast';
 
 /** One cycling control: list loop → shuffle → single loop → in order (stops at the end). */
 export type PlayMode = 'loop' | 'shuffle' | 'one' | 'order';
@@ -27,10 +31,24 @@ type PlayerState = {
   volume: number;
   mode: PlayMode;
   lyricsOpen: boolean;
+  queueOpen: boolean;
   togglePlay: () => void;
   play: (track: Track, queue?: Track[]) => void;
+  /**
+   * Double-click on a list row, per 设置 › 播放 › 双击歌曲: replace the queue with
+   * the list (default), or only insert this song after the current one.
+   */
+  playFromList: (track: Track, list: Track[]) => void;
   /** Append to the end of the play queue (skips tracks already queued). */
   enqueue: (tracks: Track[]) => void;
+  /** Insert right after the current track (下一首播放); moves it if already queued. */
+  playNext: (tracks: Track[]) => void;
+  /** Remove from the queue; removing the playing track moves on to the next. */
+  removeFromQueue: (id: string) => void;
+  /** Move a queued track to another position (drag reorder). */
+  moveInQueue: (id: string, toIndex: number) => void;
+  /** Empty the queue and stop. */
+  clearQueue: () => void;
   previous: () => void;
   next: () => void;
   /** Seconds within the loaded stream. */
@@ -41,6 +59,7 @@ type PlayerState = {
   cycleMode: () => void;
   openLyrics: () => void;
   closeLyrics: () => void;
+  setQueueOpen: (open: boolean) => void;
 };
 
 const PlayerContext = createContext<PlayerState | null>(null);
@@ -53,8 +72,31 @@ function randomOtherIndex(current: number, length: number) {
   return current >= 0 && pick >= current ? pick + 1 : pick;
 }
 
+/**
+ * Ramp the element's volume over `ms` (ease-in-out), cancelling a previous ramp.
+ * Returns the cancel function; `done` runs when the ramp completes.
+ */
+function rampVolume(audio: HTMLAudioElement, from: number, to: number, ms: number, previous: (() => void) | null, done?: () => void) {
+  previous?.();
+  let frame = 0;
+  const started = performance.now();
+  audio.volume = Math.max(0, Math.min(1, from));
+  const tick = (now: number) => {
+    const t = Math.min(1, (now - started) / ms);
+    const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+    audio.volume = Math.max(0, Math.min(1, from + (to - from) * eased));
+    if (t < 1) frame = requestAnimationFrame(tick);
+    else done?.();
+  };
+  frame = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(frame);
+}
+
 const VOLUME_KEY = 'coco:volume';
 const MODE_KEY = 'coco:play-mode';
+const QUEUE_KEY = 'coco:queue';
+const POSITION_KEY = 'coco:position';
+const QUEUE_LIMIT = 2000;
 const readStored = (key: string) => {
   try { return localStorage.getItem(key); } catch { return null; }
 };
@@ -67,16 +109,34 @@ const readMode = (): PlayMode => {
   const raw = readStored(MODE_KEY);
   return playModes.includes(raw as PlayMode) ? (raw as PlayMode) : 'loop';
 };
+const readPosition = (id: string) => {
+  try {
+    const saved = JSON.parse(readStored(POSITION_KEY) ?? 'null') as { id?: unknown; t?: unknown } | null;
+    return saved && saved.id === id && typeof saved.t === 'number' && saved.t > 0 ? saved.t : 0;
+  } catch { return 0; }
+};
+/** Saved queue + current track (restored paused). */
+const readQueue = (): { queue: Track[]; current?: Track } => {
+  try {
+    const parsed = JSON.parse(readStored(QUEUE_KEY) ?? 'null') as { queue?: unknown; currentId?: unknown } | null;
+    if (!parsed || !Array.isArray(parsed.queue)) return { queue: [] };
+    const queue = (parsed.queue as Track[]).filter(item => item && typeof item.id === 'string' && typeof item.title === 'string' && isPlayable(item)).slice(0, QUEUE_LIMIT);
+    return { queue, current: queue.find(item => item.id === parsed.currentId) ?? queue[0] };
+  } catch {
+    return { queue: [] };
+  }
+};
 
 /**
- * Playback backed by a single <audio> element. Selecting a track fetches a fresh
- * stream URL (they expire), then plays it; `ended` advances per play mode.
- * Failing tracks are skipped, with a cap so a queue of unplayable songs stops.
+ * Playback backed by a single <audio> element. Catalog songs fetch a fresh
+ * stream URL (they expire); local files stream from the app server. `ended`
+ * advances per play mode. Failing tracks are skipped, with a cap so a queue
+ * of unplayable songs stops.
  */
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const [queue, setQueue] = useState<Track[]>([initialTrack]);
-  const [track, setTrack] = useState(initialTrack);
+  const [queue, setQueue] = useState<Track[]>([]);
+  const [track, setTrack] = useState(emptyTrack);
   // Bumped to (re)load the current track, including the same one again.
   const [loadKey, setLoadKey] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -88,22 +148,42 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const lastVolume = useRef(0.62);
   const [mode, setMode] = useState<PlayMode>('loop');
   const [lyricsOpen, setLyricsOpen] = useState(false);
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const prefs = useSettings();
 
   const failures = useRef(0);
   /** Resume point after re-fetching an expired stream URL. */
   const resumeAt = useRef<number | null>(null);
   /** Played tracks, so 上一首 in shuffle mode walks back instead of rolling again. */
   const history = useRef<Track[]>([]);
+  /** Track id already counted in 最近播放 for the current load (count once per play). */
+  const recorded = useRef<string | null>(null);
 
   const select = (next: Track, options: { autoplay?: boolean; remember?: boolean } = {}) => {
-    if (options.remember !== false && latest.current.track.songId) history.current = [...history.current.slice(-49), latest.current.track];
+    if (options.remember !== false && isPlayable(latest.current.track)) history.current = [...history.current.slice(-49), latest.current.track];
     setTrack(next);
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
-    setStatus(next.songId ? 'loading' : 'idle');
-    setPlaying(options.autoplay !== false && Boolean(next.songId));
+    setStatus(isPlayable(next) ? 'loading' : 'idle');
+    setPlaying(options.autoplay !== false && isPlayable(next));
+    recorded.current = null;
     setLoadKey(value => value + 1);
+  };
+
+  /** Nothing left to play: back to the empty state. */
+  const stop = () => {
+    const audio = audioRef.current;
+    audio?.pause();
+    audio?.removeAttribute('src');
+    audio?.load();
+    setTrack(emptyTrack);
+    setPlaying(false);
+    setStatus('idle');
+    setPosition(0);
+    setMediaDuration(undefined);
+    setTrial(undefined);
   };
 
   /**
@@ -132,7 +212,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const fail = (message: string) => {
     failures.current += 1;
     const { queue: list } = latest.current;
-    const canSkip = list.filter(item => item.songId).length > 1 && failures.current < Math.min(list.length, 5);
+    const canSkip = appSettings.get().skipOnError && list.filter(isPlayable).length > 1 && failures.current < Math.min(list.length, 5);
     toast.error(canSkip ? `${message}，已跳到下一首` : message);
     if (canSkip) { step(1); return; }
     failures.current = 0;
@@ -140,64 +220,126 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPlaying(false);
   };
 
-  const latest = useLatest({ queue, track, mode, playing, step, fail, select });
+  const latest = useLatest({ queue, track, mode, playing, step, fail, select, volume });
+  /** Running volume ramp (fade in/out); cancelled when a new one starts. */
+  const fade = useRef<(() => void) | null>(null);
 
-  // Restore saved volume and play mode once mounted (localStorage is browser-only).
+  // Restore saved volume, play mode and queue once mounted (localStorage is browser-only).
   useEffect(() => {
     const saved = readVolume();
     lastVolume.current = saved || 0.62;
-    const timer = setTimeout(() => { setVolumeState(saved); setMode(readMode()); }, 0);
+    const timer = setTimeout(() => {
+      setVolumeState(saved);
+      setMode(readMode());
+      const stored = readQueue();
+      const prefsNow = appSettings.get();
+      if (stored.queue.length) setQueue(stored.queue);
+      if (prefsNow.resumeOnLaunch && stored.current) {
+        // Restored paused: autoplay on launch would be a surprise.
+        const at = prefsNow.resumePosition ? readPosition(stored.current.id) : 0;
+        if (at > 0) resumeAt.current = at;
+        latest.current.select(stored.current, { autoplay: false, remember: false });
+        if (at > 0) setPosition(at);
+      }
+      setRestored(true);
+    }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [latest]);
 
   useEffect(() => {
     try { localStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable */ }
   }, [mode]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-    try { localStorage.setItem(VOLUME_KEY, String(volume)); } catch { /* storage unavailable */ }
-  }, [volume]);
+    if (!restored) return;
+    try { localStorage.setItem(QUEUE_KEY, JSON.stringify({ queue: queue.slice(0, QUEUE_LIMIT), currentId: track.id })); } catch { /* storage full */ }
+  }, [queue, track.id, restored]);
 
-  // Fetch a fresh stream URL whenever a track is (re)selected.
+  // Remember where we are in the song (for 设置 › 播放 › 恢复播放进度), at most every 2s.
+  const positionSaved = useRef(0);
+  useEffect(() => {
+    if (!restored || !isPlayable(track)) return;
+    const now = Date.now();
+    if (now - positionSaved.current < 2000 && position > 0) return;
+    positionSaved.current = now;
+    try { localStorage.setItem(POSITION_KEY, JSON.stringify({ id: track.id, t: Math.round(position) })); } catch { /* storage full */ }
+  }, [position, track, restored]);
+
+  useEffect(() => {
+    // Moving the slider mid-fade wins: cancel the ramp (a fade-out still pauses via `playing`).
+    if (audioRef.current && fade.current && latest.current.playing) { fade.current(); fade.current = null; }
+    if (audioRef.current && !fade.current) audioRef.current.volume = volume;
+    try { localStorage.setItem(VOLUME_KEY, String(volume)); } catch { /* storage unavailable */ }
+  }, [volume, latest]);
+
+  // Load the stream whenever a track is (re)selected: local file, or a fresh catalog URL.
   useEffect(() => {
     const audio = audioRef.current;
-    const songId = track.songId;
-    if (!audio || !songId) return;
+    if (!audio || !isPlayable(track)) return;
     const controller = new AbortController();
     audio.pause();
     audio.removeAttribute('src');
     audio.load();
-    catalogApi.songSource(songId, controller.signal)
+    const attach = (url: string) => {
+      audio.src = url;
+      if (resumeAt.current !== null) { audio.currentTime = resumeAt.current; resumeAt.current = null; }
+      if (latest.current.playing) audio.play().catch(() => undefined);
+    };
+    if (track.localId) {
+      attach(localAudioUrl(track.localId));
+      return () => controller.abort();
+    }
+    catalogApi.songSource(track.songId!, controller.signal, appSettings.get().quality)
       .then(source => {
         if (controller.signal.aborted) return;
         setTrial(source.trial);
-        audio.src = source.url;
-        if (resumeAt.current !== null) { audio.currentTime = resumeAt.current; resumeAt.current = null; }
         if (source.trial) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
-        if (latest.current.playing) audio.play().catch(() => undefined);
+        attach(source.url);
       })
       .catch(error => {
         if (controller.signal.aborted) return;
         latest.current.fail(error instanceof Error ? error.message : '无法获取播放地址');
       });
     return () => controller.abort();
-  }, [track.songId, loadKey, latest]);
+    // Keyed on identity (id) and loadKey; track object changes alone must not reload.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [track.id, loadKey, latest]);
+
+  // 设置 › 播放: speed (keeps pitch) and output device.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.playbackRate = prefs.playbackRate;
+    audio.defaultPlaybackRate = prefs.playbackRate;
+    audio.preservesPitch = true;
+  }, [prefs.playbackRate, loadKey]);
+  useEffect(() => {
+    const audio = audioRef.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null;
+    if (!audio?.setSinkId) return;
+    audio.setSinkId(prefs.outputDevice).catch(() => {
+      // Device unplugged or permission denied: fall back to the system default.
+      if (prefs.outputDevice) { toast.error('所选输出设备不可用，已切换到系统默认'); appSettings.set('outputDevice', ''); }
+    });
+  }, [prefs.outputDevice]);
 
   // Desired play state → element. Skipped while the URL is still loading (no src yet).
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio || !audio.getAttribute('src')) return;
+    const fadeMs = appSettings.get().fadeMs;
     if (playing && audio.paused) {
+      // Fade in to the current volume; the handle clears when done so the slider owns volume again.
+      if (fadeMs) fade.current = rampVolume(audio, 0, latest.current.volume, fadeMs, fade.current, () => { fade.current = null; });
       audio.play().catch(error => {
         // AbortError: a newer load/pause interrupted this play() call, not a failure.
         if (error instanceof DOMException && error.name === 'AbortError') return;
         setPlaying(false);
       });
     } else if (!playing && !audio.paused) {
-      audio.pause();
+      if (!fadeMs) { audio.pause(); return; }
+      fade.current = rampVolume(audio, audio.volume, 0, fadeMs, fade.current, () => { fade.current = null; audio.pause(); audio.volume = latest.current.volume; });
     }
-  }, [playing, loadKey]);
+  }, [playing, loadKey, latest]);
 
   // Element events → state.
   useEffect(() => {
@@ -205,7 +347,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (!audio) return;
     const sync = () => setPosition(audio.currentTime);
     const onDuration = () => setMediaDuration(Number.isFinite(audio.duration) ? audio.duration : undefined);
-    const onPlaying = () => { failures.current = 0; setStatus('ready'); };
+    const onPlaying = () => {
+      failures.current = 0;
+      setStatus('ready');
+      // Count a play once the audio actually starts (not on mere selection).
+      const current = latest.current.track;
+      if (recorded.current !== current.id) {
+        recorded.current = current.id;
+        recentPlays.add(current);
+        if (appSettings.get().toastOnTrackChange && !document.hasFocus()) toast.info(`正在播放：${current.title} - ${current.artist}`);
+      }
+    };
     const onWaiting = () => setStatus('loading');
     const onEnded = () => {
       if (latest.current.mode === 'one') {
@@ -217,14 +369,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     const onError = () => {
       if (!audio.getAttribute('src')) return;
-      // Stream links expire after ~20 minutes; refetch once and resume where we were.
-      if (audio.currentTime > 0 && resumeAt.current === null) {
+      const current = latest.current.track;
+      // Catalog links expire after ~20 minutes; refetch once and resume where we were.
+      if (!current.localId && audio.currentTime > 0 && resumeAt.current === null) {
         resumeAt.current = audio.currentTime;
         setLoadKey(value => value + 1);
         return;
       }
       resumeAt.current = null;
-      latest.current.fail('歌曲播放失败');
+      latest.current.fail(current.localId ? '本地文件无法播放（可能已被移动或删除）' : '歌曲播放失败');
     };
     audio.addEventListener('timeupdate', sync);
     audio.addEventListener('seeked', sync);
@@ -260,24 +413,73 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<PlayerState>(() => {
     const audio = () => audioRef.current;
+    const currentIndex = () => queue.findIndex(item => item.id === track.id);
     return {
-      track, queue, playing, status, trial, volume, mode, lyricsOpen,
+      track, queue, playing, status, trial, volume, mode, lyricsOpen, queueOpen,
       duration: mediaDuration ?? (trial ? trial.end - trial.start : track.duration ?? 0),
       togglePlay: () => {
-        if (!track.songId) { toast.info('从歌单、排行榜或搜索中选一首歌开始播放'); return; }
+        if (!isPlayable(track)) { toast.info('从歌单、排行榜、本地音乐或搜索中选一首歌开始播放'); return; }
         if (status === 'error') { select(track, { remember: false }); return; }
         setPlaying(current => !current);
       },
       play: (next, nextQueue) => {
-        if (nextQueue) setQueue(nextQueue);
+        if (nextQueue) setQueue(nextQueue.slice(0, QUEUE_LIMIT));
+        else if (!queue.some(item => item.id === next.id)) {
+          // A single song (search result, opened file) joins the queue after the current one.
+          const at = currentIndex() + 1;
+          setQueue([...queue.slice(0, at), next, ...queue.slice(at)]);
+        }
         if (next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
+        failures.current = 0;
+        select(next);
+      },
+      playFromList: (next, list) => {
+        if (appSettings.get().doubleClick === 'insert') {
+          if (next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
+          const rest = queue.filter(item => item.id !== next.id);
+          const at = rest.findIndex(item => item.id === track.id) + 1;
+          setQueue([...rest.slice(0, at), next, ...rest.slice(at)]);
+          failures.current = 0;
+          select(next);
+          return;
+        }
+        if (next.id === track.id && status !== 'error' && status !== 'idle') { setQueue(list.slice(0, QUEUE_LIMIT)); setPlaying(current => !current); return; }
+        setQueue(list.slice(0, QUEUE_LIMIT));
         failures.current = 0;
         select(next);
       },
       enqueue: tracks => setQueue(previous => {
         const known = new Set(previous.map(item => item.id));
-        return [...previous.filter(item => item.songId), ...tracks.filter(item => !known.has(item.id))];
+        return [...previous, ...tracks.filter(item => !known.has(item.id))].slice(0, QUEUE_LIMIT);
       }),
+      playNext: tracks => {
+        const ids = new Set(tracks.map(item => item.id));
+        setQueue(previous => {
+          const rest = previous.filter(item => !ids.has(item.id) || item.id === track.id);
+          const at = rest.findIndex(item => item.id === track.id) + 1;
+          return [...rest.slice(0, at), ...tracks.filter(item => item.id !== track.id), ...rest.slice(at)].slice(0, QUEUE_LIMIT);
+        });
+        if (!isPlayable(track) && tracks[0]) select(tracks[0]);
+      },
+      removeFromQueue: id => {
+        const index = queue.findIndex(item => item.id === id);
+        if (index < 0) return;
+        const rest = queue.filter(item => item.id !== id);
+        setQueue(rest);
+        if (id !== track.id) return;
+        // Removing the playing song: continue with what was after it.
+        if (!rest.length) { stop(); return; }
+        select(rest[Math.min(index, rest.length - 1)], { autoplay: playing });
+      },
+      moveInQueue: (id, toIndex) => setQueue(previous => {
+        const from = previous.findIndex(item => item.id === id);
+        if (from < 0) return previous;
+        const copy = previous.slice();
+        const [item] = copy.splice(from, 1);
+        copy.splice(Math.max(0, Math.min(copy.length, toIndex)), 0, item);
+        return copy;
+      }),
+      clearQueue: () => { setQueue([]); history.current = []; stop(); },
       previous: () => {
         // Like most players: 上一首 restarts the current song after the first few seconds.
         const element = audio();
@@ -302,20 +504,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       },
       openLyrics: () => setLyricsOpen(true),
       closeLyrics: () => setLyricsOpen(false),
+      setQueueOpen,
     };
-    // select/step only read refs and setters; they are recreated each render but behave identically.
+    // select/step/stop only read refs and setters; they are recreated each render but behave identically.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, track, playing, status, trial, mediaDuration, volume, mode, lyricsOpen]);
+  }, [queue, track, playing, status, trial, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
   // System media controls (keyboard media keys, OS now-playing panels).
   const controls = useLatest(value);
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !track.songId) return;
+    if (!('mediaSession' in navigator) || !isPlayable(track)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
       title: track.title,
       artist: track.artist,
       album: track.album ?? '',
-      artwork: track.cover ? [{ src: track.cover, sizes: '200x200' }] : [],
+      artwork: track.cover ? [{ src: new URL(track.cover, window.location.href).href, sizes: '200x200' }] : [],
     });
     const handlers: Array<[MediaSessionAction, () => void]> = [
       ['play', () => { if (!controls.current.playing) controls.current.togglePlay(); }],
@@ -328,19 +531,55 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
   }, [track, controls]);
 
-  // Space toggles playback, unless typing or a control that uses Space itself has focus.
+  // Desktop lyrics window and other views follow playback over a broadcast channel.
+  useEffect(() => { broadcastPlayer.publishTrack(track, trial); }, [track, trial]);
+  useEffect(() => { broadcastPlayer.publishClock(position, playing); }, [position, playing]);
+  useEffect(() => broadcastPlayer.onCommand(command => {
+    if (command === 'toggle') controls.current.togglePlay();
+    else if (command === 'next') controls.current.next();
+    else if (command === 'previous') controls.current.previous();
+    else if (command === 'sync') broadcastPlayer.publishTrack(controls.current.track, controls.current.trial, true);
+  }), [controls]);
+
+  // In-app shortcuts (设置 › 快捷键): Space play/pause; ⌘/Ctrl + ←/→ previous/next; ⌘/Ctrl + ↑/↓ volume.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.code !== 'Space' || event.repeat || event.metaKey || event.ctrlKey || event.altKey) return;
+      if (!appSettings.get().appShortcuts || event.repeat || event.altKey) return;
       const target = event.target as HTMLElement | null;
+      const typing = target?.closest('input, textarea, select, [contenteditable="true"]');
+      const combo = (event.metaKey || event.ctrlKey) && !event.shiftKey;
+      if (combo && !typing) {
+        const player = controls.current;
+        const actions: Record<string, () => void> = {
+          ArrowRight: player.next,
+          ArrowLeft: player.previous,
+          ArrowUp: () => player.setVolume(Math.min(1, Math.round((player.volume + 0.05) * 100) / 100)),
+          ArrowDown: () => player.setVolume(Math.max(0, Math.round((player.volume - 0.05) * 100) / 100)),
+        };
+        const action = actions[event.key];
+        if (action) { event.preventDefault(); action(); }
+        return;
+      }
+      if (event.code !== 'Space' || event.metaKey || event.ctrlKey) return;
       // Modal dialogs own the keyboard, except surfaces of the player itself (lyrics page).
-      if (target?.closest('input, textarea, select, button, [contenteditable="true"], [role="slider"], [role="menu"], [role="dialog"]:not([data-player-surface])')) return;
+      if (typing || target?.closest('button, [role="slider"], [role="menu"], [role="dialog"]:not([data-player-surface])')) return;
       event.preventDefault();
       controls.current.togglePlay();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [controls]);
+
+  // System-wide shortcuts registered by the main process (设置 › 快捷键 › 全局快捷键).
+  useEffect(() => window.coco?.app?.onShortcut(action => {
+    const player = controls.current;
+    if (action === 'toggle') player.togglePlay();
+    else if (action === 'next') player.next();
+    else if (action === 'previous') player.previous();
+    else if (action === 'volume-up') player.setVolume(Math.min(1, Math.round((player.volume + 0.05) * 100) / 100));
+    else if (action === 'volume-down') player.setVolume(Math.max(0, Math.round((player.volume - 0.05) * 100) / 100));
+    else if (action === 'lyrics') window.coco?.lyrics?.setDesktop('toggle');
+  }), [controls]);
 
   return (
     <PlayerContext.Provider value={value}>

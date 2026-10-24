@@ -9,6 +9,7 @@ import { fadeSwap } from '@/components/common/motion';
 import { Tabs } from '@/components/common/Tabs';
 import { ScrollArea } from '@/components/scroll';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
 import { LyricsPanel } from './LyricsPanel';
 import { LyricsPlayerBar } from './LyricsPlayerBar';
 import { usePlayer } from './player-store';
@@ -42,12 +43,18 @@ function CommentsPage({ songId, total }: { songId: string; total?: number }) {
 /** Page 0 recedes and fades as the comments page slides over it. */
 function Stage({ progress }: { progress: MotionValue<number> }) {
   const { track, playing, trial } = usePlayer();
+  const prefs = useSettings();
   const opacity = useTransform(progress, [0, 0.8], [1, 0]);
   const scale = useTransform(progress, [0, 1], [1, 0.94]);
   return (
     <motion.div className={styles.stage} style={{ opacity, scale }}>
       <motion.div className={styles.art} initial={{ scale: 0.85, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.12, type: 'spring', stiffness: 220, damping: 24 }}>
-        <Cover seed={track.coverSeed} src={track.cover} className={cn(styles.artCover, !playing && styles.artPaused)} radius={18} />
+        <Cover
+          seed={track.coverSeed}
+          src={track.cover}
+          className={cn(styles.artCover, !playing && styles.artPaused, prefs.lyricsSpinCover && styles.artSpin, prefs.lyricsSpinCover && playing && styles.artSpinning)}
+          radius={prefs.lyricsSpinCover ? 999 : 18}
+        />
       </motion.div>
       <motion.div className={styles.lyrics} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2, duration: 0.4 }}>
         <header className={styles.heading}>
@@ -69,6 +76,7 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
 export function LyricsDrawer() {
   const { lyricsOpen, closeLyrics, track } = usePlayer();
   const stats = useSongStats(track.songId);
+  const lyricsBackground = useSettings().lyricsBackground;
   const viewportRef = useRef<HTMLDivElement>(null);
   const viewport = useCallback(() => viewportRef.current, []);
   const snap = usePageSnap(viewport, lyricsOpen && Boolean(track.songId));
@@ -116,8 +124,9 @@ export function LyricsDrawer() {
           exit={{ y: '100%' }}
           transition={{ type: 'spring', stiffness: 260, damping: 32 }}
         >
-          <div className={styles.backdrop} aria-hidden>
-            <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />
+          {/* 设置 › 歌词页 › 背景: blurred artwork or a calm flat backdrop. */}
+          <div className={cn(styles.backdrop, lyricsBackground === 'plain' && styles.backdropPlain)} aria-hidden>
+            {lyricsBackground === 'cover' && <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />}
           </div>
 
           <div className={styles.topBar}>

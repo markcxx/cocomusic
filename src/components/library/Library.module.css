@@ -1,0 +1,124 @@
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.count {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.count small {
+  margin-left: 4px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.count .matches {
+  margin-left: 10px;
+  color: var(--accent-strong);
+}
+
+.filter {
+  margin-left: auto;
+}
+
+/* ───────── Local music ───────── */
+
+.folders {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.folder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 320px;
+  height: 30px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.folder span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}
+
+.folder button {
+  width: 22px;
+  height: 22px;
+}
+
+/* Whole-page drop target while files are dragged over the window. */
+.dropZone {
+  position: fixed;
+  inset: 12px;
+  z-index: 140;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 2px dashed var(--accent);
+  border-radius: 24px;
+  background: rgba(246, 244, 255, 0.86);
+  font-size: 16px;
+  color: var(--accent-strong);
+  pointer-events: none;
+  backdrop-filter: blur(8px);
+}
+
+.dropZone span {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.emptyLocal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.emptyLocal h2 {
+  margin: 6px 0 0;
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.emptyLocal p {
+  max-width: 420px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.emptyActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.scanning {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--accent-strong);
+}

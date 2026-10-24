@@ -205,7 +205,7 @@
   height: 1px;
   margin: 8px 18px;
   padding: 0;
-  background: rgba(111, 90, 168, 0.12);
+  background: rgba(var(--accent-strong-rgb), 0.12);
   opacity: 1;
 }
 

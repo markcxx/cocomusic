@@ -22,7 +22,9 @@
   /* Accent: soft lavender family */
   --accent: #9b87bf;
   --accent-strong: #6f5aa8;
-  --accent-soft: rgba(155, 135, 191, 0.16);
+  --accent-rgb: 155, 135, 191;
+  --accent-strong-rgb: 111, 90, 168;
+  --accent-soft: rgba(var(--accent-rgb), 0.16);
   --accent-tint: #e6dff5;
   --accent-tint-strong: #d8cdef;
   --trend-up: #e0605a;
@@ -116,6 +118,16 @@ html[data-material="vibrancy"] .backdrop {
   opacity: 0.35;
 }
 
+/* Reduce motion (设置 › 外观): stop ambient and CSS-driven animation. */
+html[data-reduce-motion='true'] *,
+html[data-reduce-motion='true'] *::before,
+html[data-reduce-motion='true'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
 /* Reusable frosted-glass surface. */
 .glass {
   background: var(--sheet);
@@ -171,14 +183,26 @@ a {
 }
 
 /*
- * Mini player: the window shrinks to the capsule; everything else is hidden so
- * only the capsule paints (its rounded corners stay transparent on the desktop).
+ * Mini player: the window shrinks to the bar and everything else is hidden.
+ * The page backing takes the bar's colour so no light edge can show at any
+ * size during the resize (keep in sync with MINI_SURFACE in electron/main/window.ts).
  */
 html[data-mini='true'],
 html[data-mini='true'] body {
-  background: transparent;
+  background: #241e3a;
+}
+
+html[data-mini='true'][data-platform='web'],
+html[data-mini='true'][data-platform='web'] body {
+  background: var(--shell);
 }
 
 html[data-mini='true'] .backdrop {
   display: none;
+}
+
+/* Desktop lyrics window: fully transparent page (the window itself is transparent). */
+html[data-desktop-lyrics='true'],
+html[data-desktop-lyrics='true'] body {
+  background: transparent;
 }

@@ -1,4 +1,8 @@
-/* The window itself is the capsule: transparent window, rounded dark glass inside. */
+/*
+ * The window itself is the bar: painted edge to edge with no own corner radius
+ * or border, so nothing of the window backing shows around it. The OS rounds
+ * the window corners. Keep `background` in sync with MINI_SURFACE (electron/main/window.ts).
+ */
 .shell {
   position: fixed;
   inset: 0;
@@ -8,11 +12,18 @@
   gap: 12px;
   padding: 0 12px 0 14px;
   overflow: hidden;
-  border-radius: 22px;
   background: #241e3a;
   color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   -webkit-app-region: drag;
+}
+
+/* Browser preview (`?mini`): no OS window around it, so round it here. */
+:global(html[data-platform='web']) .shell {
+  inset: 12px auto auto 12px;
+  width: 440px;
+  height: 96px;
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(30, 20, 70, 0.3);
 }
 
 .shell button {

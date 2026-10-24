@@ -1,6 +1,7 @@
 'use client';
 
 import { ListMusic } from 'lucide-react';
+import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics';
 import { IconButton } from '@/components/ui';
 import { CommentButton, Transport, VolumeControl } from './controls';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
@@ -26,8 +27,9 @@ function Progress() {
  * the right. Transparent over the blurred artwork, dark-themed.
  */
 export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
-  const { track } = usePlayer();
+  const { track, queueOpen, setQueueOpen } = usePlayer();
   const stats = useSongStats(track.songId);
+  const desktopLyrics = useDesktopLyrics();
   return (
     <footer className={styles.bar} aria-label="播放控制">
       <Progress />
@@ -37,9 +39,14 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
         <div className={`${styles.side} ${styles.tools}`}>
           <CommentButton count={stats.commentCount} onClick={onComments} disabled={!track.songId} />
           <VolumeControl />
-          <IconButton label="播放队列" tooltip="播放队列（即将接入）" tone="muted">
-            <ListMusic size={19} strokeWidth={1.4} />
+          <IconButton label={desktopLyrics.visible ? '关闭桌面歌词' : '打开桌面歌词'} tone="muted" onClick={desktopLyrics.toggle} disabled={!desktopLyrics.available} active={desktopLyrics.visible} pressed={desktopLyrics.visible}>
+            <span className={styles.ci}>词</span>
           </IconButton>
+          <span data-queue-toggle style={{ display: 'inline-flex' }}>
+            <IconButton label="播放列表" tone="muted" onClick={() => setQueueOpen(!queueOpen)} active={queueOpen} pressed={queueOpen}>
+              <ListMusic size={19} strokeWidth={1.4} />
+            </IconButton>
+          </span>
         </div>
       </div>
     </footer>

@@ -61,6 +61,21 @@ export async function createMainWindow(origin: string, token: string) {
 
 /* ───────── Mini player ───────── */
 
+/** User setting: OS material behind the window (off = the app's own drawn backdrop only). */
+const materialEnabled = new WeakMap<BrowserWindow, boolean>();
+
+export function setWindowMaterial(window: BrowserWindow, enabled: boolean) {
+  materialEnabled.set(window, enabled);
+  if (miniState.has(window)) return; // mini mode manages its own surface; applied on exit
+  applyMaterial(window, enabled);
+}
+
+function applyMaterial(window: BrowserWindow, enabled: boolean) {
+  if (isWindows) window.setBackgroundMaterial(enabled ? 'acrylic' : 'none');
+  if (isMac) window.setVibrancy(enabled ? 'under-window' : null);
+  window.setBackgroundColor(enabled && (isWindows || isMac) ? '#00000000' : '#dfe2f6');
+}
+
 /** Compact floating bar. Width fits the mini layout; height includes the hover-expanded lyric row. */
 export const MINI_WIDTH = 440;
 export const MINI_HEIGHT = 96;
@@ -72,6 +87,24 @@ const miniPosition = new WeakMap<BrowserWindow, { x: number; y: number }>();
 
 export function isMini(window: BrowserWindow) {
   return miniState.has(window);
+}
+
+/** Base colour of the mini capsule (MiniPlayer.module.css `.shell`). */
+const MINI_SURFACE = '#241e3a';
+
+/**
+ * The main window is not created `transparent` (that would cost acrylic and
+ * native resizing), so anything the page leaves unpainted shows the window
+ * backing: the OS material, or white. In mini mode the backing becomes the
+ * capsule's own colour and the capsule fills the window edge to edge; corner
+ * rounding and shadow come from the OS (Windows 11 / macOS), so no rim appears.
+ */
+function setMiniSurface(window: BrowserWindow, mini: boolean) {
+  if (isMac) window.setWindowButtonVisibility(!mini);
+  if (!mini) { applyMaterial(window, materialEnabled.get(window) ?? true); return; }
+  if (isWindows) window.setBackgroundMaterial('none');
+  if (isMac) window.setVibrancy(null);
+  window.setBackgroundColor(MINI_SURFACE);
 }
 
 /**
@@ -88,7 +121,7 @@ export function toggleMini(window: BrowserWindow) {
     window.setSkipTaskbar(false);
     window.setResizable(true);
     window.setMinimumSize(MIN_WIDTH, MIN_HEIGHT);
-    if (isMac) window.setWindowButtonVisibility(true);
+    setMiniSurface(window, false);
     window.setBounds(previous.bounds, true);
     if (previous.maximized) window.maximize();
     window.webContents.send(IPC.miniChanged, false);
@@ -100,7 +133,7 @@ export function toggleMini(window: BrowserWindow) {
   // Tell the renderer first so the mini layout is painted before the window shrinks.
   window.webContents.send(IPC.miniChanged, true);
   window.setMinimumSize(MINI_WIDTH, MINI_HEIGHT);
-  if (isMac) window.setWindowButtonVisibility(false);
+  setMiniSurface(window, true);
   window.setAlwaysOnTop(true, 'floating');
   const area = screen.getDisplayMatching(window.getBounds()).workArea;
   const saved = miniPosition.get(window);

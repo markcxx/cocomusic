@@ -1,0 +1,184 @@
+.doneIcon {
+  color: var(--trend-new);
+}
+
+.spin {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ring {
+  rotate: -90deg;
+}
+
+.ringTrack,
+.ringFill {
+  fill: none;
+  stroke-width: 2;
+}
+
+.ringTrack {
+  stroke: rgba(var(--accent-strong-rgb), 0.18);
+}
+
+.ringFill {
+  stroke: var(--accent-strong);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms linear;
+}
+
+/* ───────── Page ───────── */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.folder {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.folder code {
+  overflow: hidden;
+  font-family: inherit;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.job {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 200px 120px;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  transition: background-color 160ms ease;
+}
+
+.job:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.names strong,
+.names span {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.names strong {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.names span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.bar {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--accent-strong-rgb), 0.14);
+}
+
+.barFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--accent-tint-strong), var(--accent-strong));
+  transition: width 300ms linear;
+}
+
+/* Waiting / unknown size: a shimmer travels along the bar. */
+.barIndeterminate {
+  width: 40%;
+  animation: slide 1.1s ease-in-out infinite;
+}
+
+@keyframes slide {
+  from { left: -40%; }
+  to { left: 100%; }
+}
+
+.failed {
+  color: #d9534f;
+}
+
+.done {
+  color: var(--trend-new);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 72px 0;
+  color: var(--text-muted);
+}
+
+.empty p {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--text-secondary);
+}
+
+.empty span {
+  font-size: 13px;
+}
+
+.trialTag {
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: rgba(224, 160, 64, 0.16);
+  font-size: 11px;
+  font-style: normal;
+  color: #b7791f;
+}

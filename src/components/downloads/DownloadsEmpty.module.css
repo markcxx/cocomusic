@@ -1,0 +1,162 @@
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 620px;
+  margin: 16px auto 0;
+  padding: 28px 32px 32px;
+  border-radius: 24px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--shadow-soft);
+  text-align: center;
+}
+
+.art {
+  width: 220px;
+  height: 160px;
+  overflow: visible;
+}
+
+/* Gentle idle motion: the record turns, the cloud bobs, the note floats. */
+.disc {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 14s linear infinite;
+}
+
+.cloud {
+  animation: bob 3.2s ease-in-out infinite;
+}
+
+.note {
+  animation: bob 4s ease-in-out -1s infinite;
+}
+
+.sparkle {
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 1; }
+}
+
+.hero h2 {
+  margin: 8px 0 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.lead {
+  max-width: 460px;
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.75;
+  color: var(--text-secondary);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--accent-tint);
+  font-size: 12px;
+  color: var(--accent-strong);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  margin-top: 22px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.08);
+  color: var(--accent-strong);
+  text-align: left;
+}
+
+.factLabel {
+  font-size: 11.5px;
+  color: var(--text-muted);
+}
+
+.factValue,
+.factPath {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 13.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-strong);
+}
+
+/* Long paths: keep the folder name (the end) visible. */
+.factPath {
+  direction: rtl;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.compact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 40px 0 56px;
+  text-align: center;
+}
+
+.compact .art {
+  width: 160px;
+  height: 116px;
+}
+
+.compact p {
+  margin: 10px 0 0;
+  font-size: 15px;
+  color: var(--text-strong);
+}
+
+.compact span {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc,
+  .cloud,
+  .note,
+  .sparkle {
+    animation: none;
+  }
+}

@@ -31,10 +31,11 @@ const date = (ms?: number) => (ms ? new Intl.DateTimeFormat('zh-CN', { year: 'nu
  * long description grows downward without moving it; the description expands
  * with an animated height. On scroll the block fades, handing off to the sticky bar.
  */
-export function CollectionHeader({ info, fallbackTitle, onPlayAll, extraActions }: {
+export function CollectionHeader({ info, fallbackTitle, onPlayAll, onDownloadAll, extraActions }: {
   info?: CollectionInfo;
   fallbackTitle?: string;
   onPlayAll: () => void;
+  onDownloadAll?: () => void;
   /** Extra buttons after the defaults (e.g. 批量操作). */
   extraActions?: ReactNode;
 }) {
@@ -103,7 +104,7 @@ export function CollectionHeader({ info, fallbackTitle, onPlayAll, extraActions 
                   {subscribed ? '已收藏' : '收藏'}
                 </Button>
             )}
-            <Button icon={<Download size={16} strokeWidth={1.5} />} disabled title="下载功能即将接入">下载</Button>
+            <Button icon={<Download size={16} strokeWidth={1.5} />} disabled={!info || !onDownloadAll} onClick={onDownloadAll} title="下载全部歌曲">下载</Button>
             <Button icon={<Share2 size={16} strokeWidth={1.5} />} disabled={!info} onClick={() => info && void copyLink(info)}>分享</Button>
             {extraActions}
           </div>

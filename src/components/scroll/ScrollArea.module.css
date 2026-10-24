@@ -18,15 +18,15 @@
 .scroll::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgba(111, 90, 168, 0.22) padding-box;
+  background: rgba(var(--accent-strong-rgb), 0.22) padding-box;
   transition: background-color 200ms ease;
 }
 
 .scroll::-webkit-scrollbar-thumb:hover {
   border-width: 2px;
-  background-color: rgba(111, 90, 168, 0.4);
+  background-color: rgba(var(--accent-strong-rgb), 0.4);
 }
 
 .scroll::-webkit-scrollbar-thumb:active {
-  background-color: rgba(111, 90, 168, 0.55);
+  background-color: rgba(var(--accent-strong-rgb), 0.55);
 }

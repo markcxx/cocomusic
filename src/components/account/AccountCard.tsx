@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { CalendarDays, Crown, Disc3, ExternalLink, Headphones, Heart, History, ListMusic, LogOut, MapPin, Mars, Mic2, Sparkles, Venus } from 'lucide-react';
+import { CalendarDays, Crown, ExternalLink, History, LogOut, MapPin, Mars, Mic2, Sparkles, Venus } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { SkeletonBlock } from '@/components/common/AsyncState';
@@ -43,11 +43,9 @@ function Action({ icon, label, onClick, danger }: { icon: ReactNode; label: stri
 /** Body; `detail` is null while loading (basic profile shown meanwhile). */
 function CardBody({ profile, detail, error, onClose }: { profile: UserProfile; detail: UserDetail | null; error: boolean; onClose: () => void }) {
   const { navigate } = useNavigation();
-  const { logout, playlists } = useAccount();
+  const { logout } = useAccount();
   const go = (fn: () => void) => () => { onClose(); fn(); };
   const vip = detail?.vipType ?? profile.vipType ?? 0;
-  const ownCount = detail?.playlists ?? playlists.filter(item => item.own).length;
-  const subCount = detail?.collections?.playlists ?? playlists.filter(item => !item.own).length;
   const since = detail?.createdAt ? new Date(detail.createdAt).getFullYear() : undefined;
   const loading = !detail && !error;
 
@@ -104,21 +102,12 @@ function CardBody({ profile, detail, error, onClose }: { profile: UserProfile; d
         <Stat value={detail?.listenSongs} label="累计听歌" />
       </div>
 
-      <div className={styles.library}>
-        <button type="button" className={styles.libraryItem} onClick={go(() => navigate({ name: 'liked' }))}>
-          <Heart size={15} strokeWidth={1.6} /><span>我喜欢</span>
-        </button>
-        <div className={styles.libraryItem}><ListMusic size={15} strokeWidth={1.6} /><span>创建歌单</span><strong>{ownCount}</strong></div>
-        <div className={styles.libraryItem}><Headphones size={15} strokeWidth={1.6} /><span>收藏歌单</span><strong>{subCount}</strong></div>
-        {detail?.collections?.albums !== undefined && <div className={styles.libraryItem}><Disc3 size={15} strokeWidth={1.6} /><span>收藏专辑</span><strong>{detail.collections.albums}</strong></div>}
-        {detail?.collections?.artists !== undefined && <div className={styles.libraryItem}><Mic2 size={15} strokeWidth={1.6} /><span>关注歌手</span><strong>{detail.collections.artists}</strong></div>}
-      </div>
 
       <div className={styles.actions} role="menu">
         <Action icon={<History size={15} strokeWidth={1.6} />} label="最近播放" onClick={go(() => navigate({ name: 'recent' }))} />
         <Action
           icon={<ExternalLink size={15} strokeWidth={1.6} />}
-          label="网易云个人主页"
+          label="个人主页"
           onClick={go(() => { window.open(detail?.url ?? `https://music.163.com/#/user/home?id=${profile.id}`, '_blank', 'noopener'); })}
         />
         <Action icon={<LogOut size={15} strokeWidth={1.6} />} label="退出登录" danger onClick={go(() => void logout())} />
@@ -181,7 +170,7 @@ export function AccountCard({ open, anchor, onClose }: { open: boolean; anchor: 
       {open && (
         <motion.div
           ref={panel}
-          className={styles.card}
+          className={cn(styles.card, (profile.vipType ?? 0) > 0 && styles.cardVip)}
           role="dialog"
           aria-label={`${profile.nickname} 的账号信息`}
           style={{ top: position?.top ?? -9999, right: position?.right ?? 0 }}

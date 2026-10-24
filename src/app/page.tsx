@@ -6,15 +6,18 @@ import { LikedView } from '@/components/account/LikedView';
 import { ArtistView } from '@/components/artist/ArtistView';
 import { ChartsView } from '@/components/charts/ChartsView';
 import { CommentsView } from '@/components/comments/CommentsView';
+import { DownloadsView } from '@/components/downloads/DownloadsView';
+import { LocalView } from '@/components/library/LocalView';
+import { RecentView } from '@/components/library/RecentView';
 import { easeOut } from '@/components/common/motion';
-import { PlaceholderView } from '@/components/common/PlaceholderView';
 import { CollectionView } from '@/components/collection/CollectionView';
 import { DiscoverView } from '@/components/discover/DiscoverView';
 import { HomeView } from '@/components/home/HomeView';
 import { AppShell } from '@/components/layout/AppShell';
-import { routeTitles, useNavigation, type Route } from '@/components/layout/navigation';
+import { useNavigation, type Route } from '@/components/layout/navigation';
 import { useScrollArea } from '@/components/scroll';
 import { SearchResultsView } from '@/components/search/SearchResultsView';
+import { SettingsView } from '@/components/settings/SettingsView';
 
 function View({ route }: { route: Route }) {
   switch (route.name) {
@@ -25,9 +28,17 @@ function View({ route }: { route: Route }) {
     case 'album': return <CollectionView kind="album" id={route.id} title={route.title} />;
     case 'artist': return <ArtistView id={route.id} title={route.title} />;
     case 'liked': return <LikedView />;
+    case 'recent': return <RecentView />;
+    case 'local': return <LocalView />;
+    case 'downloads': return <DownloadsView />;
+    case 'settings': return <SettingsView />;
     case 'search': return <SearchResultsView keyword={route.keyword} type={route.type ?? 'song'} />;
     case 'comments': return <CommentsView songId={route.songId} title={route.title} artist={route.artist} cover={route.cover} />;
-    default: return <PlaceholderView title={routeTitles[route.name]} />;
+    default: {
+      // Every route has a page; this fails to compile if a new route is added without one.
+      const unhandled: never = route;
+      return unhandled;
+    }
   }
 }
 

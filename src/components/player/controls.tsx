@@ -82,11 +82,11 @@ export function Transport({ likeCount, large = false }: { likeCount?: number; la
       {track.songId
         ? <LikeButton songId={track.songId} size="md" iconSize={18} count={likeCount} />
         : <IconButton label="喜欢" disabled><Heart size={18} strokeWidth={1.4} /></IconButton>}
-      <IconButton label="上一首" onClick={player.previous} iconHover={{ x: -2, scale: 1.1 }}>
+      <IconButton label="上一首" onClick={player.previous} iconHover={{ x: -2, scale: 1.1 }} disabled={!player.queue.length}>
         <SkipBack size={skip} strokeWidth={1.4} />
       </IconButton>
       <PlayPauseButton large={large} />
-      <IconButton label="下一首" onClick={player.next} iconHover={{ x: 2, scale: 1.1 }}>
+      <IconButton label="下一首" onClick={player.next} iconHover={{ x: 2, scale: 1.1 }} disabled={!player.queue.length}>
         <SkipForward size={skip} strokeWidth={1.4} />
       </IconButton>
       <PlayModeButton />

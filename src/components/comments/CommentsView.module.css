@@ -66,7 +66,7 @@
   display: flex;
   gap: 14px;
   padding: 16px 4px;
-  border-bottom: 1px solid var(--comment-divider, rgba(111, 90, 168, 0.08));
+  border-bottom: 1px solid var(--comment-divider, rgba(var(--accent-strong-rgb), 0.08));
 }
 
 .avatar {

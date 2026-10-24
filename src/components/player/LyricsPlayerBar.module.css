@@ -52,3 +52,8 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 }
+
+.ci {
+  font-size: 15px;
+  line-height: 1;
+}

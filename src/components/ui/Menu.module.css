@@ -29,7 +29,7 @@
 
 .item:hover:not(:disabled),
 .item:focus-visible {
-  background: rgba(155, 135, 191, 0.14);
+  background: rgba(var(--accent-rgb), 0.14);
   outline: none;
 }
 
@@ -71,5 +71,5 @@
 .divider {
   height: 1px;
   margin: 4px 6px;
-  background: rgba(111, 90, 168, 0.1);
+  background: rgba(var(--accent-strong-rgb), 0.1);
 }

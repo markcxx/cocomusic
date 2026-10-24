@@ -210,9 +210,13 @@ export interface CommentPage {
   cursor?: string;
 }
 
+/** Stream quality request. Higher levels need the matching membership; upstream falls back silently. */
+export type AudioQuality = 'standard' | 'higher' | 'exhigh' | 'lossless' | 'hires';
+export const AUDIO_QUALITIES: AudioQuality[] = ['standard', 'higher', 'exhigh', 'lossless', 'hires'];
+
 export interface CatalogProvider {
   source: CatalogSource;
-  songSource(id: string): Promise<SongSource>;
+  songSource(id: string, quality?: AudioQuality): Promise<SongSource>;
   lyrics(id: string): Promise<Lyrics>;
   songStats(id: string): Promise<SongStats>;
   comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage>;

@@ -25,6 +25,38 @@ extraResources:
 asar: true
 npmRebuild: false
 
+# "Open with CoCo Music": registers the app for these audio types on install.
+# macOS reads them into Info.plist (role Viewer = can open, never claims default);
+# Windows NSIS writes ProgIDs so the app appears in "打开方式". The OS then
+# launches/forwards paths: see electron/main/open-files.ts.
+# Keep in sync with AUDIO_EXTENSIONS in electron/shared/ipc.ts.
+fileAssociations:
+  - ext: mp3
+    name: MP3 Audio
+    description: MP3 音频
+    mimeType: audio/mpeg
+    role: Viewer
+  - ext: flac
+    name: FLAC Audio
+    description: FLAC 无损音频
+    mimeType: audio/flac
+    role: Viewer
+  - ext: [m4a, aac]
+    name: AAC Audio
+    description: AAC / M4A 音频
+    mimeType: audio/mp4
+    role: Viewer
+  - ext: wav
+    name: WAV Audio
+    description: WAV 音频
+    mimeType: audio/wav
+    role: Viewer
+  - ext: [ogg, oga, opus]
+    name: Ogg Audio
+    description: Ogg / Opus 音频
+    mimeType: audio/ogg
+    role: Viewer
+
 mac:
   icon: build/icon.icns
   category: public.app-category.music
@@ -40,6 +72,8 @@ win:
 
 nsis:
   oneClick: false
+  # Associations write to HKCU without elevation in per-user installs.
+  perMachine: false
   allowToChangeInstallationDirectory: true
   artifactName: ${productName}-${version}-Setup.${ext}
 

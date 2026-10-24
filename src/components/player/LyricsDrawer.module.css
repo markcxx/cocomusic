@@ -218,7 +218,7 @@
   margin: 0;
   padding: 10px 14px;
   border-radius: 12px;
-  font-size: 18px;
+  font-size: var(--lyric-size, 18px);
   line-height: 1.5;
   color: rgba(255, 255, 255, 0.42);
   transform-origin: left center;
@@ -237,7 +237,7 @@
 }
 
 .lineTranslation {
-  font-size: 14px;
+  font-size: calc(var(--lyric-size, 18px) * 0.78);
   opacity: 0.8;
 }
 
@@ -351,4 +351,39 @@
 
 .commentsBody {
   padding: 4px 0 32px;
+}
+
+/* ───────── Lyrics page settings ───────── */
+
+.backdropPlain {
+  inset: 0;
+  background: radial-gradient(120% 90% at 20% 10%, #3a3158 0%, #241e3a 55%, #1b1630 100%);
+  filter: none;
+  transform: none;
+}
+
+.centered .line {
+  align-items: center;
+  text-align: center;
+  transform-origin: center;
+}
+
+/* Depth of field: only the current line is sharp (browsing lifts it). */
+.blurInactive:not(.browsing) .line:not(.lineActive) {
+  filter: blur(1.2px);
+}
+
+.artSpin {
+  border-radius: 50%;
+  box-shadow: 0 0 0 10px rgba(0, 0, 0, 0.28), 0 30px 60px rgba(0, 0, 0, 0.35);
+  animation: artSpin 24s linear infinite;
+  animation-play-state: paused;
+}
+
+.artSpinning {
+  animation-play-state: running;
+}
+
+@keyframes artSpin {
+  to { rotate: 360deg; }
 }

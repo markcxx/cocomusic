@@ -68,10 +68,16 @@ run(process.execPath, [tscBin, '-p', 'electron/tsconfig.json', '--watch', '--pre
   });
 
 // 3. Electron, restarted on main-process changes.
+// Files after `--` simulate "open with CoCo Music": `npm run dev -- ~/Music/a.mp3`.
+// They are passed on the first launch only (a restart should not replay them).
+const openFiles = process.argv.slice(2).filter(arg => !arg.startsWith('-')).map(arg => path.resolve(arg));
+if (openFiles.length) log(`将模拟“打开方式”打开：${openFiles.join(', ')}`);
 let electron;
 let restarting = false;
+let launches = 0;
 function startElectron() {
-  electron = run(electronBinary, ['.'], { env: { ...env, COCO_DEV_RELOAD: '1' }, stdio: ['pipe', 'inherit', 'inherit'] });
+  const files = launches++ === 0 ? openFiles : [];
+  electron = run(electronBinary, ['.', ...files], { env: { ...env, COCO_DEV_RELOAD: '1' }, stdio: ['pipe', 'inherit', 'inherit'] });
   electron.once('exit', code => {
     if (restarting) { restarting = false; startElectron(); return; }
     log('Electron closed, stopping dev server');

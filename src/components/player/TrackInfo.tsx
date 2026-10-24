@@ -3,12 +3,34 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronUp } from 'lucide-react';
 import { Cover } from '@/components/common/Cover';
+import { isEmptyTrack } from '@/lib/mock-data';
 import { usePlayer } from './player-store';
 import styles from './PlayerBar.module.css';
 
-/** Now-playing card: one hover target that opens the full-screen lyrics drawer. */
+/**
+ * Now-playing card: one hover target that opens the full-screen lyrics drawer.
+ * Before anything is chosen it shows a neutral placeholder and a hint instead.
+ */
 export function TrackInfo() {
   const { track, openLyrics } = usePlayer();
+  const empty = isEmptyTrack(track);
+
+  if (empty) {
+    return (
+      <div className={styles.trackButton} data-empty>
+        <span className={styles.trackInfo}>
+          <span className={styles.thumb}>
+            <Cover seed="empty" empty size={52} radius={8} />
+          </span>
+          <span className={styles.meta}>
+            <strong className={styles.emptyTitle}>未在播放</strong>
+            <span>选一首歌，开始聆听</span>
+          </span>
+        </span>
+      </div>
+    );
+  }
+
   return (
     <motion.button
       type="button"

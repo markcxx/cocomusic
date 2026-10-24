@@ -1,14 +1,16 @@
 'use client';
 
-import { MotionConfig } from 'framer-motion';
 import { useEffect, type ReactNode } from 'react';
 import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
+import { ApplyAppearance } from '@/components/settings/ApplyAppearance';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
 import { PlayerBar } from '@/components/player/PlayerBar';
 import { PlayerProvider } from '@/components/player/player-store';
+import { QueuePanel } from '@/components/player/QueuePanel';
+import { LocalDropOverlay } from '@/components/library/LocalDropOverlay';
 import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
 import { NavigationProvider, useNavigation } from './navigation';
@@ -19,8 +21,7 @@ import styles from './AppShell.module.css';
 
 function useWindowMaterial() {
   useEffect(() => {
-    // With OS acrylic/vibrancy the drawn backdrop fades back so the desktop shows through.
-    document.documentElement.dataset.material = window.coco?.material ?? 'none';
+    // data-material (OS acrylic/vibrancy) is owned by ApplyAppearance, which follows settings.
     // macOS keeps native traffic lights in the top-left; layout reserves room for them.
     document.documentElement.dataset.platform = window.coco?.platform ?? 'web';
   }, []);
@@ -43,7 +44,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => { document.documentElement.dataset.mini = mini ? 'true' : 'false'; }, [mini]);
   return (
     // reducedMotion="user" disables transform/layout animations when the OS asks for it.
-    <MotionConfig reducedMotion="user" transition={{ type: 'spring', stiffness: 420, damping: 36, mass: 0.8 }}>
+    <ApplyAppearance>
       <NavigationProvider>
         <AccountProvider>
           <PlayerProvider>
@@ -64,12 +65,14 @@ export function AppShell({ children }: { children: ReactNode }) {
               </div>
             </div>
             {mini ? <MiniPlayer /> : <LyricsDrawer />}
+            {!mini && <QueuePanel />}
+            {!mini && <LocalDropOverlay />}
             <LoginDialog />
             <Toaster />
             <TooltipLayer />
           </PlayerProvider>
         </AccountProvider>
       </NavigationProvider>
-    </MotionConfig>
+    </ApplyAppearance>
   );
 }

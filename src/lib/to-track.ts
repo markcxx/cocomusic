@@ -9,6 +9,7 @@ export function toTrack(item: CatalogTrack): Track {
     title: item.title,
     artist: item.artist,
     album: item.album,
+    albumId: item.albumId,
     duration: item.duration,
     cover: item.cover,
     coverSeed: `${item.source}:${item.id}`,

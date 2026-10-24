@@ -13,5 +13,6 @@
     "outDir": "../dist-electron",
     "sourceMap": true
   },
-  "include": ["main/**/*.ts", "preload/**/*.ts", "shared/**/*.ts"]
+  "include": ["main/**/*.ts", "preload/**/*.ts", "shared/**/*.ts"],
+  "exclude": ["**/*.test.ts"]
 }

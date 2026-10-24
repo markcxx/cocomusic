@@ -15,13 +15,15 @@ function hash(seed: string) {
  * Artwork with a seeded gradient underneath. A real `src` fades in once loaded;
  * if it is missing or fails, the gradient remains as the placeholder.
  */
-export function Cover({ seed, src, size, radius, className, alt = '' }: {
+export function Cover({ seed, src, size, radius, className, alt = '', empty = false }: {
   seed: string;
   src?: string;
   size?: number;
   radius?: number;
   className?: string;
   alt?: string;
+  /** Neutral placeholder (no seeded colour), e.g. the player before anything is chosen. */
+  empty?: boolean;
 }) {
   const [status, setStatus] = useState<{ src?: string; state: 'loading' | 'loaded' | 'error' }>({ src, state: 'loading' });
   const state = status.src === src ? status.state : 'loading';
@@ -39,7 +41,7 @@ export function Cover({ seed, src, size, radius, className, alt = '' }: {
 
   const showImage = src && state !== 'error';
   return (
-    <span className={cn(styles.cover, showImage && state === 'loading' && styles.loading, className)} style={style} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
+    <span className={cn(styles.cover, empty && styles.empty, showImage && state === 'loading' && styles.loading, className)} style={style} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
       {showImage ? (
         <img
           key={src}

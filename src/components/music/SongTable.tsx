@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Download, Play } from 'lucide-react';
+import { Play } from 'lucide-react';
 import { LikeButton } from '@/components/account/LikeButton';
 import { TrackMenuButton } from '@/components/account/TrackMenuButton';
 import { useMemo, type MouseEvent } from 'react';
@@ -10,7 +10,8 @@ import { Cover } from '@/components/common/Cover';
 import { riseItem, staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
 import { formatTime, usePlayer } from '@/components/player/player-store';
-import { Checkbox, IconButton } from '@/components/ui';
+import { DownloadButton } from '@/components/downloads/DownloadButton';
+import { Checkbox } from '@/components/ui';
 import type { CatalogTrack } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
 import type { Selection } from '@/lib/selection';
@@ -93,7 +94,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
               // Earlier pages are already visible: show them instantly instead of replaying the entrance.
               variants={index >= animateFrom ? riseItem : stillItem}
               onClick={event => onRowClick(event, key)}
-              onDoubleClick={() => { if (!selecting) player.play(track, queue); }}
+              onDoubleClick={() => { if (!selecting) player.playFromList(track, queue); }}
             >
               <span role="cell" className={styles.index}>
                 {selecting && selection ? (
@@ -129,7 +130,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
                 {!selecting && (
                   <>
                     <LikeButton songId={item.id} />
-                    <IconButton label="下载（即将接入）" size="sm" tone="muted" disabled><Download size={16} strokeWidth={1.4} /></IconButton>
+                    <DownloadButton track={item} />
                     <TrackMenuButton track={item} playlistId={playlistId} onRemoved={onRemoved} />
                   </>
                 )}

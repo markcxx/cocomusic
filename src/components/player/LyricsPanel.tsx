@@ -3,16 +3,18 @@
 import { animate } from 'framer-motion';
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Spinner } from '@/components/ui';
-import { catalogApi, useCatalog, type LyricLine } from '@/lib/catalog-client';
+import type { LyricLine } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
+import { useTrackLyrics } from './use-track-lyrics';
 import styles from './LyricsDrawer.module.css';
 
 /** Lead so a line lights up as it starts, not a frame late (also hides decode latency). */
 const LEAD_SECONDS = 0.25;
 
-const LineList = memo(function LineList({ lines, active, synced, onSeek }: { lines: LyricLine[]; active: number; synced: boolean; onSeek: (time: number) => void }) {
+const LineList = memo(function LineList({ lines, active, synced, onSeek, translation }: { lines: LyricLine[]; active: number; synced: boolean; onSeek: (time: number) => void; translation: boolean }) {
   return (
     <>
       {lines.map((line, index) => (
@@ -24,7 +26,7 @@ const LineList = memo(function LineList({ lines, active, synced, onSeek }: { lin
           title={synced ? `跳转到 ${formatTime(line.time)}` : undefined}
         >
           <span className={styles.lineText}>{line.text}</span>
-          {line.translation && <span className={styles.lineTranslation}>{line.translation}</span>}
+          {translation && line.translation && <span className={styles.lineTranslation}>{line.translation}</span>}
         </p>
       ))}
     </>
@@ -38,13 +40,15 @@ const LineList = memo(function LineList({ lines, active, synced, onSeek }: { lin
  */
 export function LyricsPanel() {
   const { track, trial, seek } = usePlayer();
-  const songId = track.songId;
-  const lyrics = useCatalog(signal => (songId ? catalogApi.lyrics(songId, signal) : Promise.resolve(null)), `lyrics:${songId ?? ''}`);
+  const songId = track.localId ?? track.songId;
+  const lyrics = useTrackLyrics(track);
   const position = usePlaybackPosition();
   const offset = trial?.start ?? 0;
   const lines = useMemo(() => lyrics.data?.lines ?? [], [lyrics.data]);
   const synced = Boolean(lyrics.data?.synced);
-  const active = synced ? activeLineIndex(lines, position + offset + LEAD_SECONDS) : -1;
+  const prefs = useSettings();
+  // 设置 › 歌词页 › 歌词偏移: positive shows lines earlier.
+  const active = synced ? activeLineIndex(lines, position + offset + LEAD_SECONDS + prefs.lyricsOffset) : -1;
 
   const container = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
@@ -118,14 +122,15 @@ export function LyricsPanel() {
   return (
     <div
       ref={container}
-      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced)}
+      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced, prefs.lyricsBlurInactive && styles.blurInactive, prefs.lyricsAlign === 'center' && styles.centered)}
+      style={{ '--lyric-size': `${prefs.lyricsFontSize}px` } as React.CSSProperties}
       // Own scroller: wheel browses lyrics, and chains to the page (comments) at either end.
       data-scroll-native
       onPointerEnter={event => { if (event.pointerType === 'mouse') setHovering(true); }}
       onPointerLeave={() => setHovering(false)}
       aria-label="歌词"
     >
-      <LineList lines={lines} active={active} synced={synced} onSeek={onSeek} />
+      <LineList lines={lines} active={active} synced={synced} onSeek={onSeek} translation={prefs.lyricsShowTranslation} />
     </div>
   );
 }

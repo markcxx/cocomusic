@@ -7,9 +7,11 @@ import { LikeButton } from '@/components/account/LikeButton';
 import { Cover } from '@/components/common/Cover';
 import { PlayModeButton } from '@/components/player/controls';
 import { usePlaybackPosition, usePlayer } from '@/components/player/player-store';
+import { useTrackLyrics } from '@/components/player/use-track-lyrics';
+import { isPlayable } from '@/types/music';
 import { IconButton } from '@/components/ui';
-import { catalogApi, useCatalog } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
 import { exitMini } from './use-mini-mode';
 import styles from './MiniPlayer.module.css';
@@ -20,12 +22,12 @@ const RING = 2 * Math.PI * 21;
 function LyricTicker() {
   const { track, trial } = usePlayer();
   const position = usePlaybackPosition();
-  const songId = track.songId;
-  const lyrics = useCatalog(signal => (songId ? catalogApi.lyrics(songId, signal) : Promise.resolve(null)), `lyrics:${songId ?? ''}`);
+  const lyrics = useTrackLyrics(track);
   const lines = useMemo(() => lyrics.data?.lines ?? [], [lyrics.data]);
-  const index = lyrics.data?.synced ? activeLineIndex(lines, position + (trial?.start ?? 0) + 0.25) : -1;
+  const prefs = useSettings();
+  const index = prefs.miniShowLyrics && lyrics.data?.synced ? activeLineIndex(lines, position + (trial?.start ?? 0) + 0.25 + prefs.lyricsOffset) : -1;
   const line = index >= 0 ? lines[index] : undefined;
-  const text = line?.text || track.artist;
+  const text = line?.text || track.artist || '选一首歌，开始聆听';
   return (
     <span className={styles.ticker} aria-live="off">
       <AnimatePresence mode="popLayout" initial={false}>
@@ -72,21 +74,23 @@ function RingPlay() {
 export function MiniPlayer() {
   const player = usePlayer();
   const { track } = player;
+  const empty = !isPlayable(track);
+  const miniSpin = useSettings().miniSpinRecord;
   return (
     <div className={styles.shell} data-theme="dark">
       <div className={styles.backdrop} aria-hidden>
-        <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />
+        {!empty && <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />}
       </div>
 
       <button type="button" className={styles.record} onClick={exitMini} aria-label="返回完整窗口" data-tooltip="返回完整窗口">
-        <span className={cn(styles.disc, player.playing && styles.spinning)}>
-          <Cover seed={track.coverSeed} src={track.cover} radius={999} className={styles.discCover} />
+        <span className={cn(styles.disc, player.playing && miniSpin && styles.spinning)}>
+          <Cover seed={track.coverSeed} src={track.cover} radius={999} className={styles.discCover} empty={empty} />
         </span>
         <span className={styles.recordHint}><Maximize2 size={14} strokeWidth={1.8} /></span>
       </button>
 
       <div className={styles.meta}>
-        <strong data-tooltip={`${track.title} - ${track.artist}`} data-tooltip-overflow>{track.title}</strong>
+        <strong data-tooltip={empty ? undefined : `${track.title} - ${track.artist}`} data-tooltip-overflow>{empty ? '未在播放' : track.title}</strong>
         <LyricTicker />
       </div>
 
@@ -94,9 +98,9 @@ export function MiniPlayer() {
         <span className={styles.secondary}>
           {track.songId && <LikeButton songId={track.songId} size="sm" iconSize={15} />}
         </span>
-        <IconButton label="上一首" size="sm" onClick={player.previous}><SkipBack size={16} strokeWidth={1.5} /></IconButton>
+        <IconButton label="上一首" size="sm" onClick={player.previous} disabled={!player.queue.length}><SkipBack size={16} strokeWidth={1.5} /></IconButton>
         <RingPlay />
-        <IconButton label="下一首" size="sm" onClick={player.next}><SkipForward size={16} strokeWidth={1.5} /></IconButton>
+        <IconButton label="下一首" size="sm" onClick={player.next} disabled={!player.queue.length}><SkipForward size={16} strokeWidth={1.5} /></IconButton>
         <span className={styles.secondary}><PlayModeButton size={15} /></span>
       </div>
 

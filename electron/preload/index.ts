@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 // Sandboxed preloads can only require 'electron' and a few Node built-ins, not
 // local modules, so this file must stay self-contained. Keep these values in
@@ -9,10 +9,33 @@ const IPC = {
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
   miniChanged: 'window:mini-changed',
+  pickFolder: 'files:pick-folder',
+  pickAudioFiles: 'files:pick-audio',
+  revealFile: 'files:reveal',
+  openFiles: 'files:open',
+  openFilesReady: 'files:ready',
+  desktopLyrics: 'lyrics:desktop',
+  desktopLyricsLock: 'lyrics:lock',
+  desktopLyricsChanged: 'lyrics:changed',
+  desktopLyricsInteractive: 'lyrics:interactive',
+  desktopLyricsDrag: 'lyrics:drag',
+  appGetSettings: 'app:get-settings',
+  appSetSettings: 'app:set-settings',
+  appSetMaterial: 'app:set-material',
+  appOpenDataFolder: 'app:open-data-folder',
+  appShortcut: 'app:shortcut',
 } as const;
 const MATERIAL_SWITCH = '--coco-material=';
 
 const material = process.argv.find(arg => arg.startsWith(MATERIAL_SWITCH))?.slice(MATERIAL_SWITCH.length) ?? 'none';
+
+/** Subscribe to a main → renderer channel without exposing the IpcRendererEvent (it carries `sender`). */
+function listen<T>(channel: string, map: (value: unknown) => T, listener: (value: T) => void) {
+  const handler = (_event: unknown, value: unknown) => listener(map(value));
+  ipcRenderer.on(channel, handler);
+  return () => { ipcRenderer.removeListener(channel, handler); };
+}
+const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []);
 
 // Keep the bridge minimal: the renderer never receives ipcRenderer itself.
 // Shape must match CocoDesktopBridge in src/types/desktop.d.ts.
@@ -25,11 +48,34 @@ contextBridge.exposeInMainWorld('coco', {
     close: () => ipcRenderer.send(IPC.windowClose),
     toggleMini: () => ipcRenderer.send(IPC.windowToggleMini),
     /** Subscribe to mini mode changes; returns an unsubscribe function. */
-    onMiniChange: (listener: (mini: boolean) => void) => {
-      // Wrap so the renderer never sees the IpcRendererEvent (it exposes `sender`).
-      const handler = (_event: unknown, mini: unknown) => listener(mini === true);
-      ipcRenderer.on(IPC.miniChanged, handler);
-      return () => { ipcRenderer.removeListener(IPC.miniChanged, handler); };
+    onMiniChange: (listener: (mini: boolean) => void) => listen(IPC.miniChanged, value => value === true, listener),
+  },
+  files: {
+    pickFolder: () => ipcRenderer.invoke(IPC.pickFolder) as Promise<string | null>,
+    pickAudioFiles: () => ipcRenderer.invoke(IPC.pickAudioFiles).then(strings),
+    reveal: (file: string) => ipcRenderer.send(IPC.revealFile, file),
+    /** Absolute path of a dropped File (Electron no longer exposes File.path). */
+    pathForFile: (file: File) => { try { return webUtils.getPathForFile(file) || null; } catch { return null; } },
+    /** Files opened with the app. Subscribing also tells main the renderer is ready for them. */
+    onOpen: (listener: (files: string[]) => void) => {
+      const off = listen(IPC.openFiles, strings, listener);
+      ipcRenderer.send(IPC.openFilesReady);
+      return off;
     },
+  },
+  app: {
+    getSettings: () => ipcRenderer.invoke(IPC.appGetSettings),
+    setSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke(IPC.appSetSettings, patch),
+    setMaterial: (enabled: boolean) => ipcRenderer.send(IPC.appSetMaterial, enabled),
+    openDataFolder: () => ipcRenderer.send(IPC.appOpenDataFolder),
+    onShortcut: (listener: (action: string) => void) => listen(IPC.appShortcut, value => (typeof value === 'string' ? value : ''), listener),
+  },
+  lyrics: {
+    setDesktop: (visible: boolean | 'toggle') => ipcRenderer.send(IPC.desktopLyrics, visible),
+    setLocked: (locked: boolean) => ipcRenderer.send(IPC.desktopLyricsLock, locked),
+    onDesktopChange: (listener: (visible: boolean) => void) => listen(IPC.desktopLyricsChanged, value => value === true, listener),
+    onLockChange: (listener: (locked: boolean) => void) => listen(IPC.desktopLyricsLock, value => value === true, listener),
+    setInteractive: (interactive: boolean) => ipcRenderer.send(IPC.desktopLyricsInteractive, interactive),
+    drag: (phase: 'start' | 'end') => ipcRenderer.send(IPC.desktopLyricsDrag, phase),
   },
 });
