@@ -313,7 +313,11 @@ export type QrLoginState =
   | { status: 'success'; profile: UserProfile };
 
 export interface AccountProvider {
-  qrCreate(): Promise<{ key: string; url: string }>;
+  /**
+   * New QR login. Either `url` (encoded into a QR locally) or `image` (a data:
+   * URL the platform rendered itself, e.g. QQ's ptlogin QR) is provided.
+   */
+  qrCreate(): Promise<{ key: string; url: string; image?: string }>;
   qrCheck(key: string): Promise<QrLoginState>;
   profile(): Promise<UserProfile | null>;
   /** Rich profile of the logged-in user for the account card. */

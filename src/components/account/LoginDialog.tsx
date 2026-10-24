@@ -7,7 +7,16 @@ import { Dialog, Spinner } from '@/components/ui';
 import { accountApi, type UserProfile } from '@/lib/account-client';
 import { useLatest } from '@/lib/use-latest';
 import { useAccount } from './account-store';
+import { SOURCE_NAMES } from '@/server/music/ids';
+import { useSettings } from '@/lib/settings';
 import styles from './LoginDialog.module.css';
+
+/** Where to find the scanner in each platform's app. */
+const SCAN_HINTS = {
+  netease: '使用网易云音乐 App 扫码登录',
+  qq: '使用手机 QQ 扫码，授权登录 QQ 音乐',
+  kugou: '使用酷狗音乐 App 扫码登录',
+} as const;
 
 type Phase =
   | { name: 'loading' }
@@ -20,7 +29,7 @@ type Phase =
 const POLL_MS = 1800;
 
 /** Runs one QR session (create → poll) per `session` value; phases from older sessions are ignored. */
-function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void) {
+function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void, platform: string) {
   const [session, setSession] = useState(0);
   const [phase, setPhase] = useState<{ session: number; value: Phase } | null>(null);
   const loggedIn = useLatest(onLoggedIn);
@@ -50,9 +59,9 @@ function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void)
         update({ name: 'error', message: error instanceof Error ? error.message : '二维码获取失败' });
       }
     })();
-    // Closing the dialog or refreshing the code stops this session's polling.
+    // Closing the dialog, refreshing the code or switching platform stops this session's polling.
     return () => { cancelled = true; };
-  }, [active, session, loggedIn]);
+  }, [active, session, loggedIn, platform]);
 
   const current: Phase = phase?.session === session ? phase.value : { name: 'loading' };
   return { phase: current, restart: () => setSession(value => value + 1) };
@@ -61,12 +70,13 @@ function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void)
 /** NetEase QR login: show code → poll until scanned/confirmed/expired. */
 export function LoginDialog() {
   const { loginOpen, closeLogin, onLoggedIn } = useAccount();
+  const platform = useSettings().catalogSource;
   const { phase, restart } = useQrLogin(loginOpen, onLoggedIn);
 
   const svg = 'svg' in phase ? phase.svg : '';
   return (
-    <Dialog open={loginOpen} onClose={closeLogin} title="登录网易云音乐" width={380}>
-      <p className={styles.subtitle}>使用网易云音乐 App 扫码登录</p>
+    <Dialog open={loginOpen} onClose={closeLogin} title={`登录${SOURCE_NAMES[platform]}`} width={380}>
+      <p className={styles.subtitle}>{SCAN_HINTS[platform]}</p>
       <div className={styles.stage}>
         <AnimatePresence mode="wait" initial={false}>
           {phase.name === 'loading' && (
@@ -88,7 +98,7 @@ export function LoginDialog() {
           )}
           {svg && (
             <motion.div key="qr" className={styles.qrWrap} initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}>
-              {/* Server-generated SVG from a fixed URL pattern; contains no user input. */}
+              {/* Server-generated SVG: a QR of a fixed URL pattern, or a validated base64 PNG; no user input. */}
               <motion.div className={styles.qr} animate={{ filter: phase.name === 'waiting' ? 'blur(0px)' : 'blur(6px)', opacity: phase.name === 'waiting' ? 1 : 0.35 }} dangerouslySetInnerHTML={{ __html: svg }} />
               <AnimatePresence>
                 {phase.name === 'scanned' && (

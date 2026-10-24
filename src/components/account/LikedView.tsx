@@ -23,7 +23,7 @@ export function LikedView() {
             <Heart size={32} strokeWidth={1.4} />
           </motion.span>
           <h1>我喜欢的音乐</h1>
-          <p>登录网易云音乐后，这里会同步你红心过的歌曲</p>
+          <p>登录后，这里会同步你在当前曲库红心过的歌曲</p>
           <Button variant="primary" icon={<QrCode size={15} strokeWidth={1.5} />} onClick={openLogin}>扫码登录</Button>
         </div>
       </Page>

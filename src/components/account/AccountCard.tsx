@@ -64,7 +64,7 @@ function CardBody({ profile, detail, error, onClose }: { profile: UserProfile; d
           <h2 data-tooltip={profile.nickname} data-tooltip-overflow>{detail?.nickname ?? profile.nickname}</h2>
           <div className={styles.badges}>
             {vip > 0 && <span className={styles.vip}><Crown size={11} strokeWidth={2} />{VIP_LABELS[vip] ?? 'VIP'}</span>}
-            {detail?.level !== undefined && <span className={styles.level} data-tooltip="网易云音乐等级">Lv.{detail.level}</span>}
+            {detail?.level !== undefined && <span className={styles.level} data-tooltip="账号等级">Lv.{detail.level}</span>}
             {detail?.verified && <span className={styles.verified}><Mic2 size={11} strokeWidth={2} />{detail.verified}</span>}
           </div>
         </div>

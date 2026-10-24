@@ -8,8 +8,12 @@ export const dynamic = 'force-dynamic';
 export function POST(request: NextRequest) {
   return respond(async () => {
     const qr = await account(request.nextUrl.searchParams.get('source')).qrCreate();
-    const svg = await QRCode.toString(qr.url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#2b2648', light: '#ffffff00' } });
-    return { ...qr, svg };
+    // Platforms that render their own QR send a PNG data URL; wrap it as an SVG <image>
+    // so the dialog keeps a single code path.
+    const svg = qr.image && /^data:image\/(png|jpeg);base64,[A-Za-z0-9+/=]+$/.test(qr.image)
+      ? `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><image href="${qr.image}" width="100" height="100" style="image-rendering:pixelated"/></svg>`
+      : await QRCode.toString(qr.url, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#2b2648', light: '#ffffff00' } });
+    return { key: qr.key, url: qr.url, svg };
   });
 }
 
