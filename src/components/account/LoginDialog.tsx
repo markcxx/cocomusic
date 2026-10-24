@@ -31,13 +31,15 @@ const POLL_MS = 1800;
 /** Runs one QR session (create → poll) per `session` value; phases from older sessions are ignored. */
 function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void, platform: string) {
   const [session, setSession] = useState(0);
-  const [phase, setPhase] = useState<{ session: number; value: Phase } | null>(null);
+  const [phase, setPhase] = useState<{ session: string; value: Phase } | null>(null);
+  // A phase belongs to one QR session on one platform.
+  const id = `${platform}:${session}`;
   const loggedIn = useLatest(onLoggedIn);
 
   useEffect(() => {
     if (!active) return;
     let cancelled = false;
-    const update = (value: Phase) => { if (!cancelled) setPhase({ session, value }); };
+    const update = (value: Phase) => { if (!cancelled) setPhase({ session: id, value }); };
     void (async () => {
       try {
         const { key, svg } = await accountApi.qrCreate();
@@ -61,17 +63,17 @@ function useQrLogin(active: boolean, onLoggedIn: (profile: UserProfile) => void,
     })();
     // Closing the dialog, refreshing the code or switching platform stops this session's polling.
     return () => { cancelled = true; };
-  }, [active, session, loggedIn, platform]);
+  }, [active, id, loggedIn]);
 
-  const current: Phase = phase?.session === session ? phase.value : { name: 'loading' };
+  const current: Phase = phase?.session === id ? phase.value : { name: 'loading' };
   return { phase: current, restart: () => setSession(value => value + 1) };
 }
 
-/** NetEase QR login: show code → poll until scanned/confirmed/expired. */
+/** QR login for the selected platform: show code → poll until scanned/confirmed/expired. */
 export function LoginDialog() {
   const { loginOpen, closeLogin, onLoggedIn } = useAccount();
   const platform = useSettings().catalogSource;
-  const { phase, restart } = useQrLogin(loginOpen, onLoggedIn);
+  const { phase, restart } = useQrLogin(loginOpen, onLoggedIn, platform);
 
   const svg = 'svg' in phase ? phase.svg : '';
   return (

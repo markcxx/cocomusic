@@ -45,7 +45,7 @@ export function TrackTile({ track, queue, item }: { track: Track; queue: Track[]
       <div className={styles.actions}>
         {item && (
           <>
-            <LikeButton songId={item.id} />
+            <LikeButton songId={item.id} source={item.source} />
             <TrackMenuButton track={item} />
           </>
         )}

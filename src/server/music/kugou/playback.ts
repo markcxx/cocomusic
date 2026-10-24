@@ -88,31 +88,35 @@ function mapComment(item: Raw): SongComment {
 }
 
 /**
- * Song comments by mixsongid (= album_audio_id). 推荐/最热 use the default
- * weighted list; 最新 uses the classify list sorted by time. Cursor: next page number.
+ * Song comments by mixsongid (= album_audio_id). 推荐 uses the default weighted
+ * thread; 最热 uses the like-ordered "歌曲相关" (type 13) listing. Kugou has no
+ * time-ordered feed, so 最新 reorders each page of the default thread by time.
+ * Cursor: next page number.
  */
 export async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
   const { albumAudioId } = splitSongKey(key);
   if (!albumAudioId) return { items: [], total: 0, hasMore: false };
   const page = Math.max(1, Number(cursor) || 1);
-  const json = await kugouRequest<Raw>({
+  const thread = () => kugouRequest<Raw>({
     method: 'POST', path: '/mcomment/v1/cmtlist', raw: true,
     params: { mixsongid: albumAudioId, need_show_image: 1, p: page, pagesize: limit, show_classify: 1, show_hotword_list: 1, extdata: '0', code: COMMENT_CODE },
   });
-  let list = rows(json.list);
-  let total = num(json.count) ?? list.length;
-  if (sort === 'latest') {
-    // Time-sorted listing lives in the classify endpoint (type 13 = 歌曲相关 covers the full thread).
-    const latest = await kugouRequest<Raw>({
+  let json = sort === 'hot'
+    ? await kugouRequest<Raw>({
       method: 'POST', path: '/mcomment/v1/cmt_classify_list', raw: true,
-      params: { mixsongid: albumAudioId, need_show_image: 1, page, pagesize: limit, type_id: 13, extdata: '0', code: COMMENT_CODE, sort_method: 2 },
-    }).catch(() => null);
-    if (latest && rows(latest.list).length) { list = rows(latest.list); total = num(latest.count) ?? total; }
-    else list = [...list].sort((a, b) => text(b.addtime).localeCompare(text(a.addtime)));
-  }
+      params: { mixsongid: albumAudioId, need_show_image: 1, page, pagesize: limit, type_id: 13, extdata: '0', code: COMMENT_CODE, sort_method: 1 },
+    }).catch(() => ({} as Raw))
+    : await thread();
+  // Smaller threads have no "歌曲相关" category: rank the default thread by likes instead.
+  const hotFallback = sort === 'hot' && !rows(json.list).length;
+  if (hotFallback) json = await thread();
+  let list = rows(json.list);
+  if (sort === 'latest') list = [...list].sort((a, b) => text(b.addtime).localeCompare(text(a.addtime)));
+  if (hotFallback) list = [...list].sort((a, b) => (num(record(b.like).count) ?? 0) - (num(record(a.like).count) ?? 0));
+  const total = num(json.count) ?? list.length;
   const items = list.map(mapComment);
   const maxPage = num(json.maxPage) ?? Infinity;
-  const hasMore = items.length >= limit && page < maxPage && page * limit < total;
+  const hasMore = items.length > 0 && page < maxPage && page * limit < total;
   return { items, total, hasMore, cursor: hasMore ? String(page + 1) : undefined };
 }
 

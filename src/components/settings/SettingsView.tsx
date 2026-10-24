@@ -1,7 +1,8 @@
 'use client';
 
-import { AppWindow, Download, FolderCog, FolderOpen, Gauge, HardDrive, Info, Keyboard, Mic2, MonitorSpeaker, Music4, Palette, PictureInPicture2, Play, Sparkles, Trash2, Type } from 'lucide-react';
+import { AppWindow, Disc3, Download, FolderCog, FolderOpen, Gauge, HardDrive, Info, Keyboard, Mic2, MonitorSpeaker, Music4, Palette, PictureInPicture2, Play, Sparkles, Trash2, Type } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useAccount } from '@/components/account/account-store';
 import { downloads, useDownloads } from '@/components/downloads/download-store';
 import { useNavigation } from '@/components/layout/navigation';
 import { usePlayer } from '@/components/player/player-store';
@@ -24,7 +25,14 @@ const QUALITIES: ReadonlyArray<{ value: AudioQuality; label: string; hint: strin
   { value: 'hires', label: 'Hi-Res', hint: '高解析度，需要会员' },
 ];
 
+const PLATFORMS = [
+  { value: 'netease', label: '网易云音乐' },
+  { value: 'qq', label: 'QQ 音乐' },
+  { value: 'kugou', label: '酷狗音乐' },
+] as const;
+
 const SECTIONS = [
+  { id: 'catalog', label: '曲库', icon: Disc3 },
   { id: 'appearance', label: '外观', icon: Palette },
   { id: 'playback', label: '播放', icon: Play },
   { id: 'lyrics', label: '歌词页', icon: Type },
@@ -93,6 +101,7 @@ function useAppSettings() {
 /** 设置: every option here is applied live; sections jump from the sticky index on the left. */
 export function SettingsView() {
   const s = useSettings();
+  const account = useAccount();
   const player = usePlayer();
   const { navigate } = useNavigation();
   const { element } = useScrollArea();
@@ -164,6 +173,23 @@ export function SettingsView() {
         </nav>
 
         <div className={styles.sections}>
+          {/* ───────── 曲库 ───────── */}
+          <Section id="catalog" icon={<Disc3 size={17} strokeWidth={1.6} />} title="曲库" description="选择浏览、搜索和登录所使用的音乐平台">
+            <Row title="音乐平台" description="首页、发现、排行榜、搜索和账号都会切换到所选平台；播放列表中已有的歌曲仍从原平台播放">
+              <Segmented value={s.catalogSource} onChange={set('catalogSource')} label="音乐平台" options={[...PLATFORMS]} />
+            </Row>
+            <Row
+              title="账号"
+              description={account.profile
+                ? `已登录${PLATFORMS.find(item => item.value === s.catalogSource)?.label}：${account.profile.nickname}。每个平台的登录状态分别保存`
+                : '每个平台的登录状态分别保存，切换平台后需要登录对应平台的账号'}
+            >
+              {account.profile
+                ? <Button variant="ghost" onClick={() => void account.logout()}>退出登录</Button>
+                : <Button onClick={account.openLogin} disabled={account.profile === undefined}>登录</Button>}
+            </Row>
+          </Section>
+
           {/* ───────── 外观 ───────── */}
           <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口透明、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
             <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步">

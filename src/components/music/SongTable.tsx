@@ -129,7 +129,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
               <span role="cell" className={styles.actions}>
                 {!selecting && (
                   <>
-                    <LikeButton songId={item.id} />
+                    <LikeButton songId={item.id} source={item.source} />
                     <DownloadButton track={item} />
                     <TrackMenuButton track={item} playlistId={playlistId} onRemoved={onRemoved} />
                   </>

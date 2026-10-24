@@ -65,6 +65,8 @@ export async function kugouRequest<T = Raw>(options: {
   sign?: 'android' | 'web';
   /** Accept a body with status 0 / error_code as success (caller inspects it). */
   raw?: boolean;
+  /** Return the raw response bytes (encrypted cloudlist replies). */
+  binary?: boolean;
 }): Promise<T> {
   const { dfid, mid, uuid, userid, token } = device();
   const clienttime = Math.floor(Date.now() / 1000);
@@ -94,6 +96,7 @@ export async function kugouRequest<T = Raw>(options: {
     throw new KugouError(timedOut ? '酷狗音乐请求超时，请稍后重试' : '无法连接酷狗音乐，请检查网络', 504);
   }
   if (!response.ok) throw new KugouError(`酷狗音乐返回异常状态（${response.status}）`);
+  if (options.binary) return Buffer.from(await response.arrayBuffer()) as T;
   let json: Raw;
   try { json = await response.json() as Raw; } catch { throw new KugouError('酷狗音乐返回了无法解析的数据'); }
   if (!options.raw) {

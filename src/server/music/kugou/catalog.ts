@@ -63,7 +63,7 @@ async function newSongs(pagesize: number) {
 
 export async function featured(): Promise<HomeFeatured> {
   const [special, tracks, chartList] = await Promise.all([specialRecommend(0, 1, 12), newSongs(9), charts(2)]);
-  return { playlists: special.items.map(item => mapPlaylist(item, text(item.show) || '推荐歌单')), tracks, charts: chartList };
+  return { playlists: special.items.slice(0, 12).map(item => mapPlaylist(item, text(item.show) || '推荐歌单')), tracks, charts: chartList };
 }
 
 export async function newReleases() {
@@ -102,7 +102,8 @@ export async function playlists({ category, cursor, limit }: { category: string;
   const id = (category && categoryIds?.get(category)) || 0;
   const page = Math.max(1, Number(cursor) || 1);
   const result = await specialRecommend(id, page, limit);
-  const items = result.items.map(item => mapPlaylist(item, category || undefined));
+  // The feed may return a few more than asked (req_multi); keep pages the requested size.
+  const items = result.items.slice(0, limit).map(item => mapPlaylist(item, category || undefined));
   const hasMore = result.hasNext && items.length > 0;
   return { items, total: result.total ?? (page - 1) * limit + items.length, hasMore, cursor: hasMore ? String(page + 1) : undefined };
 }

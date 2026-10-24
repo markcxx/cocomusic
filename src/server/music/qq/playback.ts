@@ -1,6 +1,8 @@
 import { buildLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
-import { QQError, qqRequest } from './client';
+import { createHash } from 'node:crypto';
+import { session } from '../session';
+import { auth, QQError, qqRequest } from './client';
 import { https, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
 /**
@@ -16,6 +18,9 @@ const FILES: Array<{ level: AudioQuality; prefix: string; ext: string; size: str
 ];
 const ORDER: AudioQuality[] = ['hires', 'lossless', 'exhigh', 'higher', 'standard'];
 
+/** Stable per-install device guid (32 hex), like the official client sends. */
+const GUID = createHash('md5').update(session.deviceId()).digest('hex');
+
 async function trackInfo(mid: string) {
   const data = await qqRequest<Raw>('music.trackInfo.UniformRuleCtrl', 'CgiGetTrackInfo', { mids: [mid], types: [0] });
   const track = rows(data.tracks)[0];
@@ -25,8 +30,11 @@ async function trackInfo(mid: string) {
 
 /** Official vkey service (music.vkey.GetVkey / UrlGetVkey). Returns a full URL or ''. */
 async function vkey(mid: string, filename: string) {
+  // The vkey is signed for the uin in the params: it must be the logged-in user,
+  // otherwise QQ hands out anonymous (trial-only) keys even for VIP accounts.
+  const login = auth();
   const data = await qqRequest<Raw>('music.vkey.GetVkey', 'UrlGetVkey', {
-    guid: '10000', songmid: [mid], songtype: [0], uin: '0', loginflag: 1, platform: '20', filename: [filename],
+    guid: GUID, songmid: [mid], songtype: [0], uin: login?.uin ?? '0', loginflag: 1, platform: '20', filename: [filename],
   });
   const info = rows(data.midurlinfo)[0];
   const purl = text(info?.purl);

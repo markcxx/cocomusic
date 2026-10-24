@@ -5,23 +5,31 @@ import { Heart } from 'lucide-react';
 import { BadgedIcon } from '@/components/common/BadgedIcon';
 import { IconButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { SOURCE_NAMES } from '@/server/music/ids';
+import { useSettings } from '@/lib/settings';
+import type { CatalogSource } from '@/server/music/types';
 import { useAccount } from './account-store';
 import styles from './LikeButton.module.css';
 
 /**
  * Red heart bound to the account's liked songs (`songId` is the platform id).
  * With `count`, the total is embedded in the heart's top-right corner.
+ * Songs from a platform other than the selected one cannot be liked (the
+ * signed-in account belongs to the selected platform).
  */
-export function LikeButton({ songId, size = 'sm', iconSize = 16, count, className }: { songId: string; size?: 'sm' | 'md'; iconSize?: number; count?: number; className?: string }) {
+export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, className }: { songId: string; source?: CatalogSource; size?: 'sm' | 'md'; iconSize?: number; count?: number; className?: string }) {
   const { isLiked, toggleLike } = useAccount();
-  const liked = isLiked(songId);
-  const label = liked ? '取消喜欢' : '喜欢';
+  const platform = useSettings().catalogSource;
+  const foreign = Boolean(source && source !== platform);
+  const liked = !foreign && isLiked(songId);
+  const label = foreign ? `${SOURCE_NAMES[source!]}的歌曲，切换到该平台后可收藏` : liked ? '取消喜欢' : '喜欢';
   return (
     <IconButton
       label={label}
       tooltip={label}
       pressed={liked}
       size={size}
+      disabled={foreign}
       tone="muted"
       className={cn(liked && styles.liked, count !== undefined && styles.badged, className)}
       onClick={() => void toggleLike(songId)}

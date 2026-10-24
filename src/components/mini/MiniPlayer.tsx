@@ -96,7 +96,7 @@ export function MiniPlayer() {
 
       <div className={styles.controls}>
         <span className={styles.secondary}>
-          {track.songId && <LikeButton songId={track.songId} size="sm" iconSize={15} />}
+          {track.songId && <LikeButton songId={track.songId} source={track.source} size="sm" iconSize={15} />}
         </span>
         <IconButton label="上一首" size="sm" onClick={player.previous} disabled={!player.queue.length}><SkipBack size={16} strokeWidth={1.5} /></IconButton>
         <RingPlay />

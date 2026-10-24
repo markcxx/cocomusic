@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { settings as appSettings } from './settings';
+import { settings as appSettings, useSettings } from './settings';
 import { useLatest } from './use-latest';
 import type {
   ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
@@ -73,7 +73,9 @@ export type Resource<T> = { data: T | null; loading: boolean; error: string; ret
  */
 export function useCatalog<T>(load: (signal: AbortSignal) => Promise<T>, key: string): Resource<T> {
   const [revision, setRevision] = useState(0);
-  const request = `${key}#${revision}`;
+  // Browsing data belongs to the selected platform: switching it reloads every resource.
+  const platform = useSettings().catalogSource;
+  const request = `${platform}:${key}#${revision}`;
   const [settled, setSettled] = useState<{ request: string; data: T | null; error: string } | null>(null);
   const loader = useLatest(load);
 

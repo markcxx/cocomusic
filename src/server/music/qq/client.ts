@@ -44,7 +44,7 @@ export class QQError extends CatalogError {
 }
 
 /** Logged-in QQ session cookie values (uin + qm_keyst), when present. */
-function auth() {
+export function auth() {
   const cookie = session.get('qq')?.cookie;
   const uin = cookie?.uin?.replace(/^o0*/, '') ?? '';
   return uin && cookie?.qm_keyst ? { uin, key: cookie.qm_keyst } : null;
@@ -71,7 +71,10 @@ export async function qqBatch(requests: Record<string, { module: string; method:
       uin: login ? Number(login.uin) : 0,
       g_tk_new_20200303: login ? gtk(login.key) : 5381,
       g_tk: login ? gtk(login.key) : 5381,
-      ...(login ? { authst: login.key } : {}),
+      // Without tmeLoginType the gateway treats the musickey as anonymous, so VIP
+      // rights (full streams, high quality) are not applied. QQ-account keys
+      // start with "Q_H_L", WeChat ones with "W_X": 2 = QQ, 1 = WeChat.
+      ...(login ? { authst: login.key, qq: login.uin, tmeAppID: 'qqmusic', tmeLoginType: login.key.startsWith('W_X') ? 1 : 2 } : {}),
     },
     ...requests,
   };

@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useSettings } from '@/lib/settings';
 
 /** In-app routes. Detail and search routes carry their parameters. */
 export type Route =
@@ -46,7 +47,13 @@ export const routeKey = (route: Route) => {
   }
 };
 
-type Entry = { route: Route; scrollTop: number };
+/** `id` is stable for the entry's lifetime so pages keep their state across history rewrites. */
+type Entry = { id: number; route: Route; scrollTop: number };
+type History = { stack: Entry[]; index: number; source: string };
+
+/** Routes whose ids belong to one platform; they are dropped when the user switches platform. */
+const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked']);
+
 
 type NavigationState = {
   route: Route;
@@ -72,10 +79,28 @@ const NavigationContext = createContext<NavigationState | null>(null);
  * position, and detail/search routes keep their parameters.
  */
 export function NavigationProvider({ children }: { children: ReactNode }) {
-  const [history, setHistory] = useState<{ stack: Entry[]; index: number }>({ stack: [{ route: { name: 'home' }, scrollTop: 0 }], index: 0 });
+  const source = useSettings().catalogSource;
+  const [history, setHistory] = useState<History>(() => ({ stack: [{ id: 0, route: { name: 'home' }, scrollTop: 0 }], index: 0, source }));
   const scrollRef = useRef(0);
 
-  const commitScroll = (state: { stack: Entry[]; index: number }) => {
+  // Switching platform (设置 › 曲库): ids of the old platform are meaningless on the new one.
+  // Keep platform-neutral entries (home, settings, local…) and drop the rest; the
+  // current page stays mounted when it is neutral, otherwise we land on home.
+  if (history.source !== source) {
+    const currentEntry = history.stack[history.index];
+    const keep = history.stack.filter(entry => !PLATFORM_ROUTES.has(entry.route.name) && entry.route.name !== 'comments');
+    let stack = keep;
+    let index = stack.indexOf(currentEntry);
+    if (index < 0) {
+      // A fresh home entry; ids only need to be unique within this stack.
+      const id = Math.max(0, ...history.stack.map(entry => entry.id)) + 1;
+      stack = [...keep.filter(entry => entry.route.name !== 'home'), { id, route: { name: 'home' }, scrollTop: 0 }];
+      index = stack.length - 1;
+    }
+    setHistory({ stack, index, source });
+  }
+
+  const commitScroll = (state: History) => {
     const stack = state.stack.slice();
     stack[state.index] = { ...stack[state.index], scrollTop: scrollRef.current };
     return stack;
@@ -84,17 +109,18 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const navigate = useCallback((route: Route) => {
     setHistory(previous => {
       if (routeKey(previous.stack[previous.index].route) === routeKey(route)) return previous;
-      const stack = [...commitScroll(previous).slice(0, previous.index + 1), { route, scrollTop: 0 }];
+      const id = Math.max(0, ...previous.stack.map(entry => entry.id)) + 1;
+      const stack = [...commitScroll(previous).slice(0, previous.index + 1), { id, route, scrollTop: 0 }];
       scrollRef.current = 0;
-      return { stack, index: stack.length - 1 };
+      return { ...previous, stack, index: stack.length - 1 };
     });
   }, []);
 
   const replace = useCallback((route: Route) => {
     setHistory(previous => {
       const stack = previous.stack.slice();
-      stack[previous.index] = { route, scrollTop: scrollRef.current };
-      return { stack, index: previous.index };
+      stack[previous.index] = { ...stack[previous.index], route, scrollTop: scrollRef.current };
+      return { ...previous, stack };
     });
   }, []);
 
@@ -104,7 +130,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
       if (index === previous.index) return previous;
       const stack = commitScroll(previous);
       scrollRef.current = stack[index].scrollTop;
-      return { stack, index };
+      return { ...previous, stack, index };
     });
   }, []);
   const back = useCallback(() => go(-1), [go]);
@@ -114,7 +140,8 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const current = history.stack[history.index];
   const value = useMemo<NavigationState>(() => ({
     route: current.route,
-    entryKey: `${history.index}:${routeKey(current.route)}`,
+    // The platform is part of the key so pages with local state (selected category, paging) start fresh.
+    entryKey: `${history.source}:${current.id}:${routeKey(current.route)}`,
     navigate,
     replace,
     back,
@@ -123,7 +150,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
     canForward: history.index < history.stack.length - 1,
     restoreScrollTop: current.scrollTop,
     rememberScroll,
-  }), [current, history.index, history.stack.length, navigate, replace, back, forward, rememberScroll]);
+  }), [current, history.index, history.source, history.stack.length, navigate, replace, back, forward, rememberScroll]);
 
   return <NavigationContext.Provider value={value}>{children}</NavigationContext.Provider>;
 }
