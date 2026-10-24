@@ -26,7 +26,16 @@ const freePort = () => new Promise((resolve, reject) => {
 });
 
 const pkg = JSON.parse(readFileSync(path.join(root, 'package.json'), 'utf8'));
-const port = await freePort();
+// Fixed port (not random): localStorage — settings, chosen platform, queue — is per origin incl. port,
+// so a new port each `npm run dev` would forget them. Override with COCO_DEV_PORT.
+const DEV_PORT = Number(process.env.COCO_DEV_PORT) || 37650;
+const portFree = port => new Promise(resolve => {
+  const server = createServer();
+  server.once('error', () => resolve(false));
+  server.listen(port, '127.0.0.1', () => server.close(() => resolve(true)));
+});
+const port = (await portFree(DEV_PORT)) ? DEV_PORT : await freePort();
+if (port !== DEV_PORT) log(`端口 ${DEV_PORT} 被占用，改用 ${port}（本次不会读到之前保存的设置）`);
 const token = randomBytes(32).toString('hex');
 const origin = `http://127.0.0.1:${port}`;
 // Same folder Electron's app.getPath('userData') resolves to (it uses productName), so dev and packaged share login sessions.

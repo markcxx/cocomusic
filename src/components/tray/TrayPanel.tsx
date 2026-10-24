@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRightToLine, Heart, LogIn, Mic2, Pause, PictureInPicture2, Play, Power, Repeat, Repeat1, Settings, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { useSchemeAndAccent } from '@/components/settings/ApplyAppearance';
 import { Slider } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -22,7 +22,7 @@ export function TrayPanel() {
   useSchemeAndAccent();
   const [state, setState] = useState<CocoTrayState | null>(null);
   const [opened, setOpened] = useState(0);
-  const card = useRef<HTMLDivElement>(null);
+  const [card, setCard] = useState<HTMLDivElement | null>(null);
   // Local volume while dragging, so the thumb does not jump back between IPC round trips.
   const [dragVolume, setDragVolume] = useState<number | null>(null);
 
@@ -31,17 +31,21 @@ export function TrayPanel() {
     setState(next);
   }), []);
 
-  // The window fits the card: report its height whenever it changes.
-  const ready = state !== null;
+  // The window fits the card: report its layout height whenever it changes.
+  // offsetHeight ignores the opening animation's scale; a detached or not yet
+  // laid out card (height 0) must never shrink the window, which used to cut
+  // the panel off below the song row.
   useLayoutEffect(() => {
-    const node = card.current;
-    if (!node) return;
-    const report = () => window.coco?.tray?.resize(Math.ceil(node.getBoundingClientRect().height) + 16);
+    if (!card) return;
+    const report = () => {
+      const height = card.offsetHeight;
+      if (card.isConnected && height > 0) window.coco?.tray?.resize(height + 16);
+    };
     report();
     const observer = new ResizeObserver(report);
-    observer.observe(node);
+    observer.observe(card);
     return () => observer.disconnect();
-  }, [ready]);
+  }, [card]);
 
   if (!state) return null;
   const ModeIcon = MODE_ICONS[state.mode];
@@ -51,16 +55,17 @@ export function TrayPanel() {
 
   return (
     <div className={styles.frame}>
-      <div ref={card} key={opened} className={styles.card} role="menu" aria-label="CoCo Music">
+      {/* Re-keying only replays the opening animation; the ref follows the new node. */}
+      <div ref={setCard} key={opened} className={styles.card} role="menu" aria-label="CoCo Music">
         <div className={styles.transport}>
           <button type="button" className={styles.round} onClick={() => send('previous')} disabled={!state.hasTrack} aria-label="上一首" data-tooltip="上一首">
-            <SkipBack size={16} strokeWidth={0} fill="currentColor" />
+            <SkipBack size={16} strokeWidth={2} fill="currentColor" />
           </button>
           <button type="button" className={cn(styles.round, styles.play)} onClick={() => send('toggle')} disabled={!state.hasTrack} aria-label={state.playing ? '暂停' : '播放'} data-tooltip={state.playing ? '暂停' : '播放'}>
             {state.playing ? <Pause size={20} strokeWidth={0} fill="currentColor" /> : <Play size={20} strokeWidth={0} fill="currentColor" className={styles.playGlyph} />}
           </button>
           <button type="button" className={styles.round} onClick={() => send('next')} disabled={!state.hasTrack} aria-label="下一首" data-tooltip="下一首">
-            <SkipForward size={16} strokeWidth={0} fill="currentColor" />
+            <SkipForward size={16} strokeWidth={2} fill="currentColor" />
           </button>
         </div>
 

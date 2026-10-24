@@ -1,12 +1,4 @@
-# Build installers for macOS / Windows / Linux and attach them to a GitHub Release.
-#
-# Release:  git tag v0.0.1 && git push origin v0.0.1
-#           → builds every platform, creates a *draft* release "CoCo Music 0.0.1"
-#             with all installers; review it on GitHub and click Publish.
-# Dry run:  Actions → Release → Run workflow (artifacts only, no release).
-#
-# Each platform is built on its own native runner: the bundled Next server
-# carries platform-specific binaries, so cross-building is not reliable.
+# Version tags publish complete releases automatically. Manual runs only diagnose packaging.
 name: Release
 
 on:
@@ -22,8 +14,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  prepare:
+    name: Validate release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test release rules
+        run: node --test .github/scripts/release.test.mjs
+      - name: Validate version and release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+        run: node .github/scripts/release.mjs validate
+
   build:
     name: ${{ matrix.name }}
+    needs: prepare
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -43,45 +51,28 @@ jobs:
             args: --linux --x64
     env:
       NEXT_TELEMETRY_DISABLED: '1'
-      # No code-signing certificates yet: never pick up a stray keychain identity.
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Check tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/v')
-        shell: bash
-        run: |
-          version=$(node -p "require('./package.json').version")
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
-            exit 1
-          fi
-
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-
       - name: Typecheck, lint, test
         shell: bash
         run: |
           npm run typecheck
           npm run lint
           npm test
-
       - name: Build app
         run: npm run build
-
       - name: Package
         run: npx electron-builder ${{ matrix.args }} --publish never
-
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}-${{ runner.arch }}
+          name: installers-${{ runner.os }}-${{ runner.arch }}
           path: |
             release/*.dmg
             release/*.zip
@@ -89,34 +80,50 @@ jobs:
             release/*.AppImage
             release/*.deb
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 3
+          compression-level: 0
 
   release:
-    name: GitHub Release
+    name: Publish GitHub Release
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
       - uses: actions/download-artifact@v4
         with:
+          pattern: installers-*
           path: dist
           merge-multiple: true
-
-      - name: Checksums
-        working-directory: dist
-        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
-
-      - name: Create draft release
+      - name: Verify installers and publish release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: node .github/scripts/release.mjs publish
+
+  cleanup:
+    name: Remove temporary installers
+    needs: release
+    if: needs.release.result == 'success'
+    runs-on: ubuntu-24.04
+    # A cleanup outage must not mark a successfully published version as failed.
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - name: Delete this run's transferred artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          prerelease=""
-          case "$version" in 0.*) prerelease="--prerelease" ;; esac
-          gh release create "$GITHUB_REF_NAME" dist/* \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "CoCo Music $version" \
-            --draft $prerelease \
-            --generate-notes
+          gh api --paginate "repos/$REPOSITORY/actions/runs/$RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name | startswith("installers-")) | .id' |
+          while read -r artifact; do
+            gh api --method DELETE "repos/$REPOSITORY/actions/artifacts/$artifact"
+          done

@@ -23,14 +23,15 @@
   to { opacity: 1; transform: none; }
 }
 
-.card button {
+/* :where() keeps this reset at zero specificity so .round / .icon / .liked colours win. */
+.card :where(button) {
   border: 0;
   background: transparent;
   color: inherit;
   font: inherit;
 }
 
-.card button:disabled {
+.card :where(button):disabled {
   opacity: 0.4;
   cursor: default;
 }

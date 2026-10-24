@@ -94,14 +94,18 @@ macOS 的“打开方式”列表由启动服务缓存，安装后如果没出�
 
 ### 发布新版本
 
-三个平台的安装包由 GitHub Actions（`.github/workflows/release.yml`）在各自的原生系统上构建：
+日常推送与 Pull Request 仅执行类型检查、Lint、测试和发布规则检查，不生成安装包。版本标签触发全平台打包，并在文件齐全、远程附件的 SHA256 校验通过后自动发布到 [Releases](https://github.com/markcxx/cocomusic/releases)，无需手动编辑说明或点击 Publish。
 
-1. 修改 `package.json` 的 `version`（例如 `0.0.2`），提交并推送。
-2. 打标签并推送：`git tag v0.0.2 && git push origin v0.0.2`。
-3. 工作流会检查标签与版本号一致，跑类型检查、Lint 和测试，然后打出 macOS（arm64 + x64）、Windows、Linux 安装包，创建一个**草稿** Release 并附上全部文件和 `SHA256SUMS.txt`。
-4. 在 GitHub 的 Releases 页面检查草稿，编辑说明后点击 Publish。
+1. 由 AI 助手根据上一个版本以来的提交和实际差异，整理面向用户的中文更新说明，保存到 `.github/release-notes/<版本>.md`。首次发布总结现有功能与已知限制。
+2. 更新 `package.json` 与锁文件中的版本号，运行检查并提交。
+3. 推送代码和对应版本标签。例如 `git tag -a v0.0.2 -m "CoCo Music 0.0.2"`，然后执行 `git push origin main --follow-tags`。
+4. 工作流验证标签、版本号与更新说明，构建 macOS（arm64 + x64）、Windows、Linux 安装包，生成 `SHA256SUMS.txt`，上传并校验全部附件后自动公开 Release。
 
-只想试打包、不发布时，在 Actions › Release 里点 Run workflow，产物会出现在该次运行的 Artifacts 中。
+试用版本使用 `0.0.2-rc.1`、`0.0.2-beta.1` 等版本号和对应标签，自动发布为 Pre-release，不覆盖 Latest；`0.0.2` 等不带预发行后缀的版本自动发布为正式版并设为 Latest。`0.0.x` 不会仅因为主版本号为零而被标为 Pre-release。
+
+工作流在确认附件齐全前使用临时草稿，完成后自动公开。打包或上传失败时不会公开不完整的版本；可重试失败任务，已公开版本的附件不会被覆盖。若代码需要修复，应发布新的版本标签。
+
+Actions Artifact 仅用于构建任务之间传递文件，保留 3 天，发布成功后自动清理本次临时产物；正式安装包保留在 Release。手动运行 Actions › Release › Run workflow 仅用于诊断打包，不创建 Release，日常试用优先使用 `-rc` 标签。
 
 ## 项目结构
 

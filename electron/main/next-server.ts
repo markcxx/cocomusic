@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import path from 'node:path';
 import { app, utilityProcess } from 'electron';
@@ -13,16 +13,37 @@ export type NextServer = {
 
 const HOST = '127.0.0.1';
 
-function freePort(): Promise<number> {
-  return new Promise((resolve, reject) => {
+/** Listen on `port` (0 = any) just to learn whether it is free; resolves the port or null. */
+function probePort(port: number): Promise<number | null> {
+  return new Promise(resolve => {
     const server = createServer();
     server.unref();
-    server.once('error', reject);
-    server.listen(0, HOST, () => {
+    server.once('error', () => resolve(null));
+    server.listen(port, HOST, () => {
       const address = server.address();
-      server.close(() => (typeof address === 'object' && address ? resolve(address.port) : reject(new Error('No port'))));
+      server.close(() => resolve(typeof address === 'object' && address ? address.port : null));
     });
   });
+}
+
+/**
+ * The renderer's saved data (settings, selected platform, queue, volume, search
+ * history…) lives in localStorage, which is scoped to the page origin
+ * *including the port*. A new random port each launch therefore looked like a
+ * fresh install. Keep one port per install: reuse the saved one, and only pick
+ * (and save) a new one if it is taken.
+ */
+const DEFAULT_PORT = 37651;
+async function stablePort() {
+  const file = path.join(app.getPath('userData'), 'server-port.json');
+  let saved = DEFAULT_PORT;
+  try { saved = Number(JSON.parse(readFileSync(file, 'utf8')).port) || DEFAULT_PORT; } catch { /* first launch */ }
+  const port = (await probePort(saved)) ?? (await probePort(0));
+  if (!port) throw new Error('No free port for the renderer server');
+  if (port !== saved || !existsSync(file)) {
+    try { writeFileSync(file, JSON.stringify({ port })); } catch { /* best effort */ }
+  }
+  return port;
 }
 
 async function waitUntilReady(origin: string, token: string, timeoutMs: number, exited: () => boolean) {
@@ -63,7 +84,7 @@ export async function startNextServer(): Promise<NextServer> {
   const serverFile = standaloneServerPath();
   if (!existsSync(serverFile)) throw new Error(`Missing Next.js build at ${serverFile}. Run \`npm run build\` first.`);
 
-  const port = await freePort();
+  const port = await stablePort();
   const token = randomBytes(32).toString('hex');
   const origin = `http://${HOST}:${port}`;
   const child = utilityProcess.fork(serverFile, [], {

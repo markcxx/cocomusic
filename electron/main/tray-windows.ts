@@ -19,8 +19,11 @@ const secure = { contextIsolation: true, sandbox: true, nodeIntegration: false }
 /* ───────── Popup panel ───────── */
 
 let panel: BrowserWindow | undefined;
-let panelHeight = 360;
+/** Fits the full card before the page reports its real height. */
+let panelHeight = 460;
 let hiddenAt = 0;
+/** The panel was opened above the icon (taskbar at the bottom). */
+let openedAbove = true;
 
 export function createPanel(origin: string, preload: string) {
   panel = new BrowserWindow({
@@ -54,13 +57,14 @@ export const isPanel = (window: BrowserWindow | null) => Boolean(window && panel
 
 export function resizePanel(height: number) {
   if (!panel || panel.isDestroyed() || !Number.isFinite(height)) return;
-  panelHeight = Math.round(Math.min(640, Math.max(120, height)));
+  // Below ~300 the card cannot be complete: ignore bogus reports instead of clipping it.
+  if (height < 300) return;
+  panelHeight = Math.round(Math.min(640, height));
   const bounds = panel.getBounds();
   if (bounds.height === panelHeight) return;
-  // Keep the edge nearest the tray icon fixed.
-  const display = screen.getDisplayMatching(bounds).workArea;
-  const anchoredBottom = bounds.y + bounds.height >= display.y + display.height - 24;
-  panel.setBounds({ ...bounds, height: panelHeight, y: anchoredBottom ? bounds.y + bounds.height - panelHeight : bounds.y });
+  // Keep the edge facing the tray icon fixed: above the icon (Windows taskbar) the bottom edge, below it (macOS menu bar) the top edge.
+  const keepBottom = openedAbove;
+  panel.setBounds({ ...bounds, height: panelHeight, y: keepBottom ? bounds.y + bounds.height - panelHeight : bounds.y });
 }
 
 /** Show next to the tray icon (`anchor` = icon bounds), flipping to stay on screen. */
@@ -74,6 +78,7 @@ export function togglePanel(anchor: Rectangle, point?: { x: number; y: number })
   const x = Math.round(Math.min(area.x + area.width - PANEL_WIDTH - margin, Math.max(area.x + margin, center.x - PANEL_WIDTH / 2)));
   // Taskbar at the bottom (Windows) → above the icon; menu bar at the top (macOS) → below it.
   const below = center.y < area.y + area.height / 2;
+  openedAbove = !below;
   const y = Math.round(below ? Math.max(area.y + margin, anchor.y + anchor.height + 4) : Math.min(area.y + area.height - panelHeight - margin, anchor.y - panelHeight - 4));
   panel.setBounds({ x, y, width: PANEL_WIDTH, height: panelHeight });
   panel.webContents.send(IPC.trayState, { opened: Date.now() });
