@@ -78,16 +78,20 @@ async function main() {
   const checksums = path.join('dist', 'SHA256SUMS.txt');
   await writeFile(checksums, manifest.map(file => `${file.hash}  ${file.name}`).join('\n') + '\n');
   manifest.push({ name: 'SHA256SUMS.txt', size: (await stat(checksums)).size, hash: await sha256(checksums) });
-  const endpoint = `repos/${repo}/releases/tags/${info.tag}`;
-  const lookup = gh(['api', endpoint], true);
-  let release;
-  if (lookup.status === 0) {
-    release = JSON.parse(lookup.stdout);
-  } else {
-    assert(lookup.stderr.includes('(HTTP 404)'), lookup.stderr);
+  // The by-tag endpoint only resolves published releases. Authenticated list
+  // responses also include drafts; use their numeric IDs throughout uploading.
+  const findRelease = () => {
+    const pages = JSON.parse(gh(['api', `repos/${repo}/releases?per_page=100`, '--paginate', '--slurp']).stdout);
+    const matches = pages.flat().filter(release => release.tag_name === info.tag);
+    assert(matches.length <= 1, 'More than one release has this tag');
+    return matches[0];
+  };
+  let release = findRelease();
+  if (!release) {
     gh(['release', 'create', info.tag, '--repo', repo, '--verify-tag', '--draft', '--title', `CoCo Music ${version}`, '--notes-file', info.notes, `--prerelease=${info.prerelease}`]);
-    release = JSON.parse(gh(['api', endpoint]).stdout);
+    release = findRelease();
   }
+  assert(release, 'Created release could not be found');
   if (!release.draft) {
     // A retried job must never overwrite files in an already-public release.
     verifyUploadedAssets(release.assets, manifest);
@@ -95,7 +99,7 @@ async function main() {
     return;
   }
   gh(['release', 'upload', info.tag, ...manifest.map(file => path.join('dist', file.name)), '--repo', repo, '--clobber']);
-  release = JSON.parse(gh(['api', endpoint]).stdout);
+  release = JSON.parse(gh(['api', `repos/${repo}/releases/${release.id}`]).stdout);
   verifyUploadedAssets(release.assets, manifest);
   gh(['release', 'edit', info.tag, '--repo', repo, '--title', `CoCo Music ${version}`, '--notes-file', info.notes, `--prerelease=${info.prerelease}`, '--draft=false', `--latest=${!info.prerelease}`]);
   console.log(`Published https://github.com/${repo}/releases/tag/${info.tag}`);

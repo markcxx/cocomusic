@@ -51,7 +51,7 @@ test('publishing is atomic and retries never overwrite an already-public release
       await writeFile(path.join(root, '.github/release-notes/0.0.1.md'), 'Release notes');
       for (const name of names) await writeFile(path.join(root, 'dist', name), `fixture-${name}`);
       const state = path.join(root, 'state.json');
-      await writeFile(state, JSON.stringify({ exists: false, draft: true, assets: [], uploads: 0, edits: 0 }));
+      await writeFile(state, JSON.stringify({ id: 123, tag_name: 'v0.0.1', exists: false, draft: true, assets: [], uploads: 0, edits: 0 }));
       await writeFile(path.join(root, 'bin/gh'), `#!/usr/bin/env node
 const fs = require('node:fs');
 const path = require('node:path');
@@ -60,8 +60,12 @@ const args = process.argv.slice(2);
 const file = process.env.FAKE_GH_STATE;
 const state = JSON.parse(fs.readFileSync(file, 'utf8'));
 if (args[0] === 'api') {
-  if (!state.exists) { console.error('gh: Not Found (HTTP 404)'); process.exit(1); }
-  console.log(JSON.stringify({...state, html_url:'https://example.com/release'}));
+  if (args[1].includes('/releases/tags/') && state.draft) { console.error('gh: Not Found (HTTP 404)'); process.exit(1); }
+  if (args.includes('--slurp')) console.log(JSON.stringify([state.exists ? [state] : []]));
+  else {
+    if (!state.exists) { console.error('gh: Not Found (HTTP 404)'); process.exit(1); }
+    console.log(JSON.stringify({...state, html_url:'https://example.com/release'}));
+  }
 } else if (args[1] === 'create') {
   state.exists = true;
 } else if (args[1] === 'upload') {

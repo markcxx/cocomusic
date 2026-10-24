@@ -1,0 +1,76 @@
+# Retry publication without rebuilding or moving a version tag.
+name: Resume Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag (for example v0.0.1)
+        required: true
+        type: string
+      run_id:
+        description: Original Release workflow run with all platform builds successful
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-refs/tags/${{ inputs.tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify source and resume publication
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test publishing rules
+        run: node --test .github/scripts/release.test.mjs
+      - name: Verify original build and load tagged release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          SOURCE_RUN_ID: ${{ inputs.run_id }}
+        run: node .github/scripts/resume-release.mjs
+      - uses: actions/download-artifact@v4
+        with:
+          github-token: ${{ github.token }}
+          run-id: ${{ inputs.run_id }}
+          pattern: installers-*
+          path: release-context/dist
+          merge-multiple: true
+      - name: Verify installers and publish
+        working-directory: release-context
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: node ../.github/scripts/release.mjs publish
+
+  cleanup:
+    name: Remove transferred artifacts
+    needs: publish
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    permissions:
+      actions: write
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ inputs.run_id }}
+        run: |
+          gh api --paginate "repos/$REPOSITORY/actions/runs/$RUN_ID/artifacts" \
+            --jq '.artifacts[] | select(.name | startswith("installers-")) | .id' |
+          while read -r artifact; do
+            gh api --method DELETE "repos/$REPOSITORY/actions/artifacts/$artifact"
+          done
