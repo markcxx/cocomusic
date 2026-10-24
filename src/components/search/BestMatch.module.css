@@ -30,7 +30,7 @@
 
 .card:hover {
   background: var(--card-hover);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 10px 26px rgba(70, 60, 140, 0.1);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 10px 26px rgba(var(--ink-rgb), 0.1);
 }
 
 .text {

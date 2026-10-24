@@ -7,7 +7,7 @@
 
 .cover {
   flex-shrink: 0;
-  box-shadow: 0 10px 24px rgba(50, 40, 110, 0.18);
+  box-shadow: 0 10px 24px rgba(var(--ink-rgb), 0.18);
 }
 
 .heroMeta {

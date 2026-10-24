@@ -16,7 +16,7 @@
 
 .account:hover,
 .account[data-open='true'] {
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--hover);
 }
 
 .avatar {
@@ -29,7 +29,7 @@
   border-radius: 50%;
   background: var(--accent-tint);
   color: var(--accent-strong);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.7);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
   transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

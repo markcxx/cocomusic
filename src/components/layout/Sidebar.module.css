@@ -134,7 +134,7 @@
 
 .navItem:hover:not(.active),
 .playlistItem:hover {
-  background: rgba(250, 249, 255, 0.42);
+  background: var(--hover);
 }
 
 .activePill {
@@ -143,7 +143,7 @@
   z-index: -1;
   border-radius: inherit;
   background: var(--nav-active);
-  box-shadow: 0 1px 2px rgba(80, 70, 150, 0.06), 0 4px 12px rgba(80, 70, 150, 0.05);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06), 0 4px 12px rgba(var(--ink-rgb), 0.05);
 }
 
 .icon {

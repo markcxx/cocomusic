@@ -49,8 +49,8 @@
   height: 220px;
   padding: 10px;
   border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 10px 30px rgba(60, 50, 130, 0.12);
+  background: #fff; /* QR codes must stay dark-on-white to scan */
+  box-shadow: 0 10px 30px rgba(var(--ink-rgb), 0.12);
 }
 
 .qr {
@@ -97,7 +97,7 @@ button.overlay {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  box-shadow: 0 4px 14px rgba(60, 50, 130, 0.2);
+  box-shadow: 0 4px 14px rgba(var(--ink-rgb), 0.2);
 }
 
 .note {

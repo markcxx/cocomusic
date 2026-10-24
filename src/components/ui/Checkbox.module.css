@@ -9,7 +9,7 @@
   padding: 0;
   border: 1.5px solid rgba(var(--accent-strong-rgb), 0.35);
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--chip);
   color: #fff;
   transition: background-color 180ms ease, border-color 180ms ease;
 }

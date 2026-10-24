@@ -1,25 +1,57 @@
+/*
+ * Design tokens. Every surface, text and line colour goes through these, so
+ * the dark theme (html[data-color-scheme='dark']) is one block of overrides.
+ * Panel alphas (--sheet, --card…) are rewritten at runtime by ApplyAppearance
+ * from the glass-opacity setting; the RGB parts below are the base tones.
+ */
 :root {
   color-scheme: light;
 
-  /* Surfaces: soft lavender acrylic palette */
+  /* Base tones (RGB triplets so alphas can vary per use). */
+  --surface-rgb: 246, 246, 255;
+  --surface-pinned-rgb: 238, 237, 252;
+  --raised-rgb: 255, 255, 255;
+  --player-rgb: 244, 244, 255;
+  /* Opaque-ish popovers: menus, dialogs, toasts, tooltips on light. */
+  --popover: rgba(250, 249, 255, 0.95);
+  --popover-solid: #faf9ff;
+  /* Ink used for shadows, scrims and overlays. */
+  --ink-rgb: 40, 32, 80;
+
+  /* Surfaces */
   --shell: #dfe1f5;
-  --sheet: rgba(246, 246, 255, 0.5);
+  --sheet: rgba(var(--surface-rgb), 0.5);
   /* Same tone as the sheet, more opaque: pinned bars hide rows sliding underneath without looking like a new layer. */
-  --sheet-pinned: rgba(238, 237, 252, 0.9);
-  --card: rgba(255, 255, 255, 0.46);
-  --card-hover: rgba(255, 255, 255, 0.72);
-  --player: rgba(244, 244, 255, 0.58);
-  --nav-active: rgba(255, 255, 255, 0.7);
+  --sheet-pinned: rgba(var(--surface-pinned-rgb), 0.9);
+  --card: rgba(var(--raised-rgb), 0.46);
+  --card-hover: rgba(var(--raised-rgb), 0.72);
+  --player: rgba(var(--player-rgb), 0.58);
+  --nav-active: rgba(var(--raised-rgb), 0.7);
   --glass-edge: rgba(255, 255, 255, 0.62);
   --glass-blur: blur(36px) saturate(1.5);
+
+  /* Interactive fills on glass */
+  --hover: rgba(var(--raised-rgb), 0.55);
+  --hover-strong: rgba(var(--raised-rgb), 0.8);
+  --field: rgba(var(--raised-rgb), 0.7);
+  --field-focus: rgba(var(--raised-rgb), 0.92);
+  --zebra: rgba(var(--raised-rgb), 0.18);
+  --row-hover: rgba(var(--raised-rgb), 0.62);
+  --chip: rgba(var(--raised-rgb), 0.55);
+  /* Solid knob/thumb/segment highlight. */
+  --knob: #ffffff;
+  --divider: rgba(var(--accent-strong-rgb), 0.1);
+  --scrim: rgba(var(--ink-rgb), 0.22);
+  --cover-scrim: rgba(30, 24, 60, 0.38);
 
   /* Text */
   --text-strong: #25294a;
   --text: #353342;
   --text-secondary: #777487;
   --text-muted: #8f92a8;
+  --text-on-accent: #ffffff;
 
-  /* Accent: soft lavender family */
+  /* Accent: soft lavender family (overridden by the theme colour setting) */
   --accent: #9b87bf;
   --accent-strong: #6f5aa8;
   --accent-rgb: 155, 135, 191;
@@ -29,14 +61,64 @@
   --accent-tint-strong: #d8cdef;
   --trend-up: #e0605a;
   --trend-new: #3fa96b;
+  --danger: #d9534f;
+  --danger-fill: #e4564f;
+  --like: #e0605a;
 
   --radius-sheet: 24px;
   --radius-card: 12px;
   --radius-cover: 10px;
-  --shadow-soft: 0 1px 2px rgba(60, 58, 110, 0.04), 0 8px 24px rgba(60, 58, 110, 0.05);
+  --shadow-soft: 0 1px 2px rgba(var(--ink-rgb), 0.04), 0 8px 24px rgba(var(--ink-rgb), 0.05);
+  --shadow-pop: 0 18px 48px rgba(var(--ink-rgb), 0.2);
+
+  /* Drawn backdrop strength (设置 › 外观 › 窗口不透明度). 1 = solid app background. */
+  --window-opacity: 1;
 
   --font-sans: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC",
     "Noto Sans SC", system-ui, sans-serif;
+}
+
+/* ───────── Dark theme ───────── */
+
+html[data-color-scheme='dark'] {
+  color-scheme: dark;
+
+  --surface-rgb: 34, 31, 50;
+  --surface-pinned-rgb: 30, 27, 44;
+  --raised-rgb: 58, 53, 82;
+  --player-rgb: 26, 24, 38;
+  --popover: rgba(38, 35, 56, 0.96);
+  --popover-solid: #26233a;
+  --ink-rgb: 0, 0, 0;
+
+  --shell: #15131f;
+  --glass-edge: rgba(255, 255, 255, 0.08);
+
+  --hover: rgba(255, 255, 255, 0.07);
+  --hover-strong: rgba(255, 255, 255, 0.12);
+  --field: rgba(255, 255, 255, 0.06);
+  --field-focus: rgba(255, 255, 255, 0.1);
+  --zebra: rgba(255, 255, 255, 0.025);
+  --row-hover: rgba(255, 255, 255, 0.07);
+  --chip: rgba(255, 255, 255, 0.07);
+  --knob: #f4f2fb;
+  --divider: rgba(255, 255, 255, 0.08);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --cover-scrim: rgba(10, 8, 20, 0.5);
+
+  --text-strong: #f1effa;
+  --text: #d9d6e6;
+  --text-secondary: #a5a1b8;
+  --text-muted: #7f7b94;
+
+  --trend-up: #f07a70;
+  --trend-new: #5cc58a;
+  --danger: #f0716b;
+  --danger-fill: #e0554e;
+  --like: #f07a70;
+
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-pop: 0 18px 48px rgba(0, 0, 0, 0.5);
 }
 
 * {
@@ -84,6 +166,8 @@ body {
     radial-gradient(22% 26% at 48% 46%, rgba(240, 222, 246, 0.7), transparent 70%),
     #dcdcf3;
   filter: blur(40px) saturate(1.1);
+  /* Follows the window opacity: lower = more of the blurred desktop behind the window. */
+  opacity: var(--window-opacity);
   content: '';
   animation: drift 40s ease-in-out infinite alternate;
 }
@@ -108,14 +192,29 @@ body {
   }
 }
 
-html[data-material="acrylic"] body,
-html[data-material="vibrancy"] body {
-  background: transparent;
+/* Dark backdrop: deep violet fields instead of pastel ones. */
+html[data-color-scheme='dark'] .backdrop::before {
+  background:
+    radial-gradient(28% 34% at 14% 18%, rgba(96, 70, 170, 0.55), transparent 70%),
+    radial-gradient(30% 36% at 82% 12%, rgba(52, 82, 150, 0.5), transparent 70%),
+    radial-gradient(34% 40% at 70% 78%, rgba(110, 60, 140, 0.45), transparent 70%),
+    radial-gradient(26% 30% at 24% 84%, rgba(40, 90, 130, 0.4), transparent 70%),
+    #16141f;
 }
 
-html[data-material="acrylic"] .backdrop,
-html[data-material="vibrancy"] .backdrop {
-  opacity: 0.35;
+html[data-color-scheme='dark'] .backdrop::after {
+  opacity: 0.12;
+}
+
+/*
+ * Whole-window transparency (设置 › 外观 › 窗口效果). With an OS material the
+ * window itself is see-through and blurred by the system; the app draws its
+ * backdrop on top at --window-opacity, so lowering it reveals the blurred desktop.
+ */
+html[data-material="acrylic"] body,
+html[data-material="mica"] body,
+html[data-material="vibrancy"] body {
+  background: transparent;
 }
 
 /* Reduce motion (设置 › 外观): stop ambient and CSS-driven animation. */
@@ -131,7 +230,7 @@ html[data-reduce-motion='true'] *::after {
 /* Reusable frosted-glass surface. */
 .glass {
   background: var(--sheet);
-  box-shadow: inset 1px 1px 0 var(--glass-edge), 0 10px 40px rgba(70, 60, 140, 0.06);
+  box-shadow: inset 1px 1px 0 var(--glass-edge), 0 10px 40px rgba(var(--ink-rgb), 0.06);
   backdrop-filter: var(--glass-blur);
 }
 

@@ -1,6 +1,6 @@
 /* Red goes on the heart only; an embedded count keeps the button's neutral colour. */
 .liked :global(svg) {
-  color: #e0605a;
+  color: var(--like);
 }
 
 .icon {

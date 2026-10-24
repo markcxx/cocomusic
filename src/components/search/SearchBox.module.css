@@ -12,7 +12,7 @@
   height: 40px;
   padding: 0 12px 0 16px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.42);
+  background: var(--chip);
   box-shadow: inset 0 0 0 1px var(--glass-edge);
   color: var(--text-secondary);
   backdrop-filter: var(--glass-blur);
@@ -21,7 +21,7 @@
 
 .field[data-open='true'] {
   background: rgba(252, 252, 255, 0.95);
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.4), 0 0 0 4px rgba(var(--accent-rgb), 0.14), 0 6px 18px rgba(80, 70, 150, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.4), 0 0 0 4px rgba(var(--accent-rgb), 0.14), 0 6px 18px rgba(var(--ink-rgb), 0.08);
   color: var(--accent-strong);
 }
 
@@ -56,6 +56,6 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  background: rgba(120, 110, 170, 0.14);
+  background: var(--hover);
   color: var(--text-secondary);
 }

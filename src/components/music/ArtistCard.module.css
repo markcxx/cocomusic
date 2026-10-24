@@ -17,7 +17,7 @@
   margin-bottom: 8px;
   overflow: hidden;
   border-radius: 50%;
-  box-shadow: 0 8px 20px rgba(60, 54, 120, 0.12);
+  box-shadow: 0 8px 20px rgba(var(--ink-rgb), 0.12);
   transition: box-shadow 260ms ease;
 }
 
@@ -30,14 +30,14 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: rgba(30, 24, 60, 0.32);
+  background: var(--cover-scrim);
   opacity: 0;
   transition: opacity 240ms ease;
 }
 
 .artist:hover .avatar,
 .artist:focus-visible .avatar {
-  box-shadow: 0 12px 28px rgba(60, 54, 120, 0.2);
+  box-shadow: 0 12px 28px rgba(var(--ink-rgb), 0.2);
 }
 
 .artist:hover .cover {

@@ -19,7 +19,7 @@
   border: 0;
   border-radius: var(--radius-cover);
   background: transparent;
-  box-shadow: 0 6px 18px rgba(60, 54, 120, 0.1);
+  box-shadow: 0 6px 18px rgba(var(--ink-rgb), 0.1);
   transition: box-shadow 260ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -64,9 +64,9 @@
   padding: 0 0 0 3px;
   border: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--field-focus);
   color: var(--accent-strong);
-  box-shadow: 0 8px 20px rgba(30, 20, 80, 0.28);
+  box-shadow: 0 8px 20px rgba(var(--ink-rgb), 0.28);
   opacity: 0;
   translate: 0 8px;
   transition: opacity 220ms ease, translate 260ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -74,7 +74,7 @@
 
 .coverFrame:hover .coverButton {
   transform: translateY(-3px);
-  box-shadow: 0 14px 28px rgba(60, 54, 120, 0.18);
+  box-shadow: 0 14px 28px rgba(var(--ink-rgb), 0.18);
 }
 
 .coverFrame:hover .cover {

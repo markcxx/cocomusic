@@ -6,8 +6,8 @@
   overflow-y: auto;
   padding: 6px;
   border-radius: 14px;
-  background: rgba(250, 249, 255, 0.95);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 18px 48px rgba(50, 40, 120, 0.2);
+  background: var(--popover);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 18px 48px rgba(var(--ink-rgb), 0.2);
   backdrop-filter: blur(28px) saturate(1.5);
 }
 
@@ -39,7 +39,7 @@
 }
 
 .danger {
-  color: #d9534f;
+  color: var(--danger);
 }
 
 .icon {

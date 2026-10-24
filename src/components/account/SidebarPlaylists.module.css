@@ -78,7 +78,7 @@
 
 .row:hover,
 .menuOpen {
-  background: rgba(250, 249, 255, 0.42);
+  background: var(--hover);
 }
 
 .active,
@@ -193,7 +193,7 @@
 
 .loginHint:hover {
   border-color: var(--accent);
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--chip);
   color: var(--accent-strong);
 }
 

@@ -10,7 +10,7 @@
   padding: 5px 10px;
   border-radius: 8px;
   background: var(--bg);
-  box-shadow: 0 8px 24px rgba(30, 22, 70, 0.22), 0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
+  box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.22), 0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
   font-size: 12px;
   line-height: 18px;
   color: var(--fg);
@@ -21,7 +21,7 @@
 
 /* Over the dark lyrics page: frosted light bubble. */
 .inverted {
-  --bg: rgba(250, 249, 255, 0.94);
+  --bg: var(--popover);
   --fg: #25294a;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }

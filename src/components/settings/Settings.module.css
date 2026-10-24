@@ -48,7 +48,7 @@
 }
 
 .indexItem:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--hover);
   color: var(--text-strong);
 }
 
@@ -56,7 +56,7 @@
 .indexActive:hover {
   background: var(--nav-active);
   color: var(--accent-strong);
-  box-shadow: 0 1px 2px rgba(80, 70, 150, 0.06);
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06);
 }
 
 .sections {
@@ -230,8 +230,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(30, 20, 70, 0.25);
+  background: var(--knob);
+  box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.25);
 }
 
 /* ───────── Segmented ───────── */
@@ -269,8 +269,8 @@
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: #fff;
-  box-shadow: 0 1px 3px rgba(60, 50, 120, 0.12);
+  background: var(--knob);
+  box-shadow: 0 1px 3px rgba(var(--ink-rgb), 0.12);
 }
 
 .segmentLabel {
@@ -289,7 +289,7 @@
   padding: 0 10px 0 14px;
   border: 0;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--field);
   box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.14);
   font-size: 13px;
   color: var(--text-strong);
@@ -348,7 +348,7 @@
   border: 0;
   border-radius: 50%;
   background: linear-gradient(135deg, var(--swatch-strong), var(--swatch));
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(60, 50, 120, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6), 0 2px 6px rgba(var(--ink-rgb), 0.18);
   transition: transform 180ms cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 180ms ease;
 }
 
@@ -357,7 +357,7 @@
 }
 
 .swatchActive {
-  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--swatch), 0 2px 8px rgba(60, 50, 120, 0.2);
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--swatch), 0 2px 8px rgba(var(--ink-rgb), 0.2);
 }
 
 /* ───────── Glass preview ───────── */
@@ -404,7 +404,7 @@
   gap: 2px;
   border-radius: 14px;
   background: var(--sheet);
-  box-shadow: inset 1px 1px 0 var(--glass-edge), 0 10px 30px rgba(70, 60, 140, 0.1);
+  box-shadow: inset 1px 1px 0 var(--glass-edge), 0 10px 30px rgba(var(--ink-rgb), 0.1);
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
   text-align: center;
@@ -503,7 +503,7 @@
 }
 
 .conflict span:first-child {
-  color: #d9534f;
+  color: var(--danger);
 }
 
 .kbd {
@@ -512,7 +512,7 @@
   height: 24px;
   padding: 0 8px;
   border-radius: 6px;
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--hover-strong);
   box-shadow: inset 0 -1px 0 rgba(var(--accent-strong-rgb), 0.18), inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.12);
   font-family: inherit;
   font-size: 12px;
@@ -531,7 +531,7 @@
 
 .about img {
   border-radius: 14px;
-  box-shadow: 0 6px 16px rgba(60, 50, 120, 0.18);
+  box-shadow: 0 6px 16px rgba(var(--ink-rgb), 0.18);
 }
 
 .about strong {
@@ -557,7 +557,7 @@
 .facts div {
   padding: 10px 12px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--hover);
 }
 
 .facts dt {

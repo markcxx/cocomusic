@@ -32,5 +32,5 @@
   width: 1px;
   height: 18px;
   margin: 0 6px 0 2px;
-  background: rgba(100, 92, 160, 0.16);
+  background: rgba(var(--ink-rgb), 0.16);
 }
