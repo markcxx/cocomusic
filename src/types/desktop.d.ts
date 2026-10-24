@@ -5,7 +5,7 @@
 interface CocoDesktopBridge {
   platform: NodeJS.Platform;
   /** OS backdrop material behind the transparent window. */
-  material: 'acrylic' | 'vibrancy' | 'none';
+  material: 'acrylic' | 'vibrancy' | 'transparent' | 'none';
   window: {
     minimize(): void;
     toggleMaximize(): void;
@@ -34,12 +34,26 @@ interface CocoDesktopBridge {
     getSettings(): Promise<CocoAppSettingsResult>;
     setSettings(patch: Partial<CocoAppSettings>): Promise<CocoAppSettingsResult>;
     /** OS material behind the main window (unsupported values fall back per platform). */
-    setMaterial(effect: 'acrylic' | 'mica' | 'vibrancy' | 'none'): void;
+    setMaterial(effect: 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'none'): void;
     /** Light/dark for native chrome and the OS material tint. */
     setColorScheme(mode: 'system' | 'light' | 'dark'): void;
     openDataFolder(): void;
+    /** Restart the app (applies window transparency). */
+    relaunch(): void;
     /** Global media shortcut fired (only while enabled in settings). */
     onShortcut(listener: (action: 'toggle' | 'next' | 'previous' | 'volume-up' | 'volume-down' | 'lyrics' | string) => void): () => void;
+  };
+  system: {
+    /** Player state for the Dock / tray / taskbar menus (electron/main/system-menu.ts PlayerState). */
+    setPlayerState(state: CocoSystemPlayerState): void;
+    /** Action picked in a Dock / tray / taskbar / app menu. */
+    onAction(listener: (action: string) => void): () => void;
+  };
+  tray: {
+    /** Tray panel / menu-bar lyrics windows only: player state (TrayPanelState). */
+    onState(listener: (state: CocoTrayState) => void): () => void;
+    action(action: string): void;
+    resize(height: number): void;
   };
   lyrics: {
     setDesktop(visible: boolean | 'toggle'): void;
@@ -53,15 +67,47 @@ interface CocoDesktopBridge {
   };
 }
 
+interface CocoTrayState extends CocoSystemPlayerState {
+  desktopLyrics: boolean;
+  desktopLyricsLocked: boolean;
+  mini: boolean;
+  /** Menu bar is dark (macOS menu-bar lyrics text colour). */
+  menuBarDark: boolean;
+  platform: string;
+  /** Menu-bar strip is hovered: show the four buttons. */
+  hover?: boolean;
+}
+
+interface CocoSystemPlayerState {
+  hasTrack: boolean;
+  title: string;
+  artist: string;
+  playing: boolean;
+  /** null when the song cannot be liked right now. */
+  liked: boolean | null;
+  mode: 'loop' | 'shuffle' | 'one' | 'order';
+  lyric: string;
+  progress: number;
+  lyricColor: string;
+  volume: number;
+  cover: string;
+  nickname: string;
+  showTray: boolean;
+  trayLyrics: boolean;
+  menuBarText: 'white' | 'black' | 'auto';
+}
+
 interface CocoAppSettings {
   openAtLogin: boolean;
   closeBehavior: 'quit' | 'minimize';
   globalShortcuts: boolean;
+  /** Create the main window see-through at the next launch (设置 › 外观 › 透明). */
+  transparentWindow: boolean;
 }
 
 interface CocoAppSettingsResult {
   settings: CocoAppSettings;
-  info: { version: string; electron: string; chrome: string; node: string; platform: string; arch: string; dataDir: string; packaged: boolean; loginItemSupported: boolean };
+  info: { version: string; electron: string; chrome: string; node: string; platform: string; arch: string; dataDir: string; packaged: boolean; loginItemSupported: boolean; transparentWindow: boolean };
   shortcuts: Array<{ accelerator: string; action: string; label: string; conflict: boolean }>;
 }
 

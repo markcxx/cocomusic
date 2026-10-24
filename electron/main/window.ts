@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { BrowserWindow, nativeTheme, screen, session, shell } from 'electron';
 import { IPC, MATERIAL_SWITCH } from '../shared/ipc';
+import { appIcon } from './branding';
 import { initialBounds, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './window-state';
 
 const isMac = process.platform === 'darwin';
@@ -11,7 +12,8 @@ function openExternal(url: string) {
   if (/^https?:\/\//.test(url)) void shell.openExternal(url);
 }
 
-export async function createMainWindow(origin: string, token: string) {
+export async function createMainWindow(origin: string, token: string, options: { transparent?: boolean } = {}) {
+  const transparent = Boolean(options.transparent);
   // Session cookie lets the renderer proxy reject requests from other local apps or web pages.
   await session.defaultSession.cookies.set({ url: origin, name: 'coco_token', value: token, httpOnly: true, sameSite: 'strict' });
 
@@ -23,22 +25,27 @@ export async function createMainWindow(origin: string, token: string) {
     minHeight: MIN_HEIGHT,
     show: false,
     title: 'CoCo Music',
+    // Taskbar / window icon on Windows and Linux (macOS uses the bundle / Dock icon).
+    icon: isMac ? undefined : appIcon(),
     frame: isMac,
     // 'hidden' (not 'hiddenInset') lets the traffic lights sit tight in the corner.
     titleBarStyle: isMac ? 'hidden' : undefined,
     trafficLightPosition: isMac ? { x: 14, y: 14 } : undefined,
     // See-through from the start on Windows/macOS so the OS material can show; the
     // renderer then applies the saved window effect (or turns it off) via setWindowMaterial.
-    backgroundColor: isWindows || isMac ? '#00000000' : nativeTheme.shouldUseDarkColors ? '#15131f' : '#dfe1f5',
-    backgroundMaterial: isWindows ? 'acrylic' : undefined,
-    vibrancy: isMac ? 'under-window' : undefined,
-    visualEffectState: isMac ? 'active' : undefined,
+    backgroundColor: transparent || isWindows || isMac ? '#00000000' : nativeTheme.shouldUseDarkColors ? '#15131f' : '#dfe1f5',
+    // 透明: a truly see-through window, like the desktop lyrics window. The page
+    // draws everything, so the desktop shows through wherever it is translucent.
+    transparent,
+    backgroundMaterial: isWindows && !transparent ? 'acrylic' : undefined,
+    vibrancy: isMac && !transparent ? 'under-window' : undefined,
+    visualEffectState: isMac && !transparent ? 'active' : undefined,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
-      additionalArguments: [`${MATERIAL_SWITCH}${isWindows ? 'acrylic' : isMac ? 'vibrancy' : 'none'}`],
+      additionalArguments: [`${MATERIAL_SWITCH}${transparent ? 'transparent' : isWindows ? 'acrylic' : isMac ? 'vibrancy' : 'none'}`],
     },
   });
 
@@ -52,6 +59,7 @@ export async function createMainWindow(origin: string, token: string) {
     openExternal(url);
   });
 
+  if (transparent) transparentWindows.add(window);
   trackWindowState(window, () => isMini(window));
   // Custom Windows/Linux controls swap the maximize ⇄ restore icon from this.
   window.on('maximize', () => window.webContents.send(IPC.maximizedChanged, true));
@@ -73,6 +81,8 @@ export async function createMainWindow(origin: string, token: string) {
  */
 export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
 const windowEffect = new WeakMap<BrowserWindow, WindowEffect>();
+/** Windows created see-through: no OS material, the page paints everything. */
+const transparentWindows = new WeakSet<BrowserWindow>();
 
 /** What this OS can actually do; unsupported picks fall back sensibly. */
 function supported(effect: WindowEffect): WindowEffect {
@@ -89,6 +99,7 @@ export function setWindowMaterial(window: BrowserWindow, effect: WindowEffect) {
 }
 
 function applyMaterial(window: BrowserWindow, effect: WindowEffect) {
+  if (transparentWindows.has(window)) { window.setBackgroundColor('#00000000'); return; }
   if (isWindows) window.setBackgroundMaterial(effect === 'mica' ? 'mica' : effect === 'acrylic' ? 'acrylic' : 'none');
   if (isMac) window.setVibrancy(effect === 'vibrancy' ? 'under-window' : null);
   const dark = nativeTheme.shouldUseDarkColors;

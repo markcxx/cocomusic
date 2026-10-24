@@ -1,4 +1,4 @@
-import { buildLyrics } from '../lrc';
+import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
 import { NeteaseError, neteaseEapi } from './client';
 import { image, num, record, rows, text, type Raw } from './mappers';
@@ -28,11 +28,16 @@ export async function songSource(id: string, quality: AudioQuality = 'exhigh'): 
   };
 }
 
-/** lyric_new (v1): original + translation; the plain `lrc` field is sufficient for line sync. */
+/**
+ * lyric_new (v1): original + translation. With a login the response also carries
+ * `yrc` (逐字歌词); its word timing is attached to the LRC lines when present.
+ */
 export async function lyrics(id: string): Promise<Lyrics> {
-  const data = await neteaseEapi<Raw>('/api/song/lyric/v1', { id, cp: false, tv: 0, lv: 0, rv: 0, kv: 0, yv: 0, ytv: 0, yrv: 0 }, { auth: false });
+  const data = await neteaseEapi<Raw>('/api/song/lyric/v1', { id, cp: false, tv: 0, lv: 0, rv: 0, kv: 0, yv: 0, ytv: 0, yrv: 0 });
   if (data.pureMusic === true || data.nolyric === true) return { lines: [], synced: false, instrumental: true };
-  return buildLyrics(text(record(data.lrc).lyric), text(record(data.tlyric).lyric));
+  const built = buildLyrics(text(record(data.lrc).lyric), text(record(data.tlyric).lyric));
+  const words = parseWordLyrics(text(record(data.yrc).lyric));
+  return words.length && built.synced ? { ...built, lines: attachWords(built.lines, words) } : built;
 }
 
 const sortTypes: Record<CommentSort, number> = { recommend: 99, hot: 2, latest: 3 };

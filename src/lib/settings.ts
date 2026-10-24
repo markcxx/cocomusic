@@ -17,7 +17,8 @@ import type { AudioQuality } from '@/server/music/types';
 export type AccentColor = string;
 export type ThemeMode = 'system' | 'light' | 'dark';
 /** OS material behind a see-through window. mica: Windows 11 only. */
-export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
+/** 'transparent': see-through window like the desktop lyrics (applies after a restart). */
+export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'none';
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 /** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
 export type DesktopColor = LyricColorId | 'custom';
@@ -108,6 +109,14 @@ export interface Settings {
 
   /* 通知 */
   toastOnTrackChange: boolean;
+
+  /* 系统托盘 / 菜单栏 */
+  /** Icon in the macOS menu bar / Windows notification area / Linux tray. */
+  showTray: boolean;
+  /** macOS: current lyric line next to the menu-bar icon. */
+  trayLyrics: boolean;
+  /** macOS: menu-bar lyric text colour ('auto' = follow the system's dark mode). */
+  menuBarText: 'white' | 'black' | 'auto';
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -158,6 +167,9 @@ export const DEFAULT_SETTINGS: Settings = {
   appShortcuts: true,
   seekStep: 5,
   rememberSearches: true,
+  showTray: true,
+  trayLyrics: true,
+  menuBarText: 'white',
 
   toastOnTrackChange: false,
 };
@@ -202,7 +214,7 @@ const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values }
 
 const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou'),
-  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'none'), windowOpacity: num(0, 100),
+  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
@@ -213,6 +225,7 @@ const RULES: Record<keyof Settings, Rule> = {
   appShortcuts: bool, seekStep: oneOf(0, 5, 10, 15, 30), rememberSearches: bool,
   trialNotice: bool, showVipBadge: bool, titleShowsTrack: bool, lyricsKeepAwake: bool,
   toastOnTrackChange: bool,
+  showTray: bool, trayLyrics: bool, menuBarText: oneOf('white', 'black', 'auto'),
 };
 
 function valid<K extends keyof Settings>(key: K, value: unknown): value is Settings[K] {

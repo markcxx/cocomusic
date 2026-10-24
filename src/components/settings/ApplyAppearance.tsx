@@ -40,21 +40,25 @@ function useSystemDark() {
 /** Effects this platform can render (main falls back the same way). */
 export function supportedEffect(effect: WindowEffect, platform: string | undefined): WindowEffect {
   if (effect === 'none' || !platform) return 'none';
+  // The window's own construction decides (main reads the saved setting at launch).
+  if (effect === 'transparent' || window.coco?.material === 'transparent') return window.coco?.material === 'transparent' ? 'transparent' : 'none';
   if (platform === 'darwin') return 'vibrancy';
   if (platform === 'win32') return effect === 'vibrancy' ? 'acrylic' : effect;
   return 'none';
 }
 
-export function ApplyAppearance({ children }: { children: ReactNode }) {
+/** Colour scheme + theme colour only (secondary windows such as the tray panel). */
+export function useSchemeAndAccent(options: { notifyMain?: boolean } = {}) {
   const s = useSettings();
   const systemDark = useSystemDark();
   const scheme = s.themeMode === 'system' ? (systemDark ? 'dark' : 'light') : s.themeMode;
+  const notifyMain = options.notifyMain ?? false;
 
-  // Scheme first: surface tokens below read the per-scheme base RGB values.
+  // Scheme first: surface tokens read the per-scheme base RGB values.
   useEffect(() => {
     document.documentElement.dataset.colorScheme = scheme;
-    window.coco?.app?.setColorScheme(s.themeMode);
-  }, [scheme, s.themeMode]);
+    if (notifyMain) window.coco?.app?.setColorScheme(s.themeMode);
+  }, [scheme, s.themeMode, notifyMain]);
 
   useEffect(() => {
     const palette = accentPalette(s.accent, scheme);
@@ -67,13 +71,22 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
     root.setProperty('--accent-strong-rgb', palette.strongRgb);
     root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
   }, [s.accent, scheme]);
+  return scheme;
+}
+
+export function ApplyAppearance({ children }: { children: ReactNode }) {
+  const s = useSettings();
+  useSchemeAndAccent({ notifyMain: true });
+
 
   // Whole window: OS material (desktop only) + how much the app paints over it.
   // Window opacity scales the drawn backdrop *and* every panel, so lowering it
   // really lets the (OS-blurred) desktop through the whole window, not just the gaps.
   useEffect(() => {
-    const effect = supportedEffect(s.windowEffect, window.coco?.platform);
-    window.coco?.app?.setMaterial(effect);
+    // A window launched see-through stays so until restart, whatever the setting says now.
+    const launchedTransparent = window.coco?.material === 'transparent';
+    const effect = launchedTransparent ? 'transparent' : supportedEffect(s.windowEffect, window.coco?.platform);
+    if (!launchedTransparent) window.coco?.app?.setMaterial(effect);
     const html = document.documentElement;
     html.dataset.material = effect;
     // Without a material there is nothing behind the window to reveal; stay opaque.

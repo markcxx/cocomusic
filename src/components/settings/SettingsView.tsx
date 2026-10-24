@@ -32,6 +32,14 @@ const PLATFORMS = [
   { value: 'kugou', label: '酷狗音乐' },
 ] as const;
 
+const WINDOW_EFFECT_HINTS: Record<string, string> = {
+  vibrancy: '系统毛玻璃：背后的桌面被实时模糊后透出来，模糊强度由系统决定',
+  acrylic: '系统亚克力：背后的桌面被强模糊并带细微噪点，模糊强度由系统决定',
+  mica: '云母：取桌面壁纸的柔和色调（Windows 11），不透出其他窗口',
+  transparent: '和桌面歌词一样的真透明窗口：背后的桌面和窗口清晰可见，不做模糊',
+  none: '不透明窗口',
+};
+
 const LYRIC_PRESETS = (Object.keys(LYRIC_COLORS) as Array<keyof typeof LYRIC_COLORS>).map(id => ({ label: LYRIC_COLORS[id].label, color: LYRIC_COLORS[id].to }));
 
 const SECTIONS = [
@@ -143,6 +151,16 @@ export function SettingsView() {
   };
 
   const loginSupported = app.result?.info.loginItemSupported;
+
+  // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
+  const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
+  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' ? s.windowEffect
+    : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
+  const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
+  const chooseEffect = async (value: Settings['windowEffect']) => {
+    settings.set('windowEffect', value);
+    await app.update({ transparentWindow: value === 'transparent' });
+  };
   const conflicts = useMemo(() => app.result?.shortcuts.filter(item => item.conflict) ?? [], [app.result]);
 
   return (
@@ -188,21 +206,27 @@ export function SettingsView() {
             <div className={styles.groupLabel}>窗口</div>
             <Row
               title="窗口效果"
-              description={!desktop ? '需要在桌面客户端中使用' : isMac() ? '毛玻璃：窗口背后的桌面由系统实时模糊透出' : '亚克力：背后桌面强模糊并带噪点；云母：取桌面壁纸的柔和色调（Windows 11）'}
+              description={!desktop ? '需要在桌面客户端中使用' : WINDOW_EFFECT_HINTS[s.windowEffect] ?? WINDOW_EFFECT_HINTS.none}
               disabled={!desktop}
             >
               <Segmented
-                value={s.windowEffect === 'none' ? 'none' : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect}
-                onChange={set('windowEffect')}
+                value={shownEffect}
+                onChange={value => void chooseEffect(value)}
                 label="窗口效果"
                 options={isMac()
-                  ? [{ value: 'vibrancy', label: '毛玻璃' }, { value: 'none', label: '不透明' }]
-                  : [{ value: 'acrylic', label: '亚克力' }, { value: 'mica', label: '云母' }, { value: 'none', label: '不透明' }]}
+                  ? [{ value: 'vibrancy', label: '毛玻璃' }, { value: 'transparent', label: '透明' }, { value: 'none', label: '不透明' }]
+                  : [{ value: 'acrylic', label: '亚克力' }, { value: 'mica', label: '云母' }, { value: 'transparent', label: '透明' }, { value: 'none', label: '不透明' }]}
               />
             </Row>
+            {needsRestart && (
+              <div className={styles.notice}>
+                <span>“透明”需要重新创建窗口，重启应用后生效。</span>
+                <Button variant="primary" onClick={() => window.coco?.app?.relaunch()}>立即重启</Button>
+              </div>
+            )}
             <Row
               title="窗口不透明度"
-              description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先开启窗口效果，降低后即可透过窗口看到模糊的桌面' : '降低后整个窗口变得通透，可以看到背后模糊的桌面和其他窗口'}
+              description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}
               disabled={!desktop || s.windowEffect === 'none'}
             >
               <Range value={s.windowOpacity} max={100} step={5} onChange={set('windowOpacity')} label="窗口不透明度" format={value => `${value}%`} />
@@ -444,9 +468,26 @@ export function SettingsView() {
             <Row title="开机自动启动" description={loginSupported ? '登录系统后自动打开 CoCo Music' : desktop ? '需要安装后的正式版应用（开发模式下不可用）' : '需要在桌面客户端中使用'} disabled={!loginSupported}>
               <Switch checked={Boolean(app.result?.settings.openAtLogin)} onChange={value => void app.update({ openAtLogin: value })} label="开机自动启动" disabled={!loginSupported} />
             </Row>
-            <Row title="关闭主窗口时" description={isMac() ? '“后台播放”时窗口隐藏，点击程序坞图标可恢复' : '“后台播放”时窗口最小化，音乐继续播放'} disabled={!desktop}>
-              <Segmented value={app.result?.settings.closeBehavior ?? 'quit'} onChange={value => void app.update({ closeBehavior: value })} label="关闭主窗口时" options={[{ value: 'quit', label: '退出应用' }, { value: 'minimize', label: '后台播放' }]} />
+            <Row title="关闭主窗口时" description={isMac() ? '“后台播放”时窗口隐藏，点击程序坞或菜单栏图标可恢复' : '“后台播放”时窗口收进系统托盘，音乐继续播放；关闭托盘图标时改为最小化'} disabled={!desktop}>
+              <Segmented value={app.result?.settings.closeBehavior ?? 'minimize'} onChange={value => void app.update({ closeBehavior: value })} label="关闭主窗口时" options={[{ value: 'quit', label: '退出应用' }, { value: 'minimize', label: '后台播放' }]} />
             </Row>
+            <Row
+              title={isMac() ? '菜单栏图标' : '系统托盘图标'}
+              description={isMac() ? '右上角菜单栏显示图标，点按可控制播放；关闭窗口后也能从这里找回' : '任务栏通知区域显示图标，右键可控制播放；关闭窗口后台播放时从这里找回'}
+              disabled={!desktop}
+            >
+              <Switch checked={s.showTray} onChange={set('showTray')} label={isMac() ? '菜单栏图标' : '系统托盘图标'} disabled={!desktop} />
+            </Row>
+            {isMac() && (
+              <Row title="菜单栏歌词" description="播放时在菜单栏图标旁滚动显示当前这句歌词" disabled={!desktop || !s.showTray}>
+                <Switch checked={s.trayLyrics} onChange={set('trayLyrics')} label="菜单栏歌词" disabled={!desktop || !s.showTray} />
+              </Row>
+            )}
+            {isMac() && (
+              <Row title="菜单栏文字颜色" description="菜单栏随壁纸变深时用白色；“跟随系统”在系统深色模式下用白色、浅色模式下用黑色" disabled={!desktop || !s.showTray || !s.trayLyrics}>
+                <Segmented value={s.menuBarText} onChange={set('menuBarText')} label="菜单栏文字颜色" options={[{ value: 'white', label: '白色' }, { value: 'black', label: '黑色' }, { value: 'auto', label: '跟随系统' }]} />
+              </Row>
+            )}
             <Row title="窗口标题显示歌曲" description="任务栏、程序坞窗口列表和切换窗口时显示正在播放的歌曲">
               <Switch checked={s.titleShowsTrack} onChange={set('titleShowsTrack')} label="窗口标题显示歌曲" />
             </Row>

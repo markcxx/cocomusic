@@ -2,6 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { app, BrowserWindow, screen, type Rectangle } from 'electron';
 import { IPC } from '../shared/ipc';
+import { refreshSystemMenus } from './system-integration';
 
 /**
  * Desktop lyrics: a transparent, frameless, always-on-top window that loads
@@ -50,6 +51,8 @@ function initialBounds(): Rectangle {
 }
 
 function notify() {
+  // 桌面歌词 checkmark in the Dock / tray / app menus.
+  refreshSystemMenus();
   if (owner && !owner.isDestroyed()) owner.webContents.send(IPC.desktopLyricsChanged, state.visible);
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.webContents.send(IPC.desktopLyricsLock, state.locked);
 }
@@ -158,6 +161,7 @@ export function setupDesktopLyrics(main: BrowserWindow, origin: string, preload:
     },
     isLyricsWindow: (window: BrowserWindow | null) => Boolean(window && lyricsWindow && window.id === lyricsWindow.id),
     visible: () => state.visible,
+    locked: () => state.locked,
   };
 }
 

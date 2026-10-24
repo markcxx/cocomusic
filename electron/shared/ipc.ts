@@ -49,6 +49,21 @@ export const IPC = {
   appOpenDataFolder: 'app:open-data-folder',
   /** main → renderer: a global media shortcut fired ('toggle' | 'next' | 'previous' | 'volume-up' | 'volume-down' | 'lyrics'). */
   appShortcut: 'app:shortcut',
+
+  /** renderer → main: player state for the Dock / tray / taskbar menus (system-menu.ts PlayerState). */
+  systemPlayerState: 'system:player-state',
+  /** main → renderer: a Dock / tray / taskbar / menu action (system-menu.ts MenuAction). */
+  systemAction: 'system:action',
+  /** main → tray panel / menu-bar lyrics: TrayPanelState (system-menu.ts). */
+  trayState: 'tray:state',
+  /** tray panel / menu-bar lyrics → main: a MenuAction. */
+  trayAction: 'tray:action',
+  /** tray panel → main: rendered card height in px (the window fits it). */
+  traySize: 'tray:size',
+  /** tray panel / menu-bar lyrics → main: send me the current state. */
+  trayReady: 'tray:ready',
+  /** renderer → main: restart the app (window transparency needs a new window). */
+  appRelaunch: 'app:relaunch',
 } as const;
 
 /** Command-line switch carrying the window material to the preload. */

@@ -10,7 +10,7 @@
 
 </div>
 
-> 项目处于早期开发阶段。当前已接入网易云音乐，其他音乐平台尚未接入。桌面打包配置覆盖 macOS、Windows 和 Linux，各系统的实际兼容性仍需验证。
+> 项目处于早期开发阶段（0.0.x）。已接入网易云音乐、QQ 音乐和酷狗音乐，可在 设置 › 曲库 中切换。安装包尚未经过代码签名，各系统的兼容性仍在验证中。
 
 ## 项目介绍
 
@@ -24,20 +24,23 @@ CoCo Music 希望提供统一、轻量的音乐体验，并通过独立的曲库
 - **统一搜索**：搜索歌曲、歌单、专辑和歌手，提供搜索建议与热门搜索。
 - **播放体验**：播放队列、进度与音量控制、列表循环、随机播放、单曲循环及顺序播放。
 - **歌词与歌曲信息**：同步歌词、平台提供的翻译歌词及评论浏览。
-- **账号与收藏**：网易云音乐扫码登录、喜欢的歌曲、歌单创建与管理。
-- **桌面集成**：基于 Electron 的应用窗口与本机服务。
-
-QQ 音乐、酷狗音乐尚未接入。最近播放、本地音乐、下载管理及设置等部分入口仍在建设中，界面中出现入口不代表功能已完成。
+- **账号与收藏**：各平台扫码登录、喜欢的歌曲、歌单创建与管理。
+- **本地与下载**：本地音乐、下载管理、最近播放、播放队列。
+- **桌面集成**：桌面歌词、迷你模式、系统毛玻璃窗口、全局快捷键、音频文件“打开方式”。
 
 ## 平台支持
 
-| 桌面系统 | 当前打包目标 | 状态 |
+| 桌面系统 | 安装包 | 文件 |
 | --- | --- | --- |
-| macOS | DMG，Apple Silicon / Intel | 已配置，待完整兼容性验证 |
-| Windows | NSIS 安装程序，x64 | 已配置，待完整兼容性验证 |
-| Linux | AppImage | 已配置，待完整兼容性验证 |
+| macOS 12+ | DMG / ZIP，Apple Silicon 与 Intel 分开提供 | `CoCo-Music-<版本>-mac-arm64.dmg`、`…-mac-x64.dmg` |
+| Windows 10/11 | NSIS 安装程序，x64 | `CoCo-Music-<版本>-win-x64-Setup.exe` |
+| Linux | AppImage 与 deb，x64 | `CoCo-Music-<版本>-linux-x86_64.AppImage`、`…-linux-amd64.deb` |
 
-当前请以源码开发方式体验。仓库中的打包配置不代表已提供经过签名、公证或完整测试的发行版。
+安装包可在 [Releases](https://github.com/markcxx/cocomusic/releases) 下载。目前没有代码签名证书，首次打开时系统会提示：
+
+- **macOS**：提示“无法验证开发者”时，在访达中右键应用选择“打开”；若提示“已损坏”，在终端执行 `xattr -cr "/Applications/CoCo Music.app"` 后再打开。
+- **Windows**：SmartScreen 提示时点“更多信息 → 仍要运行”。
+- **Linux**：AppImage 需先 `chmod +x` 再运行；deb 用 `sudo apt install ./CoCo-Music-*.deb` 安装。
 
 ## 本地开发
 
@@ -81,12 +84,24 @@ macOS 的“打开方式”列表由启动服务缓存，安装后如果没出�
 | `npm run build` | 编译 Electron 与 Next.js，准备 standalone 产物 |
 | `npm start` | 使用已有构建产物启动桌面应用 |
 | `npm run dist:dir` | 构建并输出未压缩的应用目录 |
-| `npm run dist` | 构建并生成当前环境对应的安装包 |
+| `npm run dist` | 构建并生成当前系统对应的安装包 |
+| `npm run dist:mac` / `dist:win` / `dist:linux` | 只打对应系统的包（需在该系统上执行） |
 | `npm run typecheck` | 检查前端与 Electron 的 TypeScript 类型 |
 | `npm run lint` | 执行 ESLint 检查 |
 | `npm test` | 运行现有测试，需要支持 `--experimental-strip-types` 的 Node.js 版本 |
 
-安装包输出到 `release/`。跨系统打包、签名和公证可能需要目标系统、额外工具及签名凭据。
+安装包输出到 `release/`。
+
+### 发布新版本
+
+三个平台的安装包由 GitHub Actions（`.github/workflows/release.yml`）在各自的原生系统上构建：
+
+1. 修改 `package.json` 的 `version`（例如 `0.0.2`），提交并推送。
+2. 打标签并推送：`git tag v0.0.2 && git push origin v0.0.2`。
+3. 工作流会检查标签与版本号一致，跑类型检查、Lint 和测试，然后打出 macOS（arm64 + x64）、Windows、Linux 安装包，创建一个**草稿** Release 并附上全部文件和 `SHA256SUMS.txt`。
+4. 在 GitHub 的 Releases 页面检查草稿，编辑说明后点击 Publish。
+
+只想试打包、不发布时，在 Actions › Release 里点 Run workflow，产物会出现在该次运行的 Artifacts 中。
 
 ## 项目结构
 

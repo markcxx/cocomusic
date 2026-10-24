@@ -1,9 +1,12 @@
 {
   "name": "cocomusic",
   "productName": "CoCo Music",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "private": true,
-  "description": "CoCo Music desktop player: Next.js app hosted by an Electron shell",
+  "description": "CoCo Music 多平台音乐桌面播放器",
+  "author": "markcxx",
+  "homepage": "https://github.com/markcxx/cocomusic",
+  "license": "GPL-3.0-only",
   "main": "dist-electron/main/index.js",
   "scripts": {
     "predev": "node scripts/ensure-deps.mjs && npm run build:electron",
@@ -16,7 +19,11 @@
     "start": "electron .",
     "dist": "npm run build && electron-builder",
     "dist:dir": "npm run build && electron-builder --dir",
+    "dist:mac": "npm run build && electron-builder --mac",
+    "dist:win": "npm run build && electron-builder --win",
+    "dist:linux": "npm run build && electron-builder --linux",
     "lint": "eslint",
+    "preview:menus": "node --experimental-strip-types --no-warnings scripts/preview-system-menus.mjs",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
     "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\""
   },

@@ -1,4 +1,5 @@
-import { buildLyrics } from '../lrc';
+import { inflateSync } from 'node:zlib';
+import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
 import { APPID, CLIENTVER, device, KugouError, kugouRequest, songKey as streamKey } from './client';
 import { image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
@@ -53,6 +54,15 @@ export async function songSource(key: string, quality: AudioQuality = 'exhigh'):
   throw new KugouError(paid ? '该歌曲需要酷狗音乐会员或购买后播放' : '该歌曲暂无版权，无法播放', 404);
 }
 
+/** KRC: base64 → skip 4-byte "krc1" header → XOR with Kugou's key → zlib (KugouMusicAPI util decodeLyrics). */
+const KRC_KEY = [64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105];
+export function decodeKrc(content: string) {
+  if (!content) return '';
+  const bytes = Buffer.from(content, 'base64').subarray(4);
+  for (let index = 0; index < bytes.length; index += 1) bytes[index] ^= KRC_KEY[index % KRC_KEY.length];
+  return inflateSync(bytes).toString('utf8');
+}
+
 export async function lyrics(key: string): Promise<Lyrics> {
   const { hash, albumAudioId } = splitSongKey(key);
   const found = await kugouRequest<Raw>({
@@ -61,13 +71,18 @@ export async function lyrics(key: string): Promise<Lyrics> {
   });
   const candidate = rows(found.candidates)[0];
   if (!candidate) return { lines: [], synced: false };
-  const json = await kugouRequest<Raw>({
+  const download = (fmt: 'krc' | 'lrc') => kugouRequest<Raw>({
     base: 'https://lyrics.kugou.com', path: '/download', raw: true,
-    params: { ver: 1, client: 'android', id: text(candidate.id), accesskey: text(candidate.accesskey), fmt: 'lrc', charset: 'utf8' },
+    params: { ver: 1, client: 'android', id: text(candidate.id), accesskey: text(candidate.accesskey), fmt, charset: 'utf8' },
   });
+  // KRC carries word timing (逐字); plain LRC is the fallback.
+  const krc = await download('krc').then(json => decodeKrc(text(json.content))).catch(() => '');
+  const words = krc ? parseWordLyrics(krc) : [];
+  const json = await download('lrc');
   const lrc = text(json.content) ? Buffer.from(text(json.content), 'base64').toString('utf8') : '';
-  if (!lrc.trim()) return { lines: [], synced: false };
-  const result = buildLyrics(lrc);
+  if (!lrc.trim() && !words.length) return { lines: [], synced: false };
+  const built = lrc.trim() ? buildLyrics(lrc) : { lines: words, synced: true };
+  const result = words.length && built.synced ? { ...built, lines: attachWords(built.lines, words) } : built;
   // Kugou marks instrumentals with a single "纯音乐，请欣赏" line.
   if (result.lines.length <= 2 && result.lines.some(line => /纯音乐/.test(line.text))) return { lines: [], synced: false, instrumental: true };
   return result;

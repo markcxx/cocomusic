@@ -43,7 +43,7 @@ async function waitUntilReady(origin: string, token: string, timeoutMs: number, 
 /** Where the Next standalone server lives: next to the app in dev, unpacked from asar when packaged. */
 function standaloneServerPath() {
   const root = app.isPackaged ? process.resourcesPath : app.getAppPath();
-  return path.join(root, app.isPackaged ? 'next' : '.next/standalone', 'server.js');
+  return path.join(root, app.isPackaged ? 'next/standalone' : '.next/standalone', 'server.js');
 }
 
 /**

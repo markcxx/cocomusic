@@ -170,6 +170,14 @@ export interface LyricLine {
   text: string;
   /** Translated line at the same timestamp, when the platform has one. */
   translation?: string;
+  /** Word timing (seconds, absolute) when the platform has word-by-word lyrics (Kugou KRC, NetEase YRC). */
+  words?: LyricWord[];
+}
+
+export interface LyricWord {
+  start: number;
+  end: number;
+  text: string;
 }
 
 export interface Lyrics {

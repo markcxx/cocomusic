@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
 import { NavigationProvider, useNavigation } from './navigation';
 import { Sidebar } from './Sidebar';
+import { SystemBridge } from './SystemBridge';
 import { useSidebarCollapsed } from './sidebar-state';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
@@ -69,6 +70,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {mini ? <MiniPlayer /> : <LyricsDrawer />}
             {!mini && <QueuePanel />}
             {!mini && <LocalDropOverlay />}
+            <SystemBridge />
             <LoginDialog />
             <Toaster />
             <TooltipLayer />

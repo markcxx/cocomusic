@@ -1,0 +1,93 @@
+/* 142 × 22 pt: 120pt lyric/button area + 22pt glyph (STRIP_* in electron/main/system-menu.ts). */
+.strip {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 120px 22px;
+  align-items: center;
+  font-family: -apple-system, "PingFang SC", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 22px;
+  user-select: none;
+}
+
+.light {
+  --ink: rgba(0, 0, 0, 0.88);
+  --dim: rgba(0, 0, 0, 0.82);
+  /* Sung part: vivid blue that stays readable on the light menu bar. */
+  --sung: #0a7cff;
+}
+
+.dark {
+  --ink: #fff;
+  --dim: rgba(255, 255, 255, 0.92);
+  --sung: #3ea1ff;
+}
+
+.viewport {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Soft left edge once the line has scrolled. */
+.fadeLeft {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px);
+  mask-image: linear-gradient(90deg, transparent 0, #000 14px);
+}
+
+.line {
+  position: relative;
+  display: inline-block;
+  transition: transform 260ms linear;
+}
+
+.base {
+  color: var(--dim);
+}
+
+/* Sung part, filled word by word. */
+.sung {
+  position: absolute;
+  inset: 0;
+  color: var(--sung);
+  transition: clip-path 200ms linear;
+}
+
+/* Four equal 30pt slots filling the lyric area (STRIP_BUTTONS_WIDTH). */
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 30px);
+  align-items: center;
+  height: 22px;
+  color: var(--ink);
+}
+
+.buttons span {
+  display: grid;
+  place-items: center;
+  height: 22px;
+}
+
+.liked {
+  color: #ff4d5e;
+}
+
+.off {
+  opacity: 0.4;
+}
+
+.glyph {
+  width: 16px;
+  height: 16px;
+  justify-self: center;
+}
+
+.light .glyph {
+  filter: brightness(0) opacity(0.85);
+}
+
+.dark .glyph {
+  filter: brightness(0) invert(1) opacity(0.92);
+}

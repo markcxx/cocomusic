@@ -1,6 +1,9 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
-import { closeBehavior, setupAppSettings } from './app-settings';
+import { applyBranding, onOpenSettings, setControlMenu } from './branding';
+import { actionFromArgv } from './system-menu';
+import { hasTray, runAction, setupSystemIntegration } from './system-integration';
+import { closeBehavior, loadAppSettings, markLaunch, setupAppSettings } from './app-settings';
 import { setupDesktopLyrics, type DesktopLyrics } from './desktop-lyrics';
 import { registerIpc } from './ipc';
 import { startNextServer, type NextServer } from './next-server';
@@ -13,6 +16,9 @@ let lyrics: DesktopLyrics | undefined;
 /** Set on a real quit (menu, Cmd+Q, system shutdown) so "close to background" lets the window go. */
 let quitting = false;
 app.on('before-quit', () => { quitting = true; });
+
+// Name before ready: menus, userData folder and the macOS app menu use it (in dev the binary is Electron).
+app.setName('CoCo Music');
 
 if (!app.requestSingleInstanceLock()) app.quit();
 
@@ -30,6 +36,9 @@ if (process.env.COCO_DEV_RELOAD && process.stdin) {
 // Windows/Linux: opening a file while the app runs starts a second instance with
 // the path in argv; it exits immediately and the paths arrive here.
 app.on('second-instance', (_event, argv, workingDirectory) => {
+  // Windows jump list tasks (taskbar right-click) relaunch the app with --coco-action=…
+  const action = actionFromArgv(argv);
+  if (action) { runAction(action); return; }
   queueOpenFiles(audioFilesFromArgv(argv, workingDirectory));
   if (!mainWindow) return;
   if (mainWindow.isMinimized()) mainWindow.restore();
@@ -44,19 +53,27 @@ app.whenReady().then(async () => {
     app.setActivationPolicy('regular');
     void app.dock?.show();
   }
+  applyBranding();
   registerIpc(() => server?.origin, () => lyrics);
   try {
     server = await startNextServer();
-    mainWindow = await createMainWindow(server.origin, server.token);
+    // 设置 › 外观 › 窗口效果 = 透明 is a construction option: read it before creating the window.
+    const transparent = loadAppSettings().transparentWindow;
+    markLaunch(transparent);
+    mainWindow = await createMainWindow(server.origin, server.token, { transparent });
     attachOpenFilesWindow(mainWindow);
     lyrics = setupDesktopLyrics(mainWindow, server.origin, path.join(__dirname, '..', 'preload', 'index.js'));
     setupAppSettings(mainWindow);
+    setupSystemIntegration(mainWindow, { origin: server.origin, preload: path.join(__dirname, '..', 'preload', 'index.js'), desktopLyrics: () => lyrics, appMenu: setControlMenu });
+    onOpenSettings(() => runAction('settings'));
     const window = mainWindow;
     // 设置 › 系统 › 关闭主窗口: keep playing in the background instead of quitting.
     window.on('close', event => {
       if (quitting || closeBehavior() !== 'minimize') return;
       event.preventDefault();
-      if (process.platform === 'darwin') window.hide(); else window.minimize();
+      // Keep playing in the background: the Dock (macOS) or the tray icon brings it back.
+      // Without a tray icon on Windows/Linux a hidden window would be unreachable: minimize instead.
+      if (process.platform === 'darwin' || hasTray()) window.hide(); else window.minimize();
     });
     mainWindow.on('closed', () => { mainWindow = undefined; });
   } catch (error) {

@@ -27,6 +27,13 @@ const IPC = {
   appSetColorScheme: 'app:set-color-scheme',
   appOpenDataFolder: 'app:open-data-folder',
   appShortcut: 'app:shortcut',
+  systemPlayerState: 'system:player-state',
+  systemAction: 'system:action',
+  trayState: 'tray:state',
+  trayAction: 'tray:action',
+  traySize: 'tray:size',
+  trayReady: 'tray:ready',
+  appRelaunch: 'app:relaunch',
 } as const;
 const MATERIAL_SWITCH = '--coco-material=';
 
@@ -75,7 +82,24 @@ contextBridge.exposeInMainWorld('coco', {
     setMaterial: (effect: string) => ipcRenderer.send(IPC.appSetMaterial, effect),
     setColorScheme: (mode: string) => ipcRenderer.send(IPC.appSetColorScheme, mode),
     openDataFolder: () => ipcRenderer.send(IPC.appOpenDataFolder),
+    relaunch: () => ipcRenderer.send(IPC.appRelaunch),
     onShortcut: (listener: (action: string) => void) => listen(IPC.appShortcut, value => (typeof value === 'string' ? value : ''), listener),
+  },
+  system: {
+    /** Player state for the Dock / tray / taskbar menus. */
+    setPlayerState: (state: Record<string, unknown>) => ipcRenderer.send(IPC.systemPlayerState, state),
+    /** Actions picked in the Dock / tray / taskbar / app menu. */
+    onAction: (listener: (action: string) => void) => listen(IPC.systemAction, value => (typeof value === 'string' ? value : ''), listener),
+  },
+  tray: {
+    /** Tray panel / menu-bar lyrics: player state from main. Subscribing asks for the current one. */
+    onState: (listener: (state: Record<string, unknown>) => void) => {
+      const off = listen(IPC.trayState, value => (value && typeof value === 'object' ? value as Record<string, unknown> : {}), listener);
+      ipcRenderer.send(IPC.trayReady);
+      return off;
+    },
+    action: (action: string) => ipcRenderer.send(IPC.trayAction, action),
+    resize: (height: number) => ipcRenderer.send(IPC.traySize, height),
   },
   lyrics: {
     setDesktop: (visible: boolean | 'toggle') => ipcRenderer.send(IPC.desktopLyrics, visible),

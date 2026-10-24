@@ -7,7 +7,7 @@ import { playerFollower, type PlayerMessage } from '@/components/player/player-b
 import { useTrackLyrics } from '@/components/player/use-track-lyrics';
 import { cn } from '@/lib/cn';
 import { desktopLyricColor, settings as appSettings, useSettings } from '@/lib/settings';
-import { activeLineIndex } from '@/server/music/lrc';
+import { activeLineIndex, lineProgress as sungFraction } from '@/server/music/lrc';
 import styles from './DesktopLyrics.module.css';
 
 type FollowedTrack = Extract<PlayerMessage, { type: 'track' }>['track'];
@@ -125,8 +125,8 @@ export function DesktopLyrics() {
   const index = synced ? activeLineIndex(lines, time) : -1;
   const line = index >= 0 ? lines[index] : undefined;
   const next = synced ? lines[index + 1] : undefined;
-  // Karaoke-style fill across the active line, based on time until the next line.
-  const lineProgress = line && next ? Math.min(1, Math.max(0, (time - line.time) / Math.max(0.6, next.time - line.time))) : line ? 1 : 0;
+  // Karaoke fill: word timing when the platform has it (逐字), else spread until the next line.
+  const lineProgress = sungFraction(line, next, time);
   const color = desktopLyricColor(prefs);
 
   const primary = !track ? 'CoCo Music' : line?.text || (lyrics.loading ? track.title : lines.length && !synced ? lines[0].text : track.title);

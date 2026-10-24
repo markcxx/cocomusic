@@ -6,6 +6,9 @@ import { AUDIO_EXTENSIONS, IPC } from '../shared/ipc';
 import { getAppSettings, setAppSettings } from './app-settings';
 import type { DesktopLyrics } from './desktop-lyrics';
 import { handedOut, markOpenFilesReady } from './open-files';
+import { isMenuAction, parsePlayerState } from './system-menu';
+import { isTrayPage, refreshSystemMenus, runAction, sendTrayState, updatePlayerState } from './system-integration';
+import { isPanel, resizePanel } from './tray-windows';
 import { setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
 
 /** Paths the user picked through a system dialog; only these (or opened files) may be revealed. */
@@ -45,7 +48,21 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
     if (lyrics()?.isLyricsWindow(window)) lyrics()?.set(false);
     else window.close();
   });
-  handle(IPC.windowToggleMini, window => { if (!lyrics()?.isLyricsWindow(window)) toggleMini(window); });
+  handle(IPC.windowToggleMini, window => { if (!lyrics()?.isLyricsWindow(window)) { toggleMini(window); refreshSystemMenus(); } });
+  // Tray panel / menu-bar strip: state on load, actions, panel height.
+  handle(IPC.trayReady, window => { if (isTrayPage(window)) sendTrayState(window); });
+  handle(IPC.trayAction, (window, action) => { if (isTrayPage(window) && isMenuAction(action)) runAction(action); });
+  handle(IPC.traySize, (window, height) => { if (isPanel(window) && typeof height === 'number') resizePanel(height); });
+  handle(IPC.appRelaunch, window => {
+    if (isTrayPage(window) || lyrics()?.isLyricsWindow(window)) return;
+    app.relaunch();
+    app.exit(0);
+  });
+  handle(IPC.systemPlayerState, (window, raw) => {
+    if (lyrics()?.isLyricsWindow(window) || isTrayPage(window)) return;
+    const state = parsePlayerState(raw);
+    if (state) updatePlayerState(state);
+  });
 
   invoke(IPC.pickFolder, async window => {
     const options = { title: '选择音乐文件夹', properties: ['openDirectory' as const, 'createDirectory' as const] };
@@ -79,7 +96,7 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
   invoke(IPC.appSetSettings, (_window, patch) => (patch && typeof patch === 'object' ? setAppSettings(patch as Record<string, unknown>) : getAppSettings()));
   handle(IPC.appSetMaterial, (window, effect) => {
     const effects: WindowEffect[] = ['acrylic', 'mica', 'vibrancy', 'none'];
-    if (effects.includes(effect as WindowEffect) && !lyrics()?.isLyricsWindow(window)) setWindowMaterial(window, effect as WindowEffect);
+    if (effects.includes(effect as WindowEffect) && !lyrics()?.isLyricsWindow(window) && !isTrayPage(window)) setWindowMaterial(window, effect as WindowEffect);
   });
   handle(IPC.appSetColorScheme, (_window, mode) => {
     if (mode === 'system' || mode === 'light' || mode === 'dark') setColorScheme(mode);

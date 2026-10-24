@@ -9,18 +9,27 @@ directories:
   buildResources: build
 
 # Only the compiled shell goes into app.asar; Next ships as extraResources.
+# The main process only needs Electron + Node built-ins, so no node_modules at
+# all: the Next server brings its own traced dependencies (extraResources).
 files:
   - dist-electron/**/*
   - package.json
   - "!**/*.map"
+  - "!node_modules/**/*"
 
 extraResources:
   - from: build/icon.png
     to: icon.png
-  - from: .next/standalone
+  # Menu-bar / tray / taskbar / jump list icons (electron/main/system-integration.ts).
+  - from: build/tray
+    to: tray
+  # Copied from .next (not .next/standalone): electron-builder always drops a
+  # top-level node_modules of `from`, which would strip the server's dependencies.
+  - from: .next
     to: next
     filter:
-      - "**/*"
+      - standalone/**/*
+      - "!standalone/**/.DS_Store"
 
 asar: true
 npmRebuild: false
@@ -57,12 +66,31 @@ fileAssociations:
     mimeType: audio/ogg
     role: Viewer
 
+# Same naming on every platform: CoCo-Music-0.0.1-mac-arm64.dmg, …-win-x64-Setup.exe, …
+artifactName: CoCo-Music-${version}-${os}-${arch}.${ext}
+
+# No auto-publish from electron-builder; the release workflow uploads artifacts.
+publish: null
+
 mac:
   icon: build/icon.icns
   category: public.app-category.music
+  darkModeSupport: true
+  # No Apple Developer ID yet: ad-hoc sign so Apple Silicon will launch the app
+  # (an unsigned arm64 bundle is reported as "damaged"). Hardened runtime needs a
+  # real identity, so it stays off until notarization is set up.
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  # The arch comes from the command line (--arm64 / --x64): each is built on a
+  # native runner because the Next server ships platform-specific binaries.
   target:
-    - target: dmg
-      arch: [arm64, x64]
+    - dmg
+    - zip
+
+dmg:
+  title: ${productName} ${version}
+  artifactName: CoCo-Music-${version}-mac-${arch}.${ext}
 
 win:
   icon: build/icon.ico
@@ -75,10 +103,28 @@ nsis:
   # Associations write to HKCU without elevation in per-user installs.
   perMachine: false
   allowToChangeInstallationDirectory: true
-  artifactName: ${productName}-${version}-Setup.${ext}
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ${productName}
+  uninstallDisplayName: ${productName}
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  artifactName: CoCo-Music-${version}-win-${arch}-Setup.${ext}
 
 linux:
   icon: build/icon.png
   category: Audio
+  executableName: cocomusic
+  synopsis: 多平台音乐桌面播放器
+  maintainer: markcxx
+  vendor: markcxx
+  desktop:
+    entry:
+      Name: CoCo Music
+      Comment: 多平台音乐桌面播放器
+      StartupWMClass: CoCo Music
   target:
-    - AppImage
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]

@@ -14,9 +14,16 @@ export interface AppSettings {
   openAtLogin: boolean;
   closeBehavior: CloseBehavior;
   globalShortcuts: boolean;
+  /**
+   * 'transparent': the main window is created see-through like the desktop
+   * lyrics window (the desktop shows through at the chosen opacity). Window
+   * transparency is fixed at creation, so this applies after a restart.
+   */
+  transparentWindow: boolean;
 }
 
-const DEFAULTS: AppSettings = { openAtLogin: false, closeBehavior: 'quit', globalShortcuts: false };
+// Closing keeps music playing in the background by default, like other desktop players.
+const DEFAULTS: AppSettings = { openAtLogin: false, closeBehavior: 'minimize', globalShortcuts: false, transparentWindow: false };
 
 /** Accelerators for the global shortcuts (shown in settings). */
 export const GLOBAL_SHORTCUTS: Array<{ accelerator: string; action: string; label: string }> = [
@@ -40,8 +47,9 @@ function load() {
       const raw = JSON.parse(readFileSync(file(), 'utf8')) as Partial<AppSettings>;
       state = {
         openAtLogin: typeof raw.openAtLogin === 'boolean' ? raw.openAtLogin : DEFAULTS.openAtLogin,
-        closeBehavior: raw.closeBehavior === 'minimize' ? 'minimize' : 'quit',
+        closeBehavior: raw.closeBehavior === 'quit' ? 'quit' : 'minimize',
         globalShortcuts: typeof raw.globalShortcuts === 'boolean' ? raw.globalShortcuts : DEFAULTS.globalShortcuts,
+        transparentWindow: raw.transparentWindow === true,
       };
     }
   } catch { state = { ...DEFAULTS }; }
@@ -69,9 +77,17 @@ function applyLogin() {
   app.setLoginItemSettings({ openAtLogin: state.openAtLogin });
 }
 
+/** Read before the main window exists (transparency is a construction option). */
+export function loadAppSettings() {
+  load();
+  return state;
+}
+/** What the running window was created with (a changed setting waits for a restart). */
+let launchedTransparent = false;
+export const markLaunch = (transparent: boolean) => { launchedTransparent = transparent; };
+
 export function setupAppSettings(main: BrowserWindow) {
   owner = main;
-  load();
   applyShortcuts();
   app.on('will-quit', () => globalShortcut.unregisterAll());
 }
@@ -90,6 +106,8 @@ export function getAppSettings() {
       packaged: app.isPackaged,
       /** Launch at login only works in an installed app on macOS/Windows. */
       loginItemSupported: process.platform !== 'linux' && app.isPackaged,
+      /** The current window is see-through (transparentWindow as of launch). */
+      transparentWindow: launchedTransparent,
     },
     shortcuts: GLOBAL_SHORTCUTS.map(item => ({ ...item, conflict: conflicts.includes(item.accelerator) })),
   };
@@ -99,6 +117,7 @@ export function setAppSettings(patch: Record<string, unknown>) {
   if (typeof patch.openAtLogin === 'boolean') { state.openAtLogin = patch.openAtLogin; applyLogin(); }
   if (patch.closeBehavior === 'quit' || patch.closeBehavior === 'minimize') state.closeBehavior = patch.closeBehavior;
   if (typeof patch.globalShortcuts === 'boolean') { state.globalShortcuts = patch.globalShortcuts; applyShortcuts(); }
+  if (typeof patch.transparentWindow === 'boolean') state.transparentWindow = patch.transparentWindow;
   save();
   return getAppSettings();
 }

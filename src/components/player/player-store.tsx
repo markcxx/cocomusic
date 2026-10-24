@@ -61,6 +61,8 @@ type PlayerState = {
   toggleMute: () => void;
   /** Advance to the next play mode. */
   cycleMode: () => void;
+  /** Pick a play mode directly (Dock / tray menu). */
+  setMode: (mode: PlayMode) => void;
   openLyrics: () => void;
   closeLyrics: () => void;
   setQueueOpen: (open: boolean) => void;
@@ -515,6 +517,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setMode(next);
         toast.info(playModeLabels[next]);
       },
+      setMode,
       openLyrics: () => setLyricsOpen(true),
       closeLyrics: () => setLyricsOpen(false),
       setQueueOpen,

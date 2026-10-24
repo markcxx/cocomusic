@@ -1,4 +1,4 @@
-import type { LyricLine, Lyrics } from './types';
+import type { LyricLine, LyricWord, Lyrics } from './types';
 
 // Platform-neutral LRC parsing. Kept free of runtime imports so tests can load it directly.
 
@@ -82,4 +82,69 @@ export function activeLineIndex(lines: readonly LyricLine[], seconds: number) {
     if (lines[middle].time <= seconds) { found = middle; low = middle + 1; } else { high = middle - 1; }
   }
   return found;
+}
+
+/* ───────── Word-by-word lyrics ───────── */
+
+/**
+ * Kugou KRC (decoded) or NetEase YRC: `[lineStartMs,lineDurMs]` then per word
+ * `<offsetMs,durMs,0>text` (KRC, offset relative to the line) or
+ * `(startMs,durMs,0)text` (YRC, absolute). Returns timed lines with words.
+ */
+export function parseWordLyrics(source: string): LyricLine[] {
+  const lines: LyricLine[] = [];
+  for (const raw of source.replace(/\r\n?/g, '\n').split('\n')) {
+    const head = /^\[(\d+),(\d+)\](.*)$/.exec(raw.trim());
+    if (!head) continue;
+    const lineStart = Number(head[1]);
+    const body = head[3];
+    const words: LyricWord[] = [];
+    const pattern = /[<(](\d+),(\d+),-?\d+[>)]([^<(]*)/g;
+    let match: RegExpExecArray | null;
+    while ((match = pattern.exec(body))) {
+      const relative = body[match.index] === '<';
+      const startMs = relative ? lineStart + Number(match[1]) : Number(match[1]);
+      words.push({ start: startMs / 1000, end: (startMs + Number(match[2])) / 1000, text: match[3] });
+    }
+    const text = words.map(word => word.text).join('').trim();
+    if (!text) continue;
+    lines.push({ time: lineStart / 1000, text, words: words.filter(word => word.text) });
+  }
+  return lines.sort((a, b) => a.time - b.time);
+}
+
+/** Attach word timing to LRC lines that start at (about) the same time. */
+export function attachWords(lines: LyricLine[], timed: readonly LyricLine[]): LyricLine[] {
+  if (!timed.length) return lines;
+  let cursor = 0;
+  return lines.map(line => {
+    while (cursor < timed.length && timed[cursor].time < line.time - 0.6) cursor += 1;
+    const match = timed[cursor];
+    if (match && Math.abs(match.time - line.time) <= 0.6 && match.words?.length) {
+      cursor += 1;
+      return { ...line, words: match.words };
+    }
+    return line;
+  });
+}
+
+/**
+ * How much of a line has been sung (0–1, by characters). Uses word timing when
+ * present, otherwise spreads the line evenly until the next line starts.
+ */
+export function lineProgress(line: LyricLine | undefined, next: LyricLine | undefined, seconds: number) {
+  if (!line) return 0;
+  const words = line.words;
+  if (words?.length) {
+    const total = words.reduce((sum, word) => sum + word.text.length, 0) || 1;
+    let sung = 0;
+    for (const word of words) {
+      if (seconds >= word.end) { sung += word.text.length; continue; }
+      if (seconds > word.start) sung += word.text.length * ((seconds - word.start) / Math.max(0.01, word.end - word.start));
+      break;
+    }
+    return Math.min(1, Math.max(0, sung / total));
+  }
+  if (!next) return 1;
+  return Math.min(1, Math.max(0, (seconds - line.time) / Math.max(0.6, next.time - line.time)));
 }
