@@ -1,0 +1,207 @@
+.lead {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.lead strong {
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+/* Notes scroll inside the dialog; the footer stays put. */
+.scroll {
+  max-height: min(52vh, 460px);
+  margin: 0 -8px;
+  padding: 0 8px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.release + .release {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+}
+
+.versionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.versionHeader strong {
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-strong);
+}
+
+.tag {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--chip);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.tagCurrent {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.date {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ───────── Rendered release notes ───────── */
+
+.notes {
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+.notes > :first-child {
+  margin-top: 0;
+}
+
+.notes p {
+  margin: 6px 0;
+}
+
+.notes h4 {
+  margin: 12px 0 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.notes ul,
+.notes ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.notes li::marker {
+  color: var(--accent);
+}
+
+.notes code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--chip);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.notes a {
+  color: var(--accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tableWrap {
+  margin: 8px 0;
+  overflow-x: auto;
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 1px var(--divider);
+}
+
+.notes table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.notes th,
+.notes td {
+  padding: 6px 10px;
+  text-align: left;
+}
+
+.notes th {
+  font-weight: 500;
+  color: var(--text-muted);
+  background: var(--hover);
+}
+
+.notes tr + tr td,
+.notes tbody tr:first-child td {
+  border-top: 1px solid var(--divider);
+}
+
+.empty,
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 120px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  color: var(--accent-strong);
+}
+
+/* ───────── Download footer ───────── */
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.progress {
+  overflow: hidden;
+}
+
+.progressText {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-secondary);
+}
+
+.bar {
+  position: relative;
+  display: block;
+  height: 4px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(var(--accent-strong-rgb), 0.14);
+}
+
+.barFill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: var(--accent-strong);
+  transition: width 200ms linear;
+}
+
+.hint {
+  margin: 0;
+  font-size: 11.5px;
+  text-align: right;
+  color: var(--text-muted);
+}

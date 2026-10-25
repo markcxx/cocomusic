@@ -59,6 +59,21 @@ interface CocoDesktopBridge {
     action(action: string): void;
     resize(height: number): void;
   };
+  /** Updates from GitHub Releases (electron/main/updater.ts). */
+  updates: {
+    getState(): Promise<CocoUpdateState>;
+    onState(listener: (state: CocoUpdateState) => void): () => void;
+    /** Check now; resolves when the check is done. */
+    check(): Promise<CocoUpdateState>;
+    download(): void;
+    cancel(): void;
+    /** Run the verified installer ('restart' quits the app). */
+    install(): void;
+    skip(version: string): void;
+    dismiss(what: 'notify' | 'whatsNew'): void;
+    setSettings(patch: Partial<CocoUpdateSettings>): Promise<CocoUpdateState>;
+    changelog(): Promise<{ releases: CocoReleaseNote[]; error: string }>;
+  };
   lyrics: {
     setDesktop(visible: boolean | 'toggle'): void;
     setLocked(locked: boolean): void;
@@ -113,6 +128,39 @@ interface CocoAppSettingsResult {
   settings: CocoAppSettings;
   info: { version: string; electron: string; chrome: string; node: string; platform: string; arch: string; dataDir: string; packaged: boolean; loginItemSupported: boolean; transparentWindow: boolean };
   shortcuts: Array<{ accelerator: string; action: string; label: string; conflict: boolean }>;
+}
+
+interface CocoUpdateSettings {
+  autoCheck: boolean;
+  autoDownload: boolean;
+  /** 'beta' also offers pre-releases (-rc / -beta tags). */
+  channel: 'stable' | 'beta';
+}
+
+interface CocoReleaseNote {
+  version: string;
+  name: string;
+  publishedAt: string;
+  url: string;
+  prerelease: boolean;
+  /** Markdown release notes. */
+  notes: string;
+}
+
+/** Mirror of UpdateState in electron/main/updater.ts. */
+interface CocoUpdateState {
+  status: 'idle' | 'checking' | 'latest' | 'available' | 'downloading' | 'ready' | 'error';
+  current: string;
+  settings: CocoUpdateSettings;
+  lastCheck: number | null;
+  update: (CocoReleaseNote & { size: number; file: string; changes: CocoReleaseNote[] }) | null;
+  progress: { received: number; total: number; speed: number } | null;
+  install: 'restart' | 'open';
+  error: string;
+  skipped: string;
+  notify: string;
+  whatsNew: string;
+  installOnQuit: boolean;
 }
 
 interface Window {

@@ -10,6 +10,7 @@ import { handedOut, markOpenFilesReady } from './open-files';
 import { isMenuAction, parsePlayerState } from './system-menu';
 import { isTrayPage, refreshSystemMenus, runAction, sendTrayState, updatePlayerState } from './system-integration';
 import { isPanel, resizePanel } from './tray-windows';
+import { cancelDownload, changelog, checkForUpdates, dismiss, downloadUpdate, getUpdateState, installUpdate, setUpdateSettings, skipVersion } from './updater';
 import { setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
 
 /** Paths the user picked through a system dialog; only these (or opened files) may be revealed. */
@@ -116,6 +117,18 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
     if (mode === 'system' || mode === 'light' || mode === 'dark') setColorScheme(mode);
   });
   handle(IPC.appOpenDataFolder, () => { void shell.openPath(app.getPath('userData')); });
+
+  // Updates: only the main window drives them; the renderer never names a URL or file.
+  const mainOnly = (window: BrowserWindow | null) => Boolean(window && !isTrayPage(window) && !lyrics()?.isLyricsWindow(window));
+  invoke(IPC.updateGetState, () => getUpdateState());
+  invoke(IPC.updateCheck, async window => { if (mainOnly(window)) await checkForUpdates(); return getUpdateState(); });
+  invoke(IPC.updateSetSettings, (window, patch) => (mainOnly(window) && patch && typeof patch === 'object' ? setUpdateSettings(patch as Record<string, unknown>) : getUpdateState()));
+  invoke(IPC.updateChangelog, () => changelog());
+  handle(IPC.updateDownload, window => { if (mainOnly(window)) void downloadUpdate(); });
+  handle(IPC.updateCancel, window => { if (mainOnly(window)) cancelDownload(); });
+  handle(IPC.updateInstall, window => { if (mainOnly(window)) void installUpdate(); });
+  handle(IPC.updateSkip, (window, version) => { if (mainOnly(window)) skipVersion(version); });
+  handle(IPC.updateDismiss, (window, what) => { if (mainOnly(window)) dismiss(what); });
 
   handle(IPC.desktopLyrics, (_window, value) => {
     if (value === true || value === false || value === 'toggle') lyrics()?.set(value);

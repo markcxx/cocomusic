@@ -564,6 +564,17 @@
   color: var(--text-secondary);
 }
 
+/* 检查更新 while a check runs. */
+.spinning {
+  animation: spin 900ms linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Inline notice inside a settings card (e.g. restart to apply). */
 .notice {
   display: flex;

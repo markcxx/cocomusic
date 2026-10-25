@@ -8,6 +8,7 @@ import { setupDesktopLyrics, type DesktopLyrics } from './desktop-lyrics';
 import { registerIpc } from './ipc';
 import { startNextServer, type NextServer } from './next-server';
 import { attachOpenFilesWindow, audioFilesFromArgv, queueOpenFiles, registerOpenFileHandlers } from './open-files';
+import { setupUpdater } from './updater';
 import { createMainWindow } from './window';
 
 let server: NextServer | undefined;
@@ -54,6 +55,8 @@ app.whenReady().then(async () => {
     void app.dock?.show();
   }
   applyBranding();
+  // Before IPC: the renderer asks for the update state as soon as it loads.
+  setupUpdater();
   registerIpc(() => server?.origin, () => lyrics);
   try {
     server = await startNextServer();

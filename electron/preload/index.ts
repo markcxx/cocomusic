@@ -34,6 +34,16 @@ const IPC = {
   traySize: 'tray:size',
   trayReady: 'tray:ready',
   appRelaunch: 'app:relaunch',
+  updateGetState: 'update:get-state',
+  updateState: 'update:state',
+  updateCheck: 'update:check',
+  updateDownload: 'update:download',
+  updateCancel: 'update:cancel',
+  updateInstall: 'update:install',
+  updateSkip: 'update:skip',
+  updateDismiss: 'update:dismiss',
+  updateSetSettings: 'update:set-settings',
+  updateChangelog: 'update:changelog',
 } as const;
 const MATERIAL_SWITCH = '--coco-material=';
 
@@ -107,6 +117,19 @@ contextBridge.exposeInMainWorld('coco', {
     },
     action: (action: string) => ipcRenderer.send(IPC.trayAction, action),
     resize: (height: number) => ipcRenderer.send(IPC.traySize, height),
+  },
+  updates: {
+    getState: () => ipcRenderer.invoke(IPC.updateGetState),
+    /** Subscribe to update state changes; returns an unsubscribe function. */
+    onState: (listener: (state: Record<string, unknown>) => void) => listen(IPC.updateState, value => (value && typeof value === 'object' ? value as Record<string, unknown> : {}), listener),
+    check: () => ipcRenderer.invoke(IPC.updateCheck),
+    download: () => ipcRenderer.send(IPC.updateDownload),
+    cancel: () => ipcRenderer.send(IPC.updateCancel),
+    install: () => ipcRenderer.send(IPC.updateInstall),
+    skip: (version: string) => ipcRenderer.send(IPC.updateSkip, version),
+    dismiss: (what: 'notify' | 'whatsNew') => ipcRenderer.send(IPC.updateDismiss, what),
+    setSettings: (patch: Record<string, unknown>) => ipcRenderer.invoke(IPC.updateSetSettings, patch),
+    changelog: () => ipcRenderer.invoke(IPC.updateChangelog),
   },
   lyrics: {
     setDesktop: (visible: boolean | 'toggle') => ipcRenderer.send(IPC.desktopLyrics, visible),

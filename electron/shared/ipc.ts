@@ -64,6 +64,27 @@ export const IPC = {
   trayReady: 'tray:ready',
   /** renderer → main: restart the app (window transparency needs a new window). */
   appRelaunch: 'app:relaunch',
+
+  /** renderer → main (invoke): current UpdateState (updater.ts). */
+  updateGetState: 'update:get-state',
+  /** main → renderer: UpdateState changed. */
+  updateState: 'update:state',
+  /** renderer → main (invoke): check GitHub Releases now; resolves to the new UpdateState. */
+  updateCheck: 'update:check',
+  /** renderer → main: download the offered installer. */
+  updateDownload: 'update:download',
+  /** renderer → main: cancel the running download. */
+  updateCancel: 'update:cancel',
+  /** renderer → main: install the verified download (quits for an in-place update). */
+  updateInstall: 'update:install',
+  /** renderer → main: stop prompting for this version. */
+  updateSkip: 'update:skip',
+  /** renderer → main: the 'notify' prompt or the 'whatsNew' note was seen. */
+  updateDismiss: 'update:dismiss',
+  /** renderer → main (invoke): update settings (autoCheck, channel); resolves to UpdateState. */
+  updateSetSettings: 'update:set-settings',
+  /** renderer → main (invoke): published releases for 更新日志. */
+  updateChangelog: 'update:changelog',
 } as const;
 
 /** Command-line switch carrying the window material to the preload. */
