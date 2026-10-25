@@ -20,10 +20,12 @@ test('song downloads default to audio only, embed artwork, preserve platforms, a
   let release!: () => void;
   const delayed = new Promise<void>(resolve => { release = resolve; });
   for (const provider of [neteaseProvider, qqProvider]) {
-    t.mock.method(provider, 'songSource', async (id: string) => {
+    const resolve = async (id: string, quality?: string) => {
       if (id === 'cancel') await delayed;
-      return { id, url: 'https://example.test/song.mp3' };
-    });
+      return { id, url: 'https://example.test/song.mp3', level: id === 'downgrade' ? 'standard' : quality };
+    };
+    t.mock.method(provider, 'songSource', resolve);
+    if (provider.downloadSource) t.mock.method(provider as { downloadSource: NonNullable<typeof provider.downloadSource> }, 'downloadSource', resolve);
     t.mock.method(provider, 'lyrics', async () => { lyricsCalls++; return { synced: true, lines: [{ time: 1, text: '测试歌词' }] }; });
   }
   t.mock.method(globalThis, 'fetch', async (url: string | URL | Request) => {
@@ -72,6 +74,23 @@ test('song downloads default to audio only, embed artwork, preserve platforms, a
     release();
     await wait(() => downloads.listDownloads().jobs.find(job => job.id === canceled.id)?.status === 'canceled');
     assert.equal(audioCalls, 2);
+    const options = { quality: 'lossless' as const, lyrics: false, allowTrial: false, allowFallback: false };
+    downloads.enqueue([{ id: 'quality', source: 'qq', title: 'Quality', artist: 'Artist' }, { id: 'downgrade', source: 'qq', title: 'Downgrade', artist: 'Artist' }], options);
+    downloads.updateSettings({ quality: 'standard', lyrics: true });
+    await wait(() => downloads.listDownloads().jobs.filter(job => ['quality', 'downgrade'].includes(job.songId)).every(job => ['done', 'failed'].includes(job.status)));
+    const selected = downloads.listDownloads().jobs.find(job => job.songId === 'quality')!;
+    assert.equal(selected.level, 'lossless');
+    assert.deepEqual(selected.options, options);
+    const denied = downloads.listDownloads().jobs.find(job => job.songId === 'downgrade')!;
+    assert.equal(denied.status, 'failed');
+    assert.match(denied.error!, /重新选择音质/);
+    assert.equal(lyricsCalls, 2); // Earlier lyric-only exports; new job keeps lyrics=false.
+    assert.equal(audioCalls, 3); // Downgraded source must not be fetched.
+    assert.equal(downloads.enqueue([{ id: 'quality', source: 'qq', title: 'Quality', artist: 'Artist' }], options).added, 0);
+    assert.equal(downloads.enqueue([{ id: 'quality', source: 'qq', title: 'Quality', artist: 'Artist' }], { ...options, quality: 'exhigh' }).added, 1);
+    await wait(() => downloads.listDownloads().jobs.find(job => job.songId === 'quality')?.status === 'done');
+    assert.equal(audioCalls, 4);
+    assert.equal(downloads.listDownloads().jobs.find(job => job.songId === 'quality')?.level, 'exhigh');
     const qqJob = jobs.find(job => job.source === 'qq')!;
     await downloads.removeJob(qqJob.id, true);
     assert.equal(library.getTrack(qqJob.localId!), undefined);

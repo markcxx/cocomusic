@@ -11,6 +11,8 @@ import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
 import { Button, ConfirmDialog, IconButton, toast } from '@/components/ui';
 import { downloadsApi, localToTrack, type DownloadJob } from '@/lib/local-client';
 import { cn } from '@/lib/cn';
+import { QUALITY_LABELS } from '@/lib/download-quality';
+import type { AudioQuality } from '@/server/music/types';
 import type { Track } from '@/types/music';
 import { downloads, useDownloads } from './download-store';
 import styles from './Downloads.module.css';
@@ -35,6 +37,7 @@ function JobState({ job }: { job: DownloadJob }) {
     return (
       <span className={styles.done}>
         已完成 · {size(job.total)}
+        {job.level && <> · {QUALITY_LABELS[job.level as AudioQuality] ?? job.level}</>}
         {job.metadataWarning && <em data-tooltip={job.metadataWarning}>标签未完整写入</em>}
         {job.trial && <em className={styles.trialTag} data-tooltip={`仅试听片段（${Math.round(job.trial.end - job.trial.start)} 秒），账号有完整播放权限时可重新下载`}>试听</em>}
       </span>

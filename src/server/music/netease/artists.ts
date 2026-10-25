@@ -1,6 +1,12 @@
 import type { ArtistInfo, CatalogAlbum, CatalogTrack } from '../types';
 import { NeteaseError, neteaseEapi, neteaseRequest } from './client';
 import { image, mapAlbum, mapTrack, num, record, rows, SOURCE, text, type Raw } from './mappers';
+import { mapBiography } from '../artist-biography';
+
+export async function artistBiography(id: string) {
+  const data = await neteaseRequest<Raw>('/artist/introduction', { id });
+  return mapBiography(data.briefDesc, data.introduction);
+}
 
 /** Artist header: profile, counts, biography (eapi artist/head/info). */
 export async function artistInfo(id: string): Promise<ArtistInfo> {

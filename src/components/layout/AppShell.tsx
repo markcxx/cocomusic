@@ -12,6 +12,7 @@ import { PlayerProvider } from '@/components/player/player-store';
 import { QueuePanel } from '@/components/player/QueuePanel';
 import { LocalDropOverlay } from '@/components/library/LocalDropOverlay';
 import { UpdateDialog } from '@/components/updates/UpdateDialog';
+import { DownloadDialog } from '@/components/downloads/DownloadDialog';
 import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
 import { NavigationProvider, useNavigation } from './navigation';
@@ -73,6 +74,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!mini && <LocalDropOverlay />}
             <SystemBridge />
             <LoginDialog />
+            <DownloadDialog />
             {!mini && <UpdateDialog />}
             <Toaster />
             <TooltipLayer />

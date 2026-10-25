@@ -1,5 +1,6 @@
 'use client';
 
+import { useNavigation } from '@/components/layout/navigation';
 import { motion } from 'framer-motion';
 import { ErrorState, SkeletonBlock } from '@/components/common/AsyncState';
 import { staggerList } from '@/components/common/motion';
@@ -9,11 +10,12 @@ import { catalogApi, useCatalog } from '@/lib/catalog-client';
 import styles from './Home.module.css';
 
 export function ArtistsTab() {
+  const { navigate } = useNavigation();
   const { data, loading, error, retry } = useCatalog(catalogApi.artists, 'artists');
   if (error) return <ErrorState message={error} onRetry={retry} />;
   return (
     <section className={styles.section}>
-      <SectionHeader title="热门歌手" />
+      <SectionHeader title="热门歌手" actionLabel="歌手" onAction={() => navigate({ name: 'artists' })} />
       {loading || !data ? (
         <div className={styles.artistGrid} aria-busy="true">
           {Array.from({ length: 12 }, (_, index) => <SkeletonBlock key={index} className={styles.skeletonArtist} />)}

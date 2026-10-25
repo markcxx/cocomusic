@@ -4,6 +4,7 @@ import type { DownloadJob, DownloadSettings } from '@/server/local/downloads';
 import type { LocalTrack } from '@/server/local/library';
 import type { CatalogTrack, Lyrics } from '@/server/music/types';
 import type { Track } from '@/types/music';
+import type { DownloadOptions, DownloadQualityOption } from './download-quality';
 
 export type { DownloadJob, DownloadSettings, DownloadStatus, FileNaming } from '@/server/local/downloads';
 export type { LocalTrack } from '@/server/local/library';
@@ -30,7 +31,8 @@ export const downloadsApi = {
   lyrics: (track: CatalogTrack) => call<{ path: string }>('/api/downloads', { action: 'lyrics', track }),
   list: () => call<{ settings: DownloadSettings; jobs: DownloadJob[] }>('/api/downloads'),
   updateSettings: (settings: Partial<Omit<DownloadSettings, 'folder'>>) => call<{ settings: DownloadSettings }>('/api/downloads', { action: 'settings', settings }),
-  add: (tracks: CatalogTrack[]) => call<{ added: number; skipped: number }>('/api/downloads', { action: 'add', tracks }),
+  qualities: (track: CatalogTrack) => call<{ options: DownloadQualityOption[] }>('/api/downloads', { action: 'qualities', track }),
+  add: (tracks: CatalogTrack[], options: DownloadOptions) => call<{ added: number; skipped: number }>('/api/downloads', { action: 'add', tracks, options }),
   cancel: (id: string) => call<{ ok: true }>('/api/downloads', { action: 'cancel', id }),
   retry: (id: string) => call<{ ok: true }>('/api/downloads', { action: 'retry', id }),
   remove: (id: string, deleteFile = false) => call<{ ok: true }>('/api/downloads', { action: 'remove', id, deleteFile }),

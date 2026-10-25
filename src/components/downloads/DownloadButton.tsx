@@ -12,7 +12,7 @@ export function DownloadButton({ track }: { track: CatalogTrack }) {
   const { jobs } = useDownloads();
   const job = jobFor(jobs, track.id, track.source);
   if (job?.status === 'done') {
-    return <IconButton label="已下载" tone="muted" size="sm" disabled><CheckCircle2 size={16} strokeWidth={1.5} className={styles.doneIcon} /></IconButton>;
+    return <IconButton label="已下载，选择下载音质" tone="muted" size="sm" onClick={() => downloads.add([track])}><CheckCircle2 size={16} strokeWidth={1.5} className={styles.doneIcon} /></IconButton>;
   }
   if (job?.status === 'queued' || job?.status === 'downloading') {
     const ratio = job.total ? job.received / job.total : 0;

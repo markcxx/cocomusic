@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Compass, Download, HardDrive, Heart, History, House, PanelLeftClose, PanelLeftOpen, TrendingUp, type LucideIcon } from 'lucide-react';
+import { Compass, Download, HardDrive, Heart, History, House, Mic2, PanelLeftClose, PanelLeftOpen, TrendingUp, type LucideIcon } from 'lucide-react';
 import { SidebarPlaylists } from '@/components/account/SidebarPlaylists';
 import { BrandMark } from '@/components/common/BrandMark';
 import { cn } from '@/lib/cn';
@@ -10,12 +10,13 @@ import { setSidebarCollapsed, useSidebarCollapsed } from './sidebar-state';
 import styles from './Sidebar.module.css';
 
 /** Sidebar destinations are parameterless routes. 设置 lives in the top bar only. */
-type SimpleRoute = 'home' | 'discover' | 'charts' | 'liked' | 'recent' | 'local' | 'downloads';
+type SimpleRoute = 'home' | 'discover' | 'artists' | 'charts' | 'liked' | 'recent' | 'local' | 'downloads';
 type NavItem = { id: SimpleRoute; label: string; icon: LucideIcon };
 
 const libraryGroup: NavItem[] = [
   { id: 'home', label: '首页', icon: House },
   { id: 'discover', label: '发现音乐', icon: Compass },
+  { id: 'artists', label: '歌手', icon: Mic2 },
   { id: 'charts', label: '排行榜', icon: TrendingUp },
 ];
 

@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { settings as appSettings, useSettings } from './settings';
+import type { ArtistDirectoryQuery } from './artist-directory';
+import type { ArtistDirectoryPage } from '@/server/music/artist-directory';
 import { useLatest } from './use-latest';
 import type {
-  ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
+  ArtistBiography, ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongSource, SongStats,
 } from '@/server/music/types';
 
@@ -42,6 +44,7 @@ async function get<T>(path: string, params: Record<string, string | number | und
 }
 
 export const catalogApi = {
+  artistDirectory: (query: ArtistDirectoryQuery, signal?: AbortSignal) => get<ArtistDirectoryPage>('artists', { ...query }, signal),
   featured: (signal?: AbortSignal) => get<HomeFeatured>('home', { section: 'featured' }, signal),
   newReleases: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>('home', { section: 'new' }, signal),
   artists: (signal?: AbortSignal) => get<{ artists: CatalogArtist[] }>('home', { section: 'artists' }, signal),
@@ -55,6 +58,7 @@ export const catalogApi = {
   suggest: (keyword: string, signal?: AbortSignal) => get<SearchSuggestion>('search/suggest', { keyword }, signal),
   bestMatch: (keyword: string, signal?: AbortSignal) => get<BestMatch>('search/best', { keyword }, signal),
   artist: (id: string, signal?: AbortSignal) => get<ArtistInfo>('artist', { id, section: 'info' }, signal),
+  artistBiography: (id: string, signal?: AbortSignal) => get<ArtistBiography>('artist', { id, section: 'biography' }, signal),
   artistSongs: (id: string, offset = 0, limit = 50, signal?: AbortSignal) => get<{ items: CatalogTrack[]; total: number; hasMore: boolean }>('artist', { id, section: 'songs', offset, limit }, signal),
   artistAlbums: (id: string, offset = 0, limit = 30, signal?: AbortSignal) => get<{ items: CatalogAlbum[]; total: number; hasMore: boolean }>('artist', { id, section: 'albums', offset, limit }, signal),
   searchDiscovery: (signal?: AbortSignal) => get<SearchDiscovery>('search/hot', {}, signal),

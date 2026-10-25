@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useLayoutEffect } from 'react';
 import { LikedView } from '@/components/account/LikedView';
+import { ArtistsView } from '@/components/artist/ArtistsView';
 import { ArtistView } from '@/components/artist/ArtistView';
 import { ChartsView } from '@/components/charts/ChartsView';
 import { CommentsView } from '@/components/comments/CommentsView';
@@ -23,6 +24,7 @@ function View({ route }: { route: Route }) {
   switch (route.name) {
     case 'home': return <HomeView />;
     case 'discover': return <DiscoverView />;
+    case 'artists': return <ArtistsView />;
     case 'charts': return <ChartsView />;
     case 'playlist': return <CollectionView kind="playlist" id={route.id} title={route.title} />;
     case 'album': return <CollectionView kind="album" id={route.id} title={route.title} />;

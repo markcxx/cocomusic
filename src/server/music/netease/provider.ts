@@ -1,15 +1,16 @@
 import type { CatalogProvider } from '../types';
 import { neteaseAccount } from './account';
-import { artistAlbums, artistInfo, artistSongs } from './artists';
+import { artistAlbums, artistBiography, artistInfo, artistSongs } from './artists';
 import { albumDetail, playlistDetail } from './collections';
 import { categories, charts, featured, newReleases, playlists, topArtists } from './discovery';
 import { bestMatch, search, searchDiscovery, suggest } from './search';
 import { SOURCE } from './mappers';
-import { comments, lyrics, songSource, songStats } from './playback';
+import { comments, downloadSource, lyrics, songSource, songStats } from './playback';
 
 export const neteaseProvider: CatalogProvider = {
   source: SOURCE,
   songSource,
+  downloadSource,
   lyrics,
   songStats,
   comments,
@@ -26,6 +27,7 @@ export const neteaseProvider: CatalogProvider = {
   suggest,
   searchDiscovery,
   artistInfo,
+  artistBiography,
   artistSongs,
   artistAlbums,
   account: neteaseAccount,

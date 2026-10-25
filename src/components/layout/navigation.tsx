@@ -7,6 +7,7 @@ import { useSettings } from '@/lib/settings';
 export type Route =
   | { name: 'home' }
   | { name: 'discover' }
+  | { name: 'artists' }
   | { name: 'charts' }
   | { name: 'liked' }
   | { name: 'recent' }
@@ -25,6 +26,7 @@ export type RouteName = Route['name'];
 export const routeTitles: Record<RouteName, string> = {
   home: '首页',
   discover: '发现音乐',
+  artists: '歌手',
   charts: '排行榜',
   liked: '我喜欢',
   recent: '最近播放',

@@ -13,6 +13,8 @@ import { addFiles, getTrack, removeTrack, trackId } from './library';
 import { clipLyrics, toLrc } from './lrc-writer';
 import { jsonStore } from './store';
 import { embedMetadata } from './metadata';
+import type { DownloadOptions } from '../../lib/download-quality';
+import { assertDownloadAccess, resolveDownload } from './download-quality';
 
 /**
  * Download manager. Jobs run in this server process (so they continue while
@@ -46,6 +48,8 @@ export interface DownloadJob {
   trial?: { start: number; end: number };
   /** Quality level upstream actually delivered (may be lower than requested). */
   level?: string;
+  /** Choices captured when queued; later preference changes must not alter this job. */
+  options?: DownloadOptions;
 }
 
 export type FileNaming = 'artist-title' | 'title-artist' | 'title';
@@ -63,7 +67,7 @@ export interface DownloadSettings {
 type DownloadsFile = { settings: DownloadSettings; jobs: DownloadJob[] };
 
 const defaultFolder = () => path.join(os.homedir(), 'Music', 'CoCo Music');
-export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: true, concurrency: 2 };
+export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: false, concurrency: 2 };
 const store = jsonStore<DownloadsFile>('downloads.json', () => ({ settings: { folder: defaultFolder(), ...DEFAULT_DOWNLOAD_SETTINGS }, jobs: [] }));
 /** Older files only stored `folder`; fill in new fields. */
 const settingsOf = (data: DownloadsFile): DownloadSettings => ({ ...DEFAULT_DOWNLOAD_SETTINGS, ...data.settings });
@@ -118,9 +122,9 @@ async function run(job: DownloadJob) {
   try {
     const provider = catalog(job.source);
     const settings = settingsOf(store.read());
-    const source = await provider.songSource(job.songId, settings.quality);
-    // Preview clips are saved only when allowed, and are clearly marked in the file name.
-    if (source.trial && !settings.allowTrial) throw new Error('仅能试听片段（可在设置 › 下载中允许保存试听片段）');
+    const options = job.options ?? { quality: settings.quality, lyrics: settings.lyrics, allowTrial: settings.allowTrial, allowFallback: true };
+    const source = await resolveDownload(provider, job.songId, options.quality);
+    assertDownloadAccess(source, options);
     controller.signal.throwIfAborted();
     const response = await fetch(source.url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(TIMEOUT_MS)]) });
     if (!response.ok || !response.body) throw new Error(`下载失败（${response.status}）`);
@@ -144,7 +148,7 @@ async function run(job: DownloadJob) {
 
     // Lyrics are a bonus; a failure here never fails the download. A clip's
     // lyrics are shifted onto its own timeline so they stay in sync.
-    if (settings.lyrics) {
+    if (options.lyrics) {
       try {
         const full = await provider.lyrics(job.songId);
         const lyrics = source.trial ? clipLyrics(full, source.trial.start, source.trial.end) : full;
@@ -186,12 +190,16 @@ export function listDownloads() {
   return { settings: settingsOf(data), jobs: jobs.map(job => (live.has(job.id) ? { ...job, ...live.get(job.id) } : job)) };
 }
 
-/** Queue songs; ones already queued, downloading, or downloaded (file still present) are skipped. */
-export function enqueue(tracks: CatalogTrack[]) {
+/** Skip active jobs and existing files of the selected quality; allow a new quality. */
+export function enqueue(tracks: CatalogTrack[], options?: DownloadOptions) {
   resumeOnce();
   const data = store.read();
   const active = new Set(data.jobs
-    .filter(job => job.status === 'queued' || job.status === 'downloading' || (job.status === 'done' && job.localId && getTrack(job.localId) && existsSync(job.path ?? '')))
+    .filter(job => {
+      if (job.status === 'queued' || job.status === 'downloading') return true;
+      const sameQuality = !options || (job.level === options.quality && (!job.trial || options.allowTrial));
+      return job.status === 'done' && sameQuality && job.localId && getTrack(job.localId) && existsSync(job.path ?? '');
+    })
     .map(job => `${job.source}:${job.songId}`));
   const fresh: DownloadJob[] = [];
   for (const track of tracks) {
@@ -211,6 +219,7 @@ export function enqueue(tracks: CatalogTrack[]) {
       received: 0,
       total: 0,
       createdAt: Date.now(),
+      options: options ? { ...options } : undefined,
     });
   }
   // Drop the oldest finished entries beyond the history cap.

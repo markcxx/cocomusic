@@ -28,6 +28,18 @@ export async function songSource(id: string, quality: AudioQuality = 'exhigh'): 
   };
 }
 
+/** Download rights can differ from playback rights; never substitute the player URL. */
+export async function downloadSource(id: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
+  const data = await neteaseEapi<Raw>('/api/song/enhance/download/url/v1', { id, level: quality, immerseType: 'c51' });
+  const item = record(data.data);
+  const url = text(item.url).replace(/^http:/, 'https:');
+  if (!url) throw new NeteaseError('当前账号无法下载该歌曲，请确认登录状态、会员或单曲购买权限', 403);
+  const trial = record(item.freeTrialInfo);
+  const start = num(trial.start);
+  const end = num(trial.end);
+  return { id, url, bitrate: num(item.br), level: text(item.level) || undefined, trial: start !== undefined && end !== undefined && end > start ? { start, end } : undefined };
+}
+
 /**
  * lyric_new (v1): original + translation. With a login the response also carries
  * `yrc` (逐字歌词); its word timing is attached to the LRC lines when present.

@@ -1,8 +1,10 @@
 import path from 'node:path';
 import type { NextRequest } from 'next/server';
-import { CatalogError, readJson, respond } from '@/server/music';
+import { catalog, CatalogError, readJson, respond } from '@/server/music';
 import { isSource, validId } from '@/server/music/ids';
-import type { CatalogTrack } from '@/server/music/types';
+import { AUDIO_QUALITIES, type AudioQuality, type CatalogTrack } from '@/server/music/types';
+import type { DownloadOptions } from '@/lib/download-quality';
+import { inspectDownloadQualities } from '@/server/local/download-quality';
 import { cancel, clearFinished, downloadLyrics, enqueue, listDownloads, removeJob, retry, setFolder, updateSettings } from '@/server/local/downloads';
 
 export const dynamic = 'force-dynamic';
@@ -24,6 +26,7 @@ function toTracks(value: unknown): CatalogTrack[] {
   return value.map(item => {
     const raw = (item ?? {}) as Record<string, unknown>;
     const id = String(raw.id ?? '');
+    if (raw.source !== undefined && !isSource(raw.source)) throw new CatalogError('歌曲来源无效', 400);
     const source = isSource(raw.source) ? raw.source : 'netease';
     if (!validId(source, 'song', id) || typeof raw.title !== 'string') throw new CatalogError('歌曲信息无效', 400);
     const text = (field: unknown, max = 200) => (typeof field === 'string' ? field.slice(0, max) : undefined);
@@ -48,7 +51,16 @@ export function POST(request: NextRequest) {
   return respond(async () => {
     const body = await readJson<Record<string, unknown>>(request, 512 * 1024);
     switch (body.action) {
-      case 'add': return enqueue(toTracks(body.tracks));
+      case 'qualities': {
+        const track = toTracks([body.track])[0];
+        return inspectDownloadQualities(catalog(track.source), track.id);
+      }
+      case 'add': {
+        const raw = body.options as Record<string, unknown> | undefined;
+        if (!raw || !AUDIO_QUALITIES.includes(raw.quality as AudioQuality) || ['lyrics', 'allowTrial', 'allowFallback'].some(key => typeof raw[key] !== 'boolean')) throw new CatalogError('请选择下载音质与选项', 400);
+        const options: DownloadOptions = { quality: raw.quality as AudioQuality, lyrics: raw.lyrics as boolean, allowTrial: raw.allowTrial as boolean, allowFallback: raw.allowFallback as boolean };
+        return enqueue(toTracks(body.tracks), options);
+      }
       case 'lyrics': return downloadLyrics(toTracks([body.track])[0]);
       case 'cancel': cancel(jobId(body.id)); return { ok: true };
       case 'retry': retry(jobId(body.id)); return { ok: true };

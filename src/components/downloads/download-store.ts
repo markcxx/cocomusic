@@ -3,6 +3,7 @@
 import { useSyncExternalStore } from 'react';
 import { toast } from '@/components/ui/toast';
 import { downloadsApi, type DownloadJob, type DownloadSettings } from '@/lib/local-client';
+import type { DownloadOptions } from '@/lib/download-quality';
 import type { CatalogTrack } from '@/lib/catalog-client';
 
 /**
@@ -63,12 +64,28 @@ export function jobFor(jobs: DownloadJob[], songId: string, source: CatalogTrack
   return jobs.find(job => job.songId === songId && job.source === source);
 }
 
+let request: CatalogTrack[] = [];
+const requestListeners = new Set<() => void>();
+const EMPTY_REQUEST: CatalogTrack[] = [];
+export function useDownloadRequest() {
+  return useSyncExternalStore(listener => { requestListeners.add(listener); return () => { requestListeners.delete(listener); }; }, () => request, () => EMPTY_REQUEST);
+}
+
 export const downloads = {
   refresh,
   async add(tracks: CatalogTrack[]) {
-    if (!tracks.length) return;
+    if (!tracks.length) { toast.info('没有可下载的歌曲'); return; }
+    if (!state.loaded) await refresh();
+    if (!state.loaded) { toast.error('下载设置加载失败，请重试'); return; }
+    request = [...tracks];
+    requestListeners.forEach(listener => listener());
+  },
+  closeRequest() { request = []; requestListeners.forEach(listener => listener()); },
+  async confirm(tracks: CatalogTrack[], options: DownloadOptions) {
     try {
-      const { added, skipped } = await downloadsApi.add(tracks);
+      await downloadsApi.updateSettings({ quality: options.quality, lyrics: options.lyrics, allowTrial: options.allowTrial });
+      const { added, skipped } = await downloadsApi.add(tracks, options);
+      downloads.closeRequest();
       if (added) toast.success(tracks.length === 1 ? `已加入下载：${tracks[0].title}` : `已加入下载 ${added} 首${skipped ? `，${skipped} 首已在列表中` : ''}`);
       else toast.info(tracks.length === 1 ? '这首歌已在下载列表中' : '这些歌曲都已在下载列表中');
     } catch (error) {

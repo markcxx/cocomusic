@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { cached, catalog, CatalogError, intParam, respond } from '@/server/music';
 import { validId } from '@/server/music/ids';
+import { mapBiography } from '@/server/music/artist-biography';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,6 +19,7 @@ export function GET(request: NextRequest) {
     if (section === 'songs') return cached(key, () => provider.artistSongs(id, offset, limit), 30 * 60_000);
     if (section === 'albums') return cached(key, () => provider.artistAlbums(id, offset, limit), 30 * 60_000);
     if (section === 'info') return cached(key, () => provider.artistInfo(id), 30 * 60_000);
+    if (section === 'biography') return cached(key, async () => provider.artistBiography ? provider.artistBiography(id) : mapBiography((await provider.artistInfo(id)).description, []), 30 * 60_000);
     throw new CatalogError('未知的歌手板块', 400);
   });
 }

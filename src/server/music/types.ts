@@ -225,6 +225,8 @@ export const AUDIO_QUALITIES: AudioQuality[] = ['standard', 'higher', 'exhigh', 
 export interface CatalogProvider {
   source: CatalogSource;
   songSource(id: string, quality?: AudioQuality): Promise<SongSource>;
+  /** Dedicated download entitlement endpoint, when the platform exposes one. */
+  downloadSource?(id: string, quality?: AudioQuality): Promise<SongSource>;
   lyrics(id: string): Promise<Lyrics>;
   songStats(id: string): Promise<SongStats>;
   comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage>;
@@ -239,12 +241,18 @@ export interface CatalogProvider {
   search(keyword: string, type: SearchType, offset: number, limit: number): Promise<SearchResult>;
   bestMatch(keyword: string): Promise<BestMatch>;
   artistInfo(id: string): Promise<ArtistInfo>;
+  artistBiography?(id: string): Promise<ArtistBiography>;
   artistSongs(id: string, offset: number, limit: number): Promise<{ items: CatalogTrack[]; total: number; hasMore: boolean }>;
   artistAlbums(id: string, offset: number, limit: number): Promise<{ items: CatalogAlbum[]; total: number; hasMore: boolean }>;
   /** Present when the platform supports accounts. */
   account?: AccountProvider;
   suggest(keyword: string): Promise<SearchSuggestion>;
   searchDiscovery(): Promise<SearchDiscovery>;
+}
+
+export interface ArtistBiography {
+  brief: string;
+  sections: Array<{ title: string; text: string }>;
 }
 
 export interface ArtistInfo {
