@@ -130,6 +130,10 @@ npm run dev
 - [数据与隐私](docs/data-and-privacy.md)
 - [版本发布](docs/releasing.md)
 
+## 致谢
+
+感谢 [LINUX DO](https://linux.do/) 社区和佬友们对开源分享的支持，也感谢社区提供交流项目、讨论问题的空间。
+
 ## 许可与说明
 
 本项目采用 [GPL-3.0-only](LICENSE) 协议开源。
