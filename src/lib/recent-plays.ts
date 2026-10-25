@@ -1,5 +1,7 @@
 'use client';
 
+import { persistentStorage } from '@/lib/persistent-storage';
+
 import { useSyncExternalStore } from 'react';
 import type { Track } from '@/types/music';
 
@@ -17,7 +19,7 @@ let cache: RecentPlay[] | null = null;
 function read(): RecentPlay[] {
   if (cache) return cache;
   try {
-    const parsed = JSON.parse(localStorage.getItem(KEY) ?? '[]') as unknown;
+    const parsed = JSON.parse(persistentStorage.getItem(KEY) ?? '[]') as unknown;
     cache = Array.isArray(parsed)
       ? parsed.filter((item): item is RecentPlay => Boolean(item && typeof item === 'object' && (item as RecentPlay).track?.id && typeof (item as RecentPlay).playedAt === 'number')).slice(0, LIMIT)
       : [];
@@ -29,7 +31,7 @@ function read(): RecentPlay[] {
 
 function write(next: RecentPlay[]) {
   cache = next;
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage full */ }
+  try { persistentStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage full */ }
   listeners.forEach(listener => listener());
 }
 

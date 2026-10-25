@@ -59,8 +59,8 @@ export function useDownloads() {
 }
 
 /** Song id → latest job for it, for per-row download state. */
-export function jobFor(jobs: DownloadJob[], songId: string) {
-  return jobs.find(job => job.songId === songId);
+export function jobFor(jobs: DownloadJob[], songId: string, source: CatalogTrack['source']) {
+  return jobs.find(job => job.songId === songId && job.source === source);
 }
 
 export const downloads = {

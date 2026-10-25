@@ -3,7 +3,7 @@
   "productName": "CoCo Music",
   "version": "0.0.1",
   "private": true,
-  "description": "CoCo Music 多平台音乐桌面播放器",
+  "description": "CoCo Music \u591a\u5e73\u53f0\u97f3\u4e50\u684c\u9762\u64ad\u653e\u5668",
   "author": "markcxx",
   "homepage": "https://github.com/markcxx/cocomusic",
   "license": "GPL-3.0-only",
@@ -25,7 +25,8 @@
     "lint": "eslint",
     "preview:menus": "node --experimental-strip-types --no-warnings scripts/preview-system-menus.mjs",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
-    "test": "node --experimental-strip-types --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\""
+    "test": "node --import tsx --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\"",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
@@ -33,6 +34,7 @@
     "lucide-react": "0.562.0",
     "music-metadata": "12.2.3",
     "next": "16.1.2",
+    "node-taglib-sharp": "6.0.3",
     "qrcode": "1.5.4",
     "react": "19.2.3",
     "react-dom": "19.2.3"
@@ -42,10 +44,18 @@
     "@types/qrcode": "1.5.6",
     "@types/react": "19.2.8",
     "@types/react-dom": "19.2.3",
+    "@types/react-test-renderer": "19.1.0",
     "electron": "45.0.0",
     "electron-builder": "26.15.3",
     "eslint": "9.39.5",
     "eslint-config-next": "16.1.2",
+    "react-test-renderer": "19.2.3",
+    "tsx": "4.21.0",
     "typescript": "5.9.3"
+  },
+  "overrides": {
+    "node-taglib-sharp": {
+      "uuid": "11.1.1"
+    }
   }
 }

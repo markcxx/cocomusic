@@ -18,6 +18,8 @@ files:
   - "!node_modules/**/*"
 
 extraResources:
+  - from: build/icon-mac.png
+    to: icon-mac.png
   - from: build/icon.png
     to: icon.png
   # Menu-bar / tray / taskbar / jump list icons (electron/main/system-integration.ts).
@@ -74,6 +76,12 @@ publish: null
 
 mac:
   icon: build/icon.icns
+  extendInfo:
+    CFBundleIconName: CoCoMusic
+  # Native layered icon for modern macOS; icon.icns remains the older-system fallback.
+  extraFiles:
+    - from: build/mac/Assets.car
+      to: Resources/Assets.car
   category: public.app-category.music
   darkModeSupport: true
   # No Apple Developer ID yet: ad-hoc sign so Apple Silicon will launch the app

@@ -1,5 +1,7 @@
 'use client';
 
+import { persistentStorage } from '@/lib/persistent-storage';
+
 import { useSyncExternalStore } from 'react';
 
 // Collapsed/expanded sidebar, persisted across launches.
@@ -9,14 +11,14 @@ let collapsed: boolean | null = null;
 
 function read() {
   if (collapsed === null) {
-    try { collapsed = localStorage.getItem(KEY) === '1'; } catch { collapsed = false; }
+    try { collapsed = persistentStorage.getItem(KEY) === '1'; } catch { collapsed = false; }
   }
   return collapsed;
 }
 
 export function setSidebarCollapsed(next: boolean) {
   collapsed = next;
-  try { localStorage.setItem(KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
+  try { persistentStorage.setItem(KEY, next ? '1' : '0'); } catch { /* storage unavailable */ }
   listeners.forEach(listener => listener());
 }
 

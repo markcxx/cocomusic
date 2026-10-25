@@ -20,12 +20,12 @@ type Tab = (typeof tabs)[number];
 
 const size = (bytes: number) => (bytes >= 1048576 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`);
 
-/** Finished job → playable local track (keeps the NetEase id for likes/comments). */
+/** Finished job → playable local track (keeps the original platform/id for likes/comments). */
 function jobTrack(job: DownloadJob): Track | null {
   if (job.status !== 'done' || !job.localId) return null;
   return {
-    ...localToTrack({ id: job.localId, path: job.path ?? '', title: job.title, artist: job.artist, album: job.album, duration: job.duration, size: job.total, mtime: 0, addedAt: job.createdAt, remoteId: job.songId }),
-    // Downloaded files rarely embed art; the catalog cover is the better picture.
+    ...localToTrack({ id: job.localId, path: job.path ?? '', title: job.title, artist: job.artist, album: job.album, duration: job.duration, size: job.total, mtime: 0, addedAt: job.createdAt, remoteId: job.songId, source: job.source, trial: Boolean(job.trial) }),
+    // Display catalog art directly while the indexed file retains its embedded cover.
     cover: job.cover,
   };
 }
@@ -35,6 +35,7 @@ function JobState({ job }: { job: DownloadJob }) {
     return (
       <span className={styles.done}>
         已完成 · {size(job.total)}
+        {job.metadataWarning && <em data-tooltip={job.metadataWarning}>标签未完整写入</em>}
         {job.trial && <em className={styles.trialTag} data-tooltip={`仅试听片段（${Math.round(job.trial.end - job.trial.start)} 秒），账号有完整播放权限时可重新下载`}>试听</em>}
       </span>
     );
@@ -79,7 +80,7 @@ export function DownloadsView() {
     <Page gap="sm">
       <CollapsingHeader
         title="下载管理"
-        subtitle={loaded ? `${running ? `${running} 首正在下载 · ` : ''}已下载 ${doneJobs.length} 首 · 歌词会一并保存为同名 .lrc 文件` : '正在读取下载列表'}
+        subtitle={loaded ? `${running ? `${running} 首正在下载 · ` : ''}已下载 ${doneJobs.length} 首` : '正在读取下载列表'}
         actions={(
           <>
             <Button variant="primary" icon={<Play size={15} strokeWidth={0} fill="currentColor" />} disabled={!doneTracks.length} onClick={() => player.play(doneTracks[0], doneTracks)}>播放已下载</Button>
@@ -104,7 +105,7 @@ export function DownloadsView() {
               const track = jobTrack(job);
               return (
                 <motion.li key={job.id} className={styles.job} layout="position" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: 24 }} onDoubleClick={() => track && player.play(track, doneTracks)}>
-                  <Cover seed={`netease:${job.songId}`} src={job.cover} size={44} radius={8} />
+                  <Cover seed={`${job.source}:${job.songId}`} src={job.cover} size={44} radius={8} />
                   <span className={styles.names}>
                     <strong data-tooltip={job.title} data-tooltip-overflow>{job.title}</strong>
                     <span>{job.artist}{job.album ? ` · ${job.album}` : ''}</span>
@@ -112,6 +113,10 @@ export function DownloadsView() {
                   <span className={styles.state}><JobState job={job} /></span>
                   <span className={styles.actions}>
                     {track && <IconButton label="播放" size="sm" tone="muted" onClick={() => player.play(track, doneTracks)}><Play size={14} strokeWidth={0} fill="currentColor" /></IconButton>}
+                    {job.status === 'done' && <IconButton label="下载歌词" size="sm" tone="muted" onClick={async () => {
+                      try { await downloadsApi.lyrics({ id: job.songId, source: job.source, title: job.title, artist: job.artist }); toast.success('歌词已保存到下载目录'); }
+                      catch (error) { toast.error(error instanceof Error ? error.message : '歌词下载失败'); }
+                    }}><ArrowDownToLine size={15} strokeWidth={1.5} /></IconButton>}
                     {job.status === 'done' && bridge && job.path && <IconButton label="在文件夹中显示" size="sm" tone="muted" onClick={() => bridge.reveal(job.path!)}><FolderOpen size={15} strokeWidth={1.5} /></IconButton>}
                     {(job.status === 'failed' || job.status === 'canceled') && <IconButton label="重试" size="sm" tone="muted" onClick={() => void downloads.run(() => downloadsApi.retry(job.id))}><RotateCw size={15} strokeWidth={1.5} /></IconButton>}
                     {(job.status === 'queued' || job.status === 'downloading')

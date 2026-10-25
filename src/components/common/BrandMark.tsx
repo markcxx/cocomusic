@@ -7,7 +7,7 @@ const geo = localFont({ src: '../../../public/fonts/Geo-Regular.ttf', display: '
 export function BrandMark() {
   return (
     <span className={styles.brand}>
-      <img src="/images/logo.svg?v=double-c-white-rounded" alt="" width={34} height={34} className={styles.logo} draggable={false} />
+      <img src="/images/logo.svg?v=wisteria-v1" alt="" width={34} height={34} className={styles.logo} draggable={false} />
       <span className={`${geo.className} ${styles.wordmark}`}>CoCo</span>
     </span>
   );

@@ -27,6 +27,7 @@ export const localApi = {
 };
 
 export const downloadsApi = {
+  lyrics: (track: CatalogTrack) => call<{ path: string }>('/api/downloads', { action: 'lyrics', track }),
   list: () => call<{ settings: DownloadSettings; jobs: DownloadJob[] }>('/api/downloads'),
   updateSettings: (settings: Partial<Omit<DownloadSettings, 'folder'>>) => call<{ settings: DownloadSettings }>('/api/downloads', { action: 'settings', settings }),
   add: (tracks: CatalogTrack[]) => call<{ added: number; skipped: number }>('/api/downloads', { action: 'add', tracks }),
@@ -39,13 +40,14 @@ export const downloadsApi = {
 
 export const localAudioUrl = (id: string) => `/api/local/${id}?part=audio`;
 
-/** Indexed file → player track. Downloaded files keep their NetEase id for likes and comments. */
+/** Indexed file → player track. Downloaded files keep their original platform and id for likes and comments. */
 export function localToTrack(item: LocalTrack): Track {
   return {
     id: `local:${item.id}`,
     localId: item.id,
     // Clips keep likes/comments, but must not fetch the full song's online lyrics.
     songId: item.remoteId,
+    source: item.source ?? (item.remoteId ? 'netease' : undefined),
     trialClip: item.trial || undefined,
     title: item.title,
     artist: item.artist,

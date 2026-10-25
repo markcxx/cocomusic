@@ -1,4 +1,5 @@
 import os from 'node:os';
+import { preferenceStore } from './preferences-store';
 import path from 'node:path';
 import { readFileSync } from 'node:fs';
 import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
@@ -26,6 +27,19 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
     const url = event.senderFrame?.url;
     try { return Boolean(origin && url && new URL(url).origin === origin); } catch { return false; }
   };
+  const preferences = preferenceStore(app.getPath('userData'));
+  ipcMain.on('preferences:get', (event, key: unknown) => {
+    event.returnValue = trusted(event) && typeof key === 'string' ? preferences.get(key) : null;
+  });
+  ipcMain.on('preferences:set', (event, key: unknown, value: unknown) => {
+    try {
+      if (!trusted(event) || typeof key !== 'string' || typeof value !== 'string') throw new Error('Invalid preference request');
+      preferences.set(key, value);
+      event.returnValue = { ok: true };
+    } catch (error) {
+      event.returnValue = { error: error instanceof Error ? error.message : 'Could not save preferences' };
+    }
+  });
   const handle = (channel: string, action: (window: BrowserWindow, ...args: unknown[]) => void) => {
     ipcMain.on(channel, (event: IpcMainEvent, ...args: unknown[]) => {
       if (!trusted(event)) return;

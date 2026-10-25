@@ -101,7 +101,7 @@ export function CollectionView({ kind, id, title }: { kind: 'playlist' | 'album'
         emptyText={needle ? '没有匹配的歌曲' : '暂无公开歌曲'}
       />
       <div ref={sentinel}>
-        <ListFooter loading={list.loadingMore} loadingText="正在加载更多歌曲" done={!list.loading && !list.hasMore && list.items.length > PAGE && !needle} doneText={`已显示全部 ${list.items.length} 首`} />
+        <ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} loadingText="正在加载更多歌曲" done={!list.loading && !list.hasMore && list.items.length > PAGE && !needle} doneText={`已显示全部 ${list.items.length} 首`} />
       </div>
       <SelectionBar
         selection={selection}

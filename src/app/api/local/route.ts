@@ -35,10 +35,10 @@ export function POST(request: NextRequest) {
         if (!Array.isArray(body.files) || !body.files.length || body.files.length > 500) throw new CatalogError('文件列表无效', 400);
         return { tracks: await addFiles(body.files.map(file => absolute(file, '文件'))) };
       }
-      case 'remove-folder': removeFolder(absolute(body.folder, '文件夹')); return { ok: true };
+      case 'remove-folder': await removeFolder(absolute(body.folder, '文件夹')); return { ok: true };
       case 'remove': {
         if (typeof body.id !== 'string' || !/^[a-f0-9]{20}$/.test(body.id)) throw new CatalogError('参数无效', 400);
-        removeTrack(body.id);
+        await removeTrack(body.id);
         return { ok: true };
       }
       default: throw new CatalogError('未知操作', 400);

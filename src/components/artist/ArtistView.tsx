@@ -31,7 +31,7 @@ function Songs({ id }: { id: string }) {
   return (
     <>
       <SongTable tracks={list.items} loading={list.loading} animateFrom={Math.max(0, list.items.length - 50)} />
-      <div ref={sentinel}><ListFooter loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText={`共 ${list.items.length} 首`} /></div>
+      <div ref={sentinel}><ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText={`共 ${list.items.length} 首`} /></div>
     </>
   );
 }
@@ -55,7 +55,7 @@ function Albums({ id }: { id: string }) {
           />
         ))}
       </CardGrid>
-      <div ref={sentinel}><ListFooter loading={list.loadingMore} done={false} /></div>
+      <div ref={sentinel}><ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={false} /></div>
     </>
   );
 }

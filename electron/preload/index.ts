@@ -50,6 +50,13 @@ const strings = (value: unknown) => (Array.isArray(value) ? value.filter((item):
 // Keep the bridge minimal: the renderer never receives ipcRenderer itself.
 // Shape must match CocoDesktopBridge in src/types/desktop.d.ts.
 contextBridge.exposeInMainWorld('coco', {
+  storage: {
+    getItem: (key: string): string | null => ipcRenderer.sendSync('preferences:get', key),
+    setItem: (key: string, value: string) => {
+      const result = ipcRenderer.sendSync('preferences:set', key, value);
+      if (!result?.ok) throw new Error(result?.error ?? 'Could not save preferences');
+    },
+  },
   platform: process.platform,
   material,
   window: {

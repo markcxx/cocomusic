@@ -1,5 +1,7 @@
 'use client';
 
+import { persistentStorage } from '@/lib/persistent-storage';
+
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
 import { catalogApi, type SongSource } from '@/lib/catalog-client';
@@ -104,7 +106,7 @@ const QUEUE_KEY = 'coco:queue';
 const POSITION_KEY = 'coco:position';
 const QUEUE_LIMIT = 2000;
 const readStored = (key: string) => {
-  try { return localStorage.getItem(key); } catch { return null; }
+  try { return persistentStorage.getItem(key); } catch { return null; }
 };
 const readVolume = () => {
   const raw = readStored(VOLUME_KEY);
@@ -232,7 +234,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   /** Running volume ramp (fade in/out); cancelled when a new one starts. */
   const fade = useRef<(() => void) | null>(null);
 
-  // Restore saved volume, play mode and queue once mounted (localStorage is browser-only).
+  // Restore saved volume, play mode and queue once mounted (the desktop bridge is browser-only).
   useEffect(() => {
     const saved = readVolume();
     lastVolume.current = saved || 0.62;
@@ -255,12 +257,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [latest]);
 
   useEffect(() => {
-    try { localStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable */ }
-  }, [mode]);
+    if (!restored) return;
+    try { persistentStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable */ }
+  }, [mode, restored]);
 
   useEffect(() => {
     if (!restored) return;
-    try { localStorage.setItem(QUEUE_KEY, JSON.stringify({ queue: queue.slice(0, QUEUE_LIMIT), currentId: track.id })); } catch { /* storage full */ }
+    try { persistentStorage.setItem(QUEUE_KEY, JSON.stringify({ queue: queue.slice(0, QUEUE_LIMIT), currentId: track.id })); } catch { /* storage full */ }
   }, [queue, track.id, restored]);
 
   // Remember where we are in the song (for 设置 › 播放 › 恢复播放进度), at most every 2s.
@@ -270,15 +273,16 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const now = Date.now();
     if (now - positionSaved.current < 2000 && position > 0) return;
     positionSaved.current = now;
-    try { localStorage.setItem(POSITION_KEY, JSON.stringify({ id: track.id, t: Math.round(position) })); } catch { /* storage full */ }
+    try { persistentStorage.setItem(POSITION_KEY, JSON.stringify({ id: track.id, t: Math.round(position) })); } catch { /* storage full */ }
   }, [position, track, restored]);
 
   useEffect(() => {
     // Moving the slider mid-fade wins: cancel the ramp (a fade-out still pauses via `playing`).
     if (audioRef.current && fade.current && latest.current.playing) { fade.current(); fade.current = null; }
     if (audioRef.current && !fade.current) audioRef.current.volume = volume;
-    try { localStorage.setItem(VOLUME_KEY, String(volume)); } catch { /* storage unavailable */ }
-  }, [volume, latest]);
+    if (!restored) return;
+    try { persistentStorage.setItem(VOLUME_KEY, String(volume)); } catch { /* storage unavailable */ }
+  }, [volume, latest, restored]);
 
   // Load the stream whenever a track is (re)selected: local file, or a fresh catalog URL.
   useEffect(() => {

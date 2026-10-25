@@ -3,6 +3,10 @@
  * Optional on Window: absent when the UI is opened in a plain browser (`npm run dev:web`).
  */
 interface CocoDesktopBridge {
+  storage: {
+    getItem(key: string): string | null;
+    setItem(key: string, value: string): void;
+  };
   platform: NodeJS.Platform;
   /** OS backdrop material behind the transparent window. */
   material: 'acrylic' | 'vibrancy' | 'transparent' | 'none';

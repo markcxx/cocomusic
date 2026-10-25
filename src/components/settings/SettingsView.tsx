@@ -383,7 +383,7 @@ export function SettingsView() {
           </Section>
 
           {/* ───────── 下载 ───────── */}
-          <Section id="downloads" icon={<Download size={17} strokeWidth={1.6} />} title="下载" description="保存位置、音质与文件命名" onReset={dl ? () => void downloads.updateSettings({ quality: 'exhigh', naming: 'artist-title', lyrics: true, allowTrial: true, concurrency: 2 }) : undefined}>
+          <Section id="downloads" icon={<Download size={17} strokeWidth={1.6} />} title="下载" description="保存位置、音质与文件命名" onReset={dl ? () => void downloads.updateSettings({ quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: true, concurrency: 2 }) : undefined}>
             <Row title="下载目录" description={<span className={styles.path} data-tooltip={folder}>{folder || '—'}</span>}>
               <div className={styles.inline}>
                 {desktop && <Button icon={<FolderOpen size={15} strokeWidth={1.5} />} onClick={() => folder && window.coco?.files?.reveal(folder + (isMac() ? '/' : '\\'))} disabled={!folder}>打开</Button>}
@@ -402,7 +402,7 @@ export function SettingsView() {
               />
             </Row>
             <Row title="同时下载歌词" description="保存为同名 .lrc 文件，其他播放器也能识别">
-              <Switch checked={dl?.lyrics ?? true} onChange={value => void downloads.updateSettings({ lyrics: value })} label="同时下载歌词" />
+              <Switch checked={dl?.lyrics ?? false} onChange={value => void downloads.updateSettings({ lyrics: value })} label="同时下载歌词" />
             </Row>
             <Row title="允许下载试听片段" description="没有完整播放权限时保存试听片段（文件名会标注“试听”）；关闭后这类歌曲会提示下载失败">
               <Switch checked={dl?.allowTrial ?? true} onChange={value => void downloads.updateSettings({ allowTrial: value })} label="允许下载试听片段" />
@@ -499,7 +499,7 @@ export function SettingsView() {
           {/* ───────── 关于 ───────── */}
           <Section id="about" icon={<Info size={17} strokeWidth={1.6} />} title="关于">
             <div className={styles.about}>
-              <img src="/images/logo.svg?v=double-c-white-rounded" alt="" width={52} height={52} />
+              <img src="/images/logo.svg?v=wisteria-v1" alt="" width={52} height={52} />
               <div>
                 <strong>CoCo Music</strong>
                 <span>{app.result ? `版本 ${app.result.info.version}${app.result.info.packaged ? '' : '（开发模式）'}` : '网页预览模式'}</span>

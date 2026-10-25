@@ -8,10 +8,11 @@ import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { catalog } from '../music';
 import { AUDIO_QUALITIES, type AudioQuality, type CatalogTrack } from '../music/types';
-import { extensionOf, safeFileName } from './formats';
-import { addFiles, getTrack, trackId } from './library';
+import { AUDIO_TYPES, extensionOf, safeFileName } from './formats';
+import { addFiles, getTrack, removeTrack, trackId } from './library';
 import { clipLyrics, toLrc } from './lrc-writer';
 import { jsonStore } from './store';
+import { embedMetadata } from './metadata';
 
 /**
  * Download manager. Jobs run in this server process (so they continue while
@@ -38,6 +39,7 @@ export interface DownloadJob {
   path?: string;
   localId?: string;
   error?: string;
+  metadataWarning?: string;
   createdAt: number;
   finishedAt?: number;
   /** Only a preview clip was available; seconds within the full song. */
@@ -61,12 +63,12 @@ export interface DownloadSettings {
 type DownloadsFile = { settings: DownloadSettings; jobs: DownloadJob[] };
 
 const defaultFolder = () => path.join(os.homedir(), 'Music', 'CoCo Music');
-export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { quality: 'exhigh', naming: 'artist-title', lyrics: true, allowTrial: true, concurrency: 2 };
+export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: true, concurrency: 2 };
 const store = jsonStore<DownloadsFile>('downloads.json', () => ({ settings: { folder: defaultFolder(), ...DEFAULT_DOWNLOAD_SETTINGS }, jobs: [] }));
 /** Older files only stored `folder`; fill in new fields. */
 const settingsOf = (data: DownloadsFile): DownloadSettings => ({ ...DEFAULT_DOWNLOAD_SETTINGS, ...data.settings });
 
-const baseName = (job: DownloadJob, naming: FileNaming) =>
+const baseName = (job: { title: string; artist: string }, naming: FileNaming) =>
   naming === 'title' ? job.title : naming === 'title-artist' ? `${job.title} - ${job.artist}` : `${job.artist} - ${job.title}`;
 
 const MAX_HISTORY = 500;
@@ -90,13 +92,13 @@ function update(id: string, patch: Partial<DownloadJob>) {
   store.write({ ...data, jobs: data.jobs.map(job => (job.id === id ? { ...job, ...patch } : job)) });
 }
 
-// Progress is written often; coalesce file writes to ~2/s per job.
+// Persist recovery progress at most once every 2s; UI reads live progress from memory.
 const lastWrite = new Map<string, number>();
 const live = new Map<string, Pick<DownloadJob, 'received' | 'total'>>();
 function progress(id: string, received: number, total: number) {
   live.set(id, { received, total });
   const now = Date.now();
-  if (now - (lastWrite.get(id) ?? 0) > 500) { lastWrite.set(id, now); update(id, { received, total }); }
+  if (now - (lastWrite.get(id) ?? 0) > 2000) { lastWrite.set(id, now); update(id, { received, total }); }
 }
 
 /** A path that does not exist yet: "name.mp3", "name (2).mp3", … */
@@ -119,19 +121,24 @@ async function run(job: DownloadJob) {
     const source = await provider.songSource(job.songId, settings.quality);
     // Preview clips are saved only when allowed, and are clearly marked in the file name.
     if (source.trial && !settings.allowTrial) throw new Error('仅能试听片段（可在设置 › 下载中允许保存试听片段）');
-    const ext = extensionOf(new URL(source.url).pathname) || 'mp3';
+    controller.signal.throwIfAborted();
+    const response = await fetch(source.url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(TIMEOUT_MS)]) });
+    if (!response.ok || !response.body) throw new Error(`下载失败（${response.status}）`);
+    const urlExt = extensionOf(new URL(source.url).pathname);
+    const mime = response.headers.get('content-type')?.split(';')[0];
+    const ext = Object.hasOwn(AUDIO_TYPES, urlExt) ? urlExt : Object.entries(AUDIO_TYPES).find(([, type]) => type === mime)?.[0] ?? 'mp3';
     mkdirSync(settings.folder, { recursive: true });
     const target = uniquePath(settings.folder, safeFileName(`${baseName(job, settings.naming)}${source.trial ? '（试听）' : ''}`), ext);
     update(job.id, { trial: source.trial, level: source.level });
     partFile = `${target}.part`;
 
-    const response = await fetch(source.url, { signal: AbortSignal.any([controller.signal, AbortSignal.timeout(TIMEOUT_MS)]) });
-    if (!response.ok || !response.body) throw new Error(`下载失败（${response.status}）`);
     const total = Number(response.headers.get('content-length')) || 0;
     let received = 0;
     const counter = Readable.fromWeb(response.body as unknown as WebReadableStream);
     counter.on('data', (chunk: Buffer) => { received += chunk.length; progress(job.id, received, total); });
-    await pipeline(counter, createWriteStream(partFile, { mode: 0o644 }));
+    await pipeline(counter, createWriteStream(partFile, { mode: 0o644 }), { signal: controller.signal });
+    const metadataWarning = await embedMetadata(partFile, ext, job, controller.signal);
+    controller.signal.throwIfAborted();
     await rename(partFile, target);
     partFile = undefined;
 
@@ -147,8 +154,8 @@ async function run(job: DownloadJob) {
     }
 
     // A trial file must not borrow the full song's online lyrics later (times differ).
-    const [local] = await addFiles([target], { remoteId: job.songId, trial: Boolean(source.trial) });
-    update(job.id, { status: 'done', path: target, localId: local?.id ?? trackId(target), received, total: total || received, finishedAt: Date.now() });
+    const [local] = await addFiles([target], { remoteId: job.songId, source: job.source, trial: Boolean(source.trial) });
+    update(job.id, { status: 'done', metadataWarning, path: target, localId: local?.id ?? trackId(target), received, total: total || received, finishedAt: Date.now() });
   } catch (error) {
     if (partFile) await rm(partFile, { force: true }).catch(() => undefined);
     const canceled = controller.signal.aborted;
@@ -237,6 +244,7 @@ export async function removeJob(id: string, deleteFile = false) {
     const inside = path.resolve(job.path).startsWith(path.resolve(settingsOf(data).folder) + path.sep);
     if (inside) {
       await rm(job.path, { force: true });
+      if (job.localId) await removeTrack(job.localId);
       await rm(job.path.slice(0, -extensionOf(job.path).length) + 'lrc', { force: true });
     }
   }
@@ -266,4 +274,21 @@ export function updateSettings(patch: Record<string, unknown>) {
   store.write({ ...data, settings: next });
   pump();
   return next;
+}
+
+/** Explicit lyric-only download. Does not enqueue or fetch the song's audio. */
+export async function downloadLyrics(track: CatalogTrack) {
+  const lyrics = await catalog(track.source).lyrics(track.id);
+  const text = toLrc(lyrics, track);
+  if (!text) throw new Error('这首歌曲暂无可下载的歌词');
+  const settings = settingsOf(store.read());
+  mkdirSync(settings.folder, { recursive: true });
+  const completed = store.read().jobs.find(job => job.source === track.source && job.songId === track.id && job.status === 'done' && !job.trial && job.path && existsSync(job.path));
+  const file = completed?.path
+    ? completed.path.slice(0, -extensionOf(completed.path).length) + 'lrc'
+    : uniquePath(settings.folder, safeFileName(baseName(track, settings.naming)), 'lrc');
+  // Never overwrite an existing lyric file. A second download gets a distinct name.
+  const target = existsSync(file) ? uniquePath(path.dirname(file), path.basename(file, '.lrc'), 'lrc') : file;
+  await writeFile(target, text, { encoding: 'utf8', flag: 'wx' });
+  return { path: target };
 }

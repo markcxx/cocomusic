@@ -1,9 +1,11 @@
 'use client';
 
+import { persistentStorage } from '@/lib/persistent-storage';
+
 import { useSyncExternalStore } from 'react';
 import { settings as appSettings } from './settings';
 
-// Recent searches persist across launches (renderer origin is stable per install).
+// Recent searches persist across launches (desktop storage is independent of the renderer origin).
 const KEY = 'coco:search-history';
 const LIMIT = 12;
 const listeners = new Set<() => void>();
@@ -12,7 +14,7 @@ let cache: string[] | null = null;
 function read(): string[] {
   if (cache) return cache;
   try {
-    const parsed = JSON.parse(localStorage.getItem(KEY) ?? '[]');
+    const parsed = JSON.parse(persistentStorage.getItem(KEY) ?? '[]');
     cache = Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, LIMIT) : [];
   } catch {
     cache = [];
@@ -22,7 +24,7 @@ function read(): string[] {
 
 function write(next: string[]) {
   cache = next;
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+  try { persistentStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
   listeners.forEach(listener => listener());
 }
 

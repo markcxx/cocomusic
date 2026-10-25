@@ -1,11 +1,13 @@
 'use client';
 
+import { persistentStorage } from '@/lib/persistent-storage';
+
 import { useSyncExternalStore } from 'react';
 import { parseHex, toHex } from './color';
 import type { AudioQuality } from '@/server/music/types';
 
 /**
- * App settings (renderer side). One flat, versioned object in localStorage,
+ * App settings (renderer side). Stored in Electron userData (localStorage in web preview),
  * shared live with every window of the app (desktop lyrics) over a
  * BroadcastChannel. Main-process settings (startup, global shortcuts, close
  * behaviour) and download settings (server) live elsewhere; see settings page.
@@ -269,12 +271,12 @@ let channel: BroadcastChannel | null = null;
 
 function read(): Settings {
   if (cache) return cache;
-  try { cache = sanitize(JSON.parse(localStorage.getItem(KEY) ?? 'null')); } catch { cache = { ...DEFAULT_SETTINGS }; }
+  try { cache = sanitize(JSON.parse(persistentStorage.getItem(KEY) ?? 'null')); } catch { cache = { ...DEFAULT_SETTINGS }; }
   connect();
   return cache;
 }
 
-/** Other windows write the same localStorage; they announce changes on the channel. */
+/** Other windows share the same preference store; they announce changes on the channel. */
 function connect() {
   if (channel || typeof BroadcastChannel === 'undefined') return;
   channel = new BroadcastChannel(CHANNEL);
@@ -287,7 +289,7 @@ function connect() {
 
 function write(next: Settings) {
   cache = next;
-  try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
+  try { persistentStorage.setItem(KEY, JSON.stringify(next)); } catch { /* storage unavailable */ }
   connect();
   channel?.postMessage({ type: 'settings', settings: next });
   listeners.forEach(listener => listener());

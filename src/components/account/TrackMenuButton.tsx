@@ -7,6 +7,7 @@ import { usePlayer } from '@/components/player/player-store';
 import { IconButton, Menu, toast, type MenuItem } from '@/components/ui';
 import { accountApi } from '@/lib/account-client';
 import type { CatalogTrack } from '@/lib/catalog-client';
+import { downloadsApi } from '@/lib/local-client';
 import { toTrack } from '@/lib/to-track';
 import { useAccount } from './account-store';
 import { CreatePlaylistDialog } from './CreatePlaylistDialog';
@@ -24,6 +25,10 @@ export function TrackMenuButton({ track, playlistId, onRemoved }: { track: Catal
     { label: '下一首播放', icon: <ListStart size={15} strokeWidth={1.5} />, onSelect: () => { player.playNext([toTrack(track)]); toast.success('将在下一首播放'); } },
     { label: '加入播放列表', icon: <ListEnd size={15} strokeWidth={1.5} />, onSelect: () => { player.enqueue([toTrack(track)]); toast.success('已加入播放列表'); } },
     { label: '下载', icon: <Download size={15} strokeWidth={1.5} />, onSelect: () => void downloads.add([track]) },
+    { label: '下载歌词', icon: <Download size={15} strokeWidth={1.5} />, onSelect: async () => {
+      try { await downloadsApi.lyrics(track); toast.success('歌词已保存到下载目录'); }
+      catch (error) { toast.error(error instanceof Error ? error.message : '歌词下载失败'); }
+    } },
     { type: 'divider' },
     { type: 'section', label: '添加到歌单' },
     { label: '新建歌单…', icon: <Plus size={15} strokeWidth={1.5} />, onSelect: () => (profile ? setCreating(true) : openLogin()) },

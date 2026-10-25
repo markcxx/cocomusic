@@ -12,10 +12,11 @@ let openSettings: (() => void) | undefined;
 /** 设置… in the app menu (⌘,). */
 export const onOpenSettings = (handler: () => void) => { openSettings = handler; };
 
-/** build/icon.png in dev; resources/icon.png when packaged (copied by extraResources). */
+/** Dock-normalized macOS PNG (with system-sized margins); shared PNG for Windows/Linux. */
 export function appIcon(): NativeImage | undefined {
   if (icon) return icon;
-  const file = app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(app.getAppPath(), 'build', 'icon.png');
+  const name = process.platform === 'darwin' ? 'icon-mac.png' : 'icon.png';
+  const file = app.isPackaged ? path.join(process.resourcesPath, name) : path.join(app.getAppPath(), 'build', name);
   const image = nativeImage.createFromPath(file);
   icon = image.isEmpty() ? undefined : image;
   return icon;
@@ -23,7 +24,8 @@ export function appIcon(): NativeImage | undefined {
 
 export function applyBranding() {
   if (process.platform === 'darwin') {
-    // The packaged .app already carries icon.icns; only override for the dev binary.
+    // Packaged apps use their native icon assets. The dev PNG includes the same
+    // outer margins: setIcon() otherwise makes a full-bleed export look too large.
     const image = appIcon();
     if (!app.isPackaged && image) app.dock?.setIcon(image);
     setControlMenu([]);

@@ -75,7 +75,7 @@ export function SearchResultsView({ keyword, type }: { keyword: string; type: Se
       )}
 
       <div ref={sentinel}>
-        <ListFooter loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText="没有更多结果了" />
+        <ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText="没有更多结果了" />
       </div>
     </Page>
   );

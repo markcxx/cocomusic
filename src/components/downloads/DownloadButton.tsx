@@ -10,7 +10,7 @@ import styles from './Downloads.module.css';
 /** Per-row download: idle → queued/progress ring → done check. Retry on failure. */
 export function DownloadButton({ track }: { track: CatalogTrack }) {
   const { jobs } = useDownloads();
-  const job = jobFor(jobs, track.id);
+  const job = jobFor(jobs, track.id, track.source);
   if (job?.status === 'done') {
     return <IconButton label="已下载" tone="muted" size="sm" disabled><CheckCircle2 size={16} strokeWidth={1.5} className={styles.doneIcon} /></IconButton>;
   }

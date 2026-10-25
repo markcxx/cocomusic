@@ -1,0 +1,40 @@
+{
+  "fill": {
+    "linear-gradient": [
+      "srgb:0.64314,0.52157,0.81176,1.00000",
+      "srgb:0.44314,0.32157,0.64706,1.00000"
+    ],
+    "orientation": {
+      "start": {
+        "x": 0,
+        "y": 0
+      },
+      "stop": {
+        "x": 0.8,
+        "y": 1
+      }
+    }
+  },
+  "groups": [
+    {
+      "layers": [
+        {
+          "image-name": "Mark.svg",
+          "name": "CoCo Music"
+        }
+      ],
+      "shadow": {
+        "kind": "neutral",
+        "opacity": 0.12
+      },
+      "translucency": {
+        "enabled": false,
+        "value": 0.5
+      },
+      "specular": false
+    }
+  ],
+  "supported-platforms": {
+    "squares": "shared"
+  }
+}

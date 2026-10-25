@@ -40,9 +40,11 @@ export function useInfiniteList<T>(key: string, loadPage: (offset: number, signa
   const loader = useLatest(loadPage);
   const latest = useLatest({ state, request });
   const controller = useRef<AbortController | null>(null);
+  const paging = useRef(false);
 
   useEffect(() => {
     controller.current?.abort();
+    paging.current = false;
     const current = new AbortController();
     controller.current = current;
     loader.current(0, current.signal)
@@ -50,24 +52,33 @@ export function useInfiniteList<T>(key: string, loadPage: (offset: number, signa
       .catch(error => {
         if (!current.signal.aborted) setState({ request, items: [], total: 0, hasMore: false, loadingMore: false, error: error instanceof Error ? error.message : '加载失败' });
       });
-    return () => current.abort();
+    return () => { current.abort(); controller.current?.abort(); };
   }, [request, loader]);
 
   const loadMore = useCallback(() => {
     const { state: snapshot, request: active } = latest.current;
-    if (!snapshot || snapshot.request !== active || snapshot.loadingMore || !snapshot.hasMore) return;
+    if (!snapshot || snapshot.request !== active || snapshot.loadingMore || paging.current || !snapshot.hasMore) return;
+    paging.current = true;
     const current = new AbortController();
     controller.current = current;
-    setState(previous => (previous ? { ...previous, loadingMore: true } : previous));
+    setState(previous => (previous ? { ...previous, loadingMore: true, error: '' } : previous));
     loader.current(snapshot.items.length, current.signal)
       .then(page => {
         if (current.signal.aborted) return;
         setState(previous => (previous?.request !== active ? previous : { ...previous, items: [...previous.items, ...page.items], total: page.total, hasMore: page.hasMore, loadingMore: false }));
       })
-      .catch(() => { if (!current.signal.aborted) setState(previous => (previous ? { ...previous, loadingMore: false, hasMore: false } : previous)); });
+      .catch(error => {
+        if (!current.signal.aborted) setState(previous => (previous?.request === active
+          ? { ...previous, loadingMore: false, error: error instanceof Error ? error.message : '加载更多失败，请重试' } : previous));
+      })
+      .finally(() => { if (controller.current === current) paging.current = false; });
   }, [latest, loader]);
 
-  const retry = useCallback(() => setRevision(value => value + 1), []);
+  const retry = useCallback(() => {
+    const snapshot = latest.current.state;
+    if (snapshot?.request === latest.current.request && snapshot.items.length && snapshot.error) loadMore();
+    else setRevision(value => value + 1);
+  }, [latest, loadMore]);
   const removeWhere = useCallback((predicate: (item: T) => boolean) => {
     setState(previous => {
       if (!previous) return previous;

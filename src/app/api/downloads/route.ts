@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { CatalogError, readJson, respond } from '@/server/music';
 import { isSource, validId } from '@/server/music/ids';
 import type { CatalogTrack } from '@/server/music/types';
-import { cancel, clearFinished, enqueue, listDownloads, removeJob, retry, setFolder, updateSettings } from '@/server/local/downloads';
+import { cancel, clearFinished, downloadLyrics, enqueue, listDownloads, removeJob, retry, setFolder, updateSettings } from '@/server/local/downloads';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,6 +49,7 @@ export function POST(request: NextRequest) {
     const body = await readJson<Record<string, unknown>>(request, 512 * 1024);
     switch (body.action) {
       case 'add': return enqueue(toTracks(body.tracks));
+      case 'lyrics': return downloadLyrics(toTracks([body.track])[0]);
       case 'cancel': cancel(jobId(body.id)); return { ok: true };
       case 'retry': retry(jobId(body.id)); return { ok: true };
       case 'remove': await removeJob(jobId(body.id), body.deleteFile === true); return { ok: true };

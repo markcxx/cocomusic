@@ -97,7 +97,7 @@ h1 { margin: 0 0 4px; font-size: 22px; } p.lead { margin: 0 0 24px; color: #555;
 <p class="note">右键（或长按）程序坞里的 CoCo Music 图标。下半部分“选项 / 显示所有窗口 / 隐藏 / 退出”是 macOS 自动追加的。关闭窗口后应用留在后台继续播放，点程序坞图标即可回来。</p>
 <div class="stage mac-stage" style="min-height:520px">
 <div class="dock-menu" style="transform:translateX(-50%)">${dockMenu}</div>
-<div class="dock"><div><img src="${asset('icon.png')}" alt=""><div class="dot"></div></div></div>
+<div class="dock"><div><img src="${asset('icon-mac.png')}" alt=""><div class="dot"></div></div></div>
 </div></section>
 
 
