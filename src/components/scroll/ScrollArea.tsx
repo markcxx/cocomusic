@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useRef, type ReactNo
 import { cn } from '@/lib/cn';
 import { useLatest } from '@/lib/use-latest';
 import styles from './ScrollArea.module.css';
+import { createWheelMotion } from './wheel-motion';
 
 type ScrollContextValue = {
   /** Live scrollTop as a motion value: drive animations without re-rendering. */
@@ -20,18 +21,15 @@ const ScrollContext = createContext<ScrollContextValue | null>(null);
  * Trackpads already deliver smooth deltas, so small or fractional deltas pass through.
  */
 function useSmoothWheel(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
+  const stop = useRef<() => void>(() => undefined);
   useEffect(() => {
     const element = ref.current;
     if (!enabled || !element || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    let target = element.scrollTop;
-    let frame = 0;
-    const max = () => element.scrollHeight - element.clientHeight;
-    const step = () => {
-      const delta = target - element.scrollTop;
-      if (Math.abs(delta) < 0.5) { element.scrollTop = target; frame = 0; return; }
-      element.scrollTop += delta * 0.18;
-      frame = requestAnimationFrame(step);
-    };
+    const motion = createWheelMotion(element, {
+      request: callback => requestAnimationFrame(callback),
+      cancel: id => cancelAnimationFrame(id),
+    });
+    stop.current = motion.stop;
     const onWheel = (event: WheelEvent) => {
       if (event.ctrlKey || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
       // Nested scrollers (dropdowns, lists) keep their own native behaviour.
@@ -39,22 +37,22 @@ function useSmoothWheel(ref: React.RefObject<HTMLDivElement | null>, enabled: bo
       if (nested && nested !== element) return;
       const pixels = event.deltaMode === 1 ? event.deltaY * 40 : event.deltaY;
       const looksLikeTrackpad = event.deltaMode === 0 && (Math.abs(pixels) < 40 || !Number.isInteger(pixels));
-      if (looksLikeTrackpad) { target = element.scrollTop + pixels; return; }
+      if (looksLikeTrackpad) { motion.stop(); return; }
       event.preventDefault();
-      if (!frame) target = element.scrollTop;
-      target = Math.max(0, Math.min(max(), target + pixels));
-      if (!frame) frame = requestAnimationFrame(step);
+      motion.by(pixels);
     };
     // Keep the target in sync when something else scrolls (keyboard, scrollbar drag, scrollTo).
-    const onScroll = () => { if (!frame) target = element.scrollTop; };
+    const onScroll = motion.sync;
     element.addEventListener('wheel', onWheel, { passive: false });
     element.addEventListener('scroll', onScroll, { passive: true });
     return () => {
-      cancelAnimationFrame(frame);
+      motion.stop();
+      stop.current = () => undefined;
       element.removeEventListener('wheel', onWheel);
       element.removeEventListener('scroll', onScroll);
     };
   }, [ref, enabled]);
+  return useCallback(() => stop.current(), []);
 }
 
 export function ScrollArea({ children, className, id, onScrollTop, nativeWheel = false }: {
@@ -71,7 +69,7 @@ export function ScrollArea({ children, className, id, onScrollTop, nativeWheel =
   const ref = useRef<HTMLDivElement>(null);
   const scrollY = useMotionValue(0);
   const report = useLatest(onScrollTop);
-  useSmoothWheel(ref, !nativeWheel);
+  const stopWheel = useSmoothWheel(ref, !nativeWheel);
 
   useEffect(() => {
     const element = ref.current;
@@ -86,9 +84,10 @@ export function ScrollArea({ children, className, id, onScrollTop, nativeWheel =
 
   const element = useCallback(() => ref.current, []);
   const scrollTo = useCallback((top: number, smooth = false) => {
+    stopWheel();
     ref.current?.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
     scrollY.set(top);
-  }, [scrollY]);
+  }, [scrollY, stopWheel]);
 
   return (
     <ScrollContext.Provider value={{ scrollY, element, scrollTo }}>

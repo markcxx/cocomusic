@@ -30,7 +30,7 @@ git push origin main --follow-tags
 应用通过 GitHub Releases API 检查更新（`electron/main/updater.ts`），启动 15 秒后和每 6 小时检查一次，也可在 设置 › 更新 手动检查。更新说明就是 Release 正文，也即 `.github/release-notes/<版本>.md`，会在更新弹窗和更新日志中显示；跨多个版本更新时会依次列出中间每个版本的说明。
 
 - 安装包按 `electron-builder.yml` 中的文件名匹配，改动 `artifactName` 时需同步修改 `electron/main/update-core.ts` 的 `installAsset`。
-- 检测到新版本后，用户可在更新弹窗或设置页点击“立即下载”，在应用内查看进度、取消或重试，无需打开 Release 页面。默认不自动下载；可在设置中开启自动下载。
+- 检测到新版本后，用户可在更新弹窗或设置页点击“立即下载”，在应用内查看进度、取消或重试，无需打开 Release 页面。发现更新时自动弹窗，由用户选择下载或跳过版本；不会自动下载或在退出时自动安装，旧版自动下载偏好会被清除。
 - 开发模式同样支持下载及打开安装包，但不会替换开发中的 Electron 应用。
 - 下载后按 GitHub 附件摘要（或 `SHA256SUMS.txt`）校验 SHA-256，不通过不会安装。
 - macOS 下载 ZIP 并在退出后替换应用；从 DMG 运行或无写入权限时改为打开 DMG。Windows 静默运行 NSIS 安装包并重新启动。Linux AppImage 原地替换，deb 交给系统安装器打开。

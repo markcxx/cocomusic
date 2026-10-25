@@ -6,6 +6,7 @@ import { useAccount } from '@/components/account/account-store';
 import { downloads, useDownloads } from '@/components/downloads/download-store';
 import { useNavigation } from '@/components/layout/navigation';
 import { usePlayer } from '@/components/player/player-store';
+import { sectionScrollTop } from '@/components/scroll/wheel-motion';
 import { Page, useScrollArea } from '@/components/scroll';
 import { Button, ConfirmDialog, toast } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -135,7 +136,7 @@ export function SettingsView() {
   const account = useAccount();
   const player = usePlayer();
   const { navigate } = useNavigation();
-  const { element } = useScrollArea();
+  const { element, scrollTo } = useScrollArea();
   const devices = useOutputDevices();
   const app = useAppSettings();
   const update = useUpdateState();
@@ -152,7 +153,6 @@ export function SettingsView() {
     const root = element();
     if (!root) return;
     const onScroll = () => {
-      // event.timeStamp shares performance.now()'s clock with the click that set `clicking`.
       if (performance.now() - clicking.current < 600) return;
       const sections = [...root.querySelectorAll<HTMLElement>('[data-settings-section]')];
       const top = root.getBoundingClientRect().top + 120;
@@ -172,7 +172,7 @@ export function SettingsView() {
     if (!root || !target) return;
     clicking.current = at;
     setActive(id);
-    root.scrollTo({ top: target.offsetTop - 16, behavior: 'smooth' });
+    scrollTo(sectionScrollTop(root, target), true);
   };
 
   const previewDesktopLyrics = () => {
@@ -208,7 +208,7 @@ export function SettingsView() {
       <div className={styles.layout}>
         <nav className={styles.index} aria-label="设置分类">
           {SECTIONS.map(({ id, label, icon: Icon }) => (
-            <button key={id} type="button" className={cn(styles.indexItem, active === id && styles.indexActive)} onClick={event => jump(id, event.timeStamp)} aria-current={active === id ? 'true' : undefined}>
+            <button key={id} type="button" className={cn(styles.indexItem, active === id && styles.indexActive)} onClick={() => jump(id, performance.now())} aria-current={active === id ? 'true' : undefined}>
               <Icon size={15} strokeWidth={1.6} />{label}
             </button>
           ))}
@@ -534,11 +534,8 @@ export function SettingsView() {
           {/* ───────── 更新 ───────── */}
           <Section id="updates" icon={<CircleArrowUp size={17} strokeWidth={1.6} />} title="更新" description="从 GitHub Releases 获取新版本与更新日志">
             <UpdateStatusRow state={update} />
-            <Row title="自动检查更新" description="启动后和每隔 6 小时在后台检查一次，发现新版本时提示" disabled={!update}>
+            <Row title="自动检查更新" description="启动后和每隔 6 小时检查，发现新版本时弹窗，由你选择下载或跳过" disabled={!update}>
               <Switch checked={Boolean(update?.settings.autoCheck)} onChange={value => void updates.setSettings({ autoCheck: value })} label="自动检查更新" disabled={!update} />
-            </Row>
-            <Row title="自动下载更新" description="默认关闭；开启后在后台下载，支持自动安装的平台会在退出时更新" disabled={!update}>
-              <Switch checked={Boolean(update?.settings.autoDownload)} onChange={value => void updates.setSettings({ autoDownload: value })} label="自动下载更新" disabled={!update} />
             </Row>
             <Row title="更新渠道" description="预览版包含尚在测试的新功能，可能不够稳定" disabled={!update}>
               <Segmented value={update?.settings.channel ?? 'stable'} onChange={value => void updates.setSettings({ channel: value })} label="更新渠道" options={[{ value: 'stable', label: '正式版' }, { value: 'beta', label: '预览版' }]} />

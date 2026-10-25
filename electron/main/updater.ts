@@ -32,8 +32,6 @@ const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
 export interface UpdateSettings {
   autoCheck: boolean;
-  /** Download found updates in the background and install them when the app quits. */
-  autoDownload: boolean;
   channel: UpdateChannel;
 }
 
@@ -66,8 +64,6 @@ export interface UpdateState {
   notify: string;
   /** The app was just updated to this version: the renderer shows what's new once. */
   whatsNew: string;
-  /** The downloaded update installs by itself when the app quits. */
-  installOnQuit: boolean;
 }
 
 /** Development only: COCO_FAKE_VERSION=0.0.0 npm run dev pretends to be an older build, to preview the update UI. */
@@ -76,7 +72,7 @@ const currentVersion = () => (!app.isPackaged && isVersion(process.env.COCO_FAKE
 const storeFile = () => path.join(app.getPath('userData'), 'updater.json');
 const downloadsDir = () => path.join(app.getPath('userData'), 'updates');
 
-const settings: UpdateSettings = { autoCheck: true, autoDownload: false, channel: app.getVersion().includes('-') ? 'beta' : 'stable' };
+const settings: UpdateSettings = { autoCheck: true, channel: app.getVersion().includes('-') ? 'beta' : 'stable' };
 let skipped = '';
 let lastVersion = '';
 let state: UpdateState;
@@ -87,15 +83,13 @@ let download: AbortController | null = null;
 /** Verified installer on disk, ready for install(). `bundle`: the unpacked macOS app, prepared ahead so quitting can swap it in at once. */
 let ready: { version: string; file: string; target: InstallTarget; bundle?: string } | null = null;
 let timer: NodeJS.Timeout | undefined;
-/** An install already took over this quit (no second one from will-quit). */
-let installing = false;
 
 function load() {
   try {
     if (!existsSync(storeFile())) return;
     const raw = JSON.parse(readFileSync(storeFile(), 'utf8')) as Record<string, unknown>;
     if (typeof raw.autoCheck === 'boolean') settings.autoCheck = raw.autoCheck;
-    if (typeof raw.autoDownload === 'boolean') settings.autoDownload = raw.autoDownload;
+    // Ignore legacy autoDownload: every download now requires an explicit user action.
     if (raw.channel === 'stable' || raw.channel === 'beta') settings.channel = raw.channel;
     if (isVersion(raw.skipped)) skipped = raw.skipped;
     if (isVersion(raw.lastVersion)) lastVersion = raw.lastVersion;
@@ -114,12 +108,11 @@ function broadcast() {
 
 function set(patch: Partial<UpdateState>) {
   state = { ...state, ...patch };
-  state.installOnQuit = Boolean(ready && state.status === 'ready' && settings.autoDownload && installMode(ready.target) === 'restart');
   broadcast();
 }
 
-/** Background download of the offered version (automatic checks with 自动下载 on). */
-const autoDownloads = () => Boolean(state.update && autoDownloadsFor(state.update.version));
+// Prompt once per version per session, independently of prior manual checks.
+const notified = new Set<string>();
 
 const note = (release: ReleaseInfo): ReleaseNote => ({
   version: release.version, name: release.name, publishedAt: release.publishedAt, url: release.url, prerelease: release.prerelease, notes: release.notes,
@@ -188,6 +181,8 @@ function applyReleases(auto: boolean) {
   const changes = releasesBetween(releases, current, latest, settings.channel).map(note);
   const same = state.update?.version === latest.version;
   const downloaded = ready?.version === latest.version;
+  const shouldNotify = auto && latest.version !== skipped && !notified.has(latest.version);
+  if (shouldNotify) notified.add(latest.version);
   if (!downloaded) ready = null;
   set({
     status: downloaded ? 'ready' : same && state.status === 'downloading' ? 'downloading' : 'available',
@@ -197,13 +192,9 @@ function applyReleases(auto: boolean) {
     lastCheck: Date.now(),
     install: installMode(target),
     // Prompt for a version only once per session, and never for a skipped one.
-    // With 自动下载 the prompt waits until the download is ready (see downloadUpdate).
-    notify: auto && !autoDownloadsFor(latest.version) && latest.version !== skipped && state.notify !== latest.version && !same ? latest.version : state.notify,
+    notify: shouldNotify ? latest.version : state.notify,
   });
-  if (auto && autoDownloads() && state.status === 'available') void downloadUpdate(true);
 }
-
-const autoDownloadsFor = (version: string) => settings.autoDownload && app.isPackaged && version !== skipped;
 
 export function checkForUpdates(auto = false): Promise<void> {
   if (checking) return checking;
@@ -245,8 +236,8 @@ async function prepareBundle(version: string, file: string) {
   return path.join(staging, bundle);
 }
 
-/** `background`: started by an automatic check; failures stay quiet and the next check retries. */
-export async function downloadUpdate(background = false) {
+/** Downloads start only after a user action, never from a version check. */
+export async function downloadUpdate() {
   // A manual click during a pending check must download the version it finishes offering.
   if (checking) await checking;
   if (!state.update || download || state.status === 'ready') return;
@@ -273,12 +264,10 @@ export async function downloadUpdate(background = false) {
     set({
       status: 'ready',
       progress: { received: bytes, total: bytes, speed: 0 },
-      // A background download announces itself once it is ready to install.
-      notify: background && release.version !== skipped ? release.version : state.notify,
     });
   } catch (error) {
     const aborted = controller.signal.aborted;
-    set({ status: aborted || background ? 'available' : 'error', progress: null, error: aborted || background ? '' : message(error) });
+    set({ status: aborted ? 'available' : 'error', progress: null, error: aborted ? '' : message(error) });
   } finally {
     if (download === controller) download = null;
   }
@@ -302,7 +291,7 @@ const MAC_SWAP = [
 
 /**
  * Start the in-place update for a verified download. `relaunch`: open the new
- * version afterwards (立即重启) or just leave it installed (update on quit).
+ * version afterwards (立即重启).
  * Must run synchronously: on quit there is no time left to await anything.
  */
 function startInstall(relaunch: boolean) {
@@ -344,7 +333,6 @@ export async function installUpdate() {
 
     if (installMode(target) === 'restart') {
       if (!startInstall(true)) throw new Error('无法启动安装，请重新下载');
-      installing = true;
       app.quit();
       return;
     }
@@ -354,13 +342,6 @@ export async function installUpdate() {
   } catch (error) {
     set({ status: 'error', error: message(error) });
   }
-}
-
-/** 自动下载: a downloaded update installs while the app quits, and the next launch is the new version. */
-function installOnQuit() {
-  if (installing || !state.installOnQuit) return;
-  installing = true;
-  try { startInstall(false); } catch { /* the download stays; the next launch offers it again */ }
 }
 
 export function skipVersion(version: unknown) {
@@ -378,15 +359,12 @@ export function dismiss(what: unknown) {
 export function setUpdateSettings(patch: Record<string, unknown>) {
   const channelChanged = (patch.channel === 'stable' || patch.channel === 'beta') && patch.channel !== settings.channel;
   if (typeof patch.autoCheck === 'boolean') settings.autoCheck = patch.autoCheck;
-  if (typeof patch.autoDownload === 'boolean') settings.autoDownload = patch.autoDownload;
   if (channelChanged) settings.channel = patch.channel as UpdateChannel;
   save();
   set({ settings: { ...settings } });
   schedule();
   // A different channel may offer a different version.
   if (channelChanged && releases.length && state.status !== 'downloading') applyReleases(false);
-  // Turned on while an update is waiting: fetch it now rather than at the next check.
-  if (patch.autoDownload === true && state.status === 'available' && autoDownloads()) void downloadUpdate(true);
   return state;
 }
 
@@ -430,10 +408,10 @@ export function setupUpdater() {
   save();
   state = {
     status: 'idle', current, settings: { ...settings }, lastCheck: null, update: null, progress: null,
-    install: installMode(installTarget()), error: '', skipped, notify: '', whatsNew, installOnQuit: false,
+    install: installMode(installTarget()), error: '', skipped, notify: '', whatsNew,
   };
   void cleanDownloads();
   schedule();
   if (settings.autoCheck) setTimeout(() => { void checkForUpdates(true); }, FIRST_CHECK_MS).unref();
-  app.on('will-quit', () => { download?.abort(); installOnQuit(); });
+  app.on('will-quit', () => { download?.abort(); });
 }

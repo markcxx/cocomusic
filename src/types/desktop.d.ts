@@ -132,7 +132,6 @@ interface CocoAppSettingsResult {
 
 interface CocoUpdateSettings {
   autoCheck: boolean;
-  autoDownload: boolean;
   /** 'beta' also offers pre-releases (-rc / -beta tags). */
   channel: 'stable' | 'beta';
 }
@@ -160,7 +159,6 @@ interface CocoUpdateState {
   skipped: string;
   notify: string;
   whatsNew: string;
-  installOnQuit: boolean;
 }
 
 interface Window {

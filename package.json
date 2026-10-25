@@ -1,7 +1,7 @@
 {
   "name": "cocomusic",
   "productName": "CoCo Music",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "private": true,
   "description": "CoCo Music 多平台音乐桌面播放器",
   "author": "markcxx",
