@@ -33,7 +33,7 @@ jobs:
           fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: "22.23.4"
       - name: Test publishing rules
         run: node --test .github/scripts/release.test.mjs
       - name: Verify original build and load tagged release notes
