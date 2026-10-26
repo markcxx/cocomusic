@@ -27,12 +27,14 @@ const GAP = 1.5;
  * both states occupy identical space and neighbouring buttons never move.
  * `reserve` adds the overflow as right margin, for icons followed by text.
  */
-export function BadgedIcon({ count, children, reserve = false, solid = false, className }: {
+export function BadgedIcon({ count, children, reserve = false, solid = false, cutout = true, className }: {
   count?: number;
   children: ReactNode;
   reserve?: boolean;
   /** Filled glyph: place the digits beside the corner instead of cutting into the shape. */
   solid?: boolean;
+  /** Clear the glyph behind the count; disable to preserve the complete icon. */
+  cutout?: boolean;
   className?: string;
 }) {
   const wrap = useRef<HTMLSpanElement>(null);
@@ -66,7 +68,7 @@ export function BadgedIcon({ count, children, reserve = false, solid = false, cl
 
   return (
     <span ref={wrap} className={cn(styles.wrap, reserve && styles.reserve, solid && styles.solid, className)}>
-      <span ref={glyph} className={cn(styles.glyph, label && styles.cut)}>{children}</span>
+      <span ref={glyph} className={cn(styles.glyph, label && cutout && styles.cut)}>{children}</span>
       {label && <span ref={digits} className={styles.count} aria-hidden>{label}</span>}
     </span>
   );

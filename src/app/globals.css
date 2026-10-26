@@ -160,12 +160,12 @@ body {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(28% 34% at 14% 18%, rgba(196, 178, 246, 0.95), transparent 70%),
-    radial-gradient(30% 36% at 82% 12%, rgba(176, 206, 252, 0.9), transparent 70%),
-    radial-gradient(34% 40% at 70% 78%, rgba(214, 190, 244, 0.85), transparent 70%),
-    radial-gradient(26% 30% at 24% 84%, rgba(180, 222, 246, 0.8), transparent 70%),
-    radial-gradient(22% 26% at 48% 46%, rgba(240, 222, 246, 0.7), transparent 70%),
-    #dcdcf3;
+    radial-gradient(28% 34% at 14% 18%, rgba(var(--backdrop-primary-rgb, 196, 178, 246), 0.95), transparent 70%),
+    radial-gradient(30% 36% at 82% 12%, rgba(var(--backdrop-secondary-rgb, 176, 206, 252), 0.9), transparent 70%),
+    radial-gradient(34% 40% at 70% 78%, rgba(var(--backdrop-tertiary-rgb, 214, 190, 244), 0.85), transparent 70%),
+    radial-gradient(26% 30% at 24% 84%, rgba(var(--backdrop-quaternary-rgb, 180, 222, 246), 0.8), transparent 70%),
+    radial-gradient(22% 26% at 48% 46%, rgba(var(--backdrop-center-rgb, 240, 222, 246), 0.7), transparent 70%),
+    var(--backdrop-base, #dcdcf3);
   filter: blur(40px) saturate(1.1);
   /* Follows the window opacity: lower = more of the blurred desktop behind the window. */
   opacity: var(--window-opacity);
@@ -177,7 +177,7 @@ body {
 .backdrop::after {
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.38 0 0 0 0 0.55 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.4 0 0 0 0 0.4 0 0 0 0 0.4 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   opacity: calc(0.22 * var(--window-opacity));
   mix-blend-mode: soft-light;
   content: '';
@@ -193,14 +193,14 @@ body {
   }
 }
 
-/* Dark backdrop: deep violet fields instead of pastel ones. */
+/* Dark backdrop: deeper theme-coloured fields instead of pastel ones. */
 html[data-color-scheme='dark'] .backdrop::before {
   background:
-    radial-gradient(28% 34% at 14% 18%, rgba(96, 70, 170, 0.55), transparent 70%),
-    radial-gradient(30% 36% at 82% 12%, rgba(52, 82, 150, 0.5), transparent 70%),
-    radial-gradient(34% 40% at 70% 78%, rgba(110, 60, 140, 0.45), transparent 70%),
-    radial-gradient(26% 30% at 24% 84%, rgba(40, 90, 130, 0.4), transparent 70%),
-    #16141f;
+    radial-gradient(28% 34% at 14% 18%, rgba(var(--backdrop-primary-rgb, 96, 70, 170), 0.55), transparent 70%),
+    radial-gradient(30% 36% at 82% 12%, rgba(var(--backdrop-secondary-rgb, 52, 82, 150), 0.5), transparent 70%),
+    radial-gradient(34% 40% at 70% 78%, rgba(var(--backdrop-tertiary-rgb, 110, 60, 140), 0.45), transparent 70%),
+    radial-gradient(26% 30% at 24% 84%, rgba(var(--backdrop-quaternary-rgb, 40, 90, 130), 0.4), transparent 70%),
+    var(--backdrop-base, #16141f);
 }
 
 html[data-color-scheme='dark'] .backdrop::after {

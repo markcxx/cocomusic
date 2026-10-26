@@ -16,3 +16,8 @@
   width: 52px;
   padding: 0 0 0 8px;
 }
+
+.button.button:hover:not(:disabled),
+:global([data-theme='dark']) .button.button:hover:not(:disabled) {
+  background: transparent;
+}

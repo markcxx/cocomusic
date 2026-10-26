@@ -70,7 +70,8 @@
   color: var(--accent-strong);
 }
 
-.song:hover .indexNumber {
+.song:hover .indexNumber,
+.song:hover .indexEqualizer {
   display: none;
 }
 

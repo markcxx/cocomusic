@@ -6,6 +6,7 @@ import { buildLyrics } from '../music/lrc';
 import type { CatalogSource, Lyrics } from '../music/types';
 import { extensionOf, isAudioFile } from './formats';
 import { dataDir, jsonStore } from './store';
+import { embeddedLyrics } from './embedded-lyrics';
 
 /**
  * Local music library. The server only ever streams files that are in this
@@ -232,8 +233,7 @@ export async function lyricsOf(id: string): Promise<Lyrics> {
   try {
     const { parseFile } = await import('music-metadata');
     const meta = await parseFile(track.path, { skipCovers: true, duration: false });
-    const embedded = meta.common.lyrics?.map(item => (typeof item === 'string' ? item : item.text ?? item.syncText?.map(line => line.text).join('\n') ?? '')).join('\n') ?? '';
-    return buildLyrics(embedded);
+    return embeddedLyrics(meta.common.lyrics);
   } catch {
     return { lines: [], synced: false };
   }

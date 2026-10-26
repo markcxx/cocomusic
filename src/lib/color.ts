@@ -21,6 +21,38 @@ export function toHex({ r, g, b }: Rgb) {
 
 export const rgbTriplet = ({ r, g, b }: Rgb) => `${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}`;
 
+/** Low-saturation surfaces follow the picked hue without turning panels into accent fills. */
+export function surfacePalette(hex: string, scheme: 'light' | 'dark'): Record<string, string> {
+  const { h, s } = rgbToHsl(parseHex(hex) ?? parseHex('#9b87bf')!);
+  const dark = scheme === 'dark';
+  const tone = (lightness: number, saturation = 0.18, hueOffset = 0) =>
+    hslToRgb({ h: (h + hueOffset + 360) % 360, s: Math.min(s, saturation), l: lightness });
+  const rgb = (l: number, saturation?: number) => rgbTriplet(tone(l, saturation));
+  const color = (l: number, saturation?: number) => toHex(tone(l, saturation));
+  return {
+    '--surface-rgb': rgb(dark ? 0.15 : 0.98),
+    '--surface-pinned-rgb': rgb(dark ? 0.13 : 0.96),
+    '--raised-rgb': rgb(dark ? 0.24 : 1),
+    '--player-rgb': rgb(dark ? 0.12 : 0.98),
+    '--popover': `rgba(${rgb(dark ? 0.17 : 0.985)}, ${dark ? 0.96 : 0.95})`,
+    '--popover-solid': color(dark ? 0.17 : 0.985),
+    '--shell': color(dark ? 0.09 : 0.91, 0.3),
+    '--ink-rgb': dark ? '0, 0, 0' : rgb(0.2, 0.12),
+    '--cover-scrim': `rgba(${rgb(dark ? 0.05 : 0.15, 0.12)}, ${dark ? 0.5 : 0.38})`,
+    '--knob': color(dark ? 0.97 : 1, 0.12),
+    '--text-strong': color(dark ? 0.96 : 0.18, 0.12),
+    '--text': color(dark ? 0.87 : 0.23, 0.08),
+    '--text-secondary': color(dark ? 0.73 : 0.35, 0.08),
+    '--text-muted': color(dark ? 0.65 : 0.39, 0.08),
+    '--backdrop-base': color(dark ? 0.095 : 0.91, 0.3),
+    '--backdrop-primary-rgb': rgb(dark ? 0.3 : 0.83, dark ? 0.4 : 0.55),
+    '--backdrop-secondary-rgb': rgbTriplet(tone(dark ? 0.26 : 0.85, 0.4, -25)),
+    '--backdrop-tertiary-rgb': rgbTriplet(tone(dark ? 0.28 : 0.86, 0.4, 20)),
+    '--backdrop-quaternary-rgb': rgbTriplet(tone(dark ? 0.24 : 0.87, 0.35, -35)),
+    '--backdrop-center-rgb': rgb(0.93, 0.35),
+  };
+}
+
 export function rgbToHsv({ r, g, b }: Rgb): Hsv {
   const [rn, gn, bn] = [r / 255, g / 255, b / 255];
   const max = Math.max(rn, gn, bn);

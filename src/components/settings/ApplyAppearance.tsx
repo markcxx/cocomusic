@@ -2,7 +2,7 @@
 
 import { MotionConfig } from 'framer-motion';
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import { accentPalette } from '@/lib/color';
+import { accentPalette, surfacePalette } from '@/lib/color';
 import { useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
@@ -70,6 +70,9 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean } = {}) {
     root.setProperty('--accent-rgb', palette.accentRgb);
     root.setProperty('--accent-strong-rgb', palette.strongRgb);
     root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
+    for (const [name, value] of Object.entries(surfacePalette(s.accent, scheme))) {
+      root.setProperty(name, value);
+    }
   }, [s.accent, scheme]);
   return scheme;
 }

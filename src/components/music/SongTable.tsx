@@ -103,7 +103,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
                   <Checkbox checked={checked} onChange={event => selection.toggle(key, event.shiftKey)} label={`选择${track.title}`} />
                 ) : (
                   <>
-                    {current && player.playing ? <Equalizer /> : <span className={styles.indexNumber}>{String(startIndex + index + 1).padStart(2, '0')}</span>}
+                    {current && player.playing ? <Equalizer className={styles.indexEqualizer} /> : <span className={styles.indexNumber}>{String(startIndex + index + 1).padStart(2, '0')}</span>}
                     <button type="button" className={styles.indexPlay} onClick={() => player.play(track, queue)} aria-label={`播放${track.title}`}>
                       <Play size={13} strokeWidth={0} fill="currentColor" />
                     </button>

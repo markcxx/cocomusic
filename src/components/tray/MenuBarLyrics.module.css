@@ -27,6 +27,7 @@
 
 .viewport {
   position: relative;
+  display: flex;
   overflow: hidden;
   white-space: nowrap;
 }
@@ -40,6 +41,9 @@
 .line {
   position: relative;
   display: inline-block;
+  flex-shrink: 0;
+  /* Short lines sit next to the glyph; overflowing lines start at the left. */
+  margin-left: auto;
   transition: transform 260ms linear;
 }
 

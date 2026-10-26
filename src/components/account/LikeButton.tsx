@@ -31,10 +31,10 @@ export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, 
       size={size}
       disabled={foreign}
       tone="muted"
-      className={cn(liked && styles.liked, count !== undefined && styles.badged, className)}
+      className={cn(styles.button, liked && styles.liked, count !== undefined && styles.badged, className)}
       onClick={() => void toggleLike(songId)}
     >
-      <BadgedIcon count={count} solid={liked}>
+      <BadgedIcon count={count} cutout={false}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={String(liked)}
