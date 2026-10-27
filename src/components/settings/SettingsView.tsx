@@ -6,6 +6,7 @@ import { useAccount } from '@/components/account/account-store';
 import { downloads, useDownloads } from '@/components/downloads/download-store';
 import { useNavigation } from '@/components/layout/navigation';
 import { usePlayer } from '@/components/player/player-store';
+import { pickTemplate, TEMPLATES } from '@/components/player/visualizer/VisualizerPicker';
 import { sectionScrollTop } from '@/components/scroll/wheel-motion';
 import { Page, useScrollArea } from '@/components/scroll';
 import { Button, ConfirmDialog, toast } from '@/components/ui';
@@ -14,7 +15,7 @@ import { downloadsApi } from '@/lib/local-client';
 import { downloadQualities, QUALITY_HINTS } from '@/lib/download-quality';
 import { recentPlays } from '@/lib/recent-plays';
 import { searchHistory } from '@/lib/search-history';
-import { ACCENT_PRESETS, desktopLyricColor, LYRIC_COLORS, settings, useSettings, type Settings } from '@/lib/settings';
+import { ACCENT_PRESETS, desktopLyricColor, LYRIC_COLORS, needsSamples, settings, useSettings, type Settings } from '@/lib/settings';
 import type { AudioQuality } from '@/server/music/types';
 import { formatBytes, updateDialog, updates, useUpdateState } from '@/components/updates/update-store';
 import { ThemeColorControl } from './ColorPicker';
@@ -59,6 +60,15 @@ const SECTIONS = [
   { id: 'updates', label: '更新', icon: CircleArrowUp },
   { id: 'about', label: '关于', icon: Info },
 ] as const;
+
+/** Quick picks next to the custom visualizer colour (the full picker is one click away). */
+const VISUALIZER_COLOR_PRESETS = [
+  { label: '湖光蓝', color: '#56a8ff' },
+  { label: '薄荷', color: '#5fe0b8' },
+  { label: '樱粉', color: '#ff8fc4' },
+  { label: '暖橙', color: '#ffb065' },
+  { label: '丁香紫', color: '#b79bff' },
+];
 
 const keysOf = (...keys: Array<keyof Settings>) => keys;
 const isMac = () => typeof window !== 'undefined' && window.coco?.platform === 'darwin';
@@ -327,7 +337,7 @@ export function SettingsView() {
           </Section>
 
           {/* ───────── 歌词页 ───────── */}
-          <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake'))}>
+          <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor', 'lyricsVisualizerDensity'))}>
             <Row title="歌词字号">
               <Range value={s.lyricsFontSize} min={14} max={32} onChange={set('lyricsFontSize')} label="歌词字号" format={value => `${value}px`} />
             </Row>
@@ -345,6 +355,31 @@ export function SettingsView() {
             </Row>
             <Row title="唱片封面" description="封面显示为旋转的唱片">
               <Switch checked={s.lyricsSpinCover} onChange={set('lyricsSpinCover')} label="唱片封面" />
+            </Row>
+            <Row title="布局" description="也可在歌词页右上角的「播放器模式」卡片中切换">
+              <Segmented value={s.lyricsLayout} onChange={set('lyricsLayout')} label="布局" options={[{ value: 'standard', label: '标准' }, { value: 'centered', label: '居中' }, { value: 'lyrics', label: '歌词' }]} />
+            </Row>
+            <Row title="播放器模式" description="歌词页的音频可视化效果，也可在歌词页右上角预览和切换">
+              <Select
+                value={s.lyricsVisualizer}
+                onChange={value => pickTemplate(s.lyricsVisualizer, value, player.reloadStream)}
+                label="播放器模式"
+                options={[{ value: 'off', label: '关闭' }, ...TEMPLATES]}
+              />
+            </Row>
+            <Row title="经典唱片搭配" description="经典唱片下方同时显示的频谱效果" disabled={s.lyricsVisualizer !== 'vinyl'}>
+              <Segmented value={s.lyricsVinylEffect} onChange={value => pickTemplate(s.lyricsVisualizer, s.lyricsVisualizer, player.reloadStream, value)} label="经典唱片搭配" options={[{ value: 'none', label: '无' }, { value: 'lines', label: '细线频谱' }, { value: 'glow', label: '柔光波' }]} />
+            </Row>
+            <Row title="播放器模式配色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
+              <Segmented value={s.lyricsVisualizerColor} onChange={set('lyricsVisualizerColor')} label="播放器模式配色" options={[{ value: 'blue', label: '湖光蓝' }, { value: 'cover', label: '跟随封面' }, { value: 'white', label: '月光白' }, { value: 'accent', label: '主题色' }, { value: 'aurora', label: '极光' }, { value: 'custom', label: '自定义' }]} />
+            </Row>
+            {s.lyricsVisualizerColor === 'custom' && (
+              <Row title="自定义颜色" description="选一个你喜欢的颜色，也可以用吸管从屏幕取色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
+                <ThemeColorControl value={s.lyricsVisualizerCustomColor} presets={VISUALIZER_COLOR_PRESETS} onChange={set('lyricsVisualizerCustomColor')} label="自定义颜色" />
+              </Row>
+            )}
+            <Row title="播放器模式密度" description="细密：频谱更多、更细" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
+              <Segmented value={s.lyricsVisualizerDensity} onChange={set('lyricsVisualizerDensity')} label="播放器模式密度" options={[{ value: 'normal', label: '舒展' }, { value: 'fine', label: '细密' }]} />
             </Row>
             <Row title="歌词偏移" description="歌词总是快或慢时微调，桌面歌词和迷你模式同样生效">
               <Range value={s.lyricsOffset} min={-3} max={3} step={0.1} onChange={value => settings.set('lyricsOffset', Math.round(value * 10) / 10)} label="歌词偏移" format={value => (value === 0 ? '0 秒' : `${value > 0 ? '提前' : '延后'} ${Math.abs(value).toFixed(1)} 秒`)} />

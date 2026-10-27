@@ -11,6 +11,9 @@ function hash(seed: string) {
   return value >>> 0;
 }
 
+/** Hue of the seeded placeholder gradient (for tinting things to match a cover). */
+export const coverHue = (seed: string) => hash(seed) % 360;
+
 /**
  * Artwork with a seeded gradient underneath. A real `src` fades in once loaded;
  * if it is missing or fails, the gradient remains as the placeholder.

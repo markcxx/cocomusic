@@ -24,6 +24,29 @@ export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'no
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 /** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
 export type DesktopColor = LyricColorId | 'custom';
+/** Lyrics page layout: cover left + lyrics right, cover centred over two lines, or lyrics only. */
+export type LyricsLayout = 'standard' | 'centered' | 'lyrics';
+/**
+ * Lyrics-page visualizer. Along the progress line: lines / glow; under the
+ * cover: mirror; 'vinyl' = the classic record with no effect; around a round
+ * spinning cover: melody / ripple / scale.
+ */
+export type VisualizerTemplate = 'off' | 'lines' | 'glow' | 'mirror' | 'vinyl' | 'melody' | 'ripple' | 'scale';
+export const VISUALIZER_TEMPLATES: readonly VisualizerTemplate[] = ['off', 'lines', 'glow', 'mirror', 'vinyl', 'melody', 'ripple', 'scale'];
+/** Effects drawn around the artwork: it turns into a round, spinning cover for them. */
+export const isRingTemplate = (template: VisualizerTemplate) => template === 'melody' || template === 'ripple' || template === 'scale';
+/** Bottom strip that 经典唱片 can carry (the record itself has no effect). */
+export type VinylEffect = 'none' | 'lines' | 'glow';
+/** Bottom strip actually shown: lines / glow on their own, or the one paired with 经典唱片. */
+export function stripTemplate(template: VisualizerTemplate, vinylEffect: VinylEffect): 'lines' | 'glow' | null {
+  if (template === 'lines' || template === 'glow') return template;
+  if (template === 'vinyl' && vinylEffect !== 'none') return vinylEffect;
+  return null;
+}
+/** Whether the current pick reads the audio (the stream must load in CORS mode for it). */
+export const needsSamples = (template: VisualizerTemplate, vinylEffect: VinylEffect) => template !== 'off' && (template !== 'vinyl' || vinylEffect !== 'none');
+/** 'cover' = tinted from the artwork, 'aurora' = hue sweep across the spectrum. */
+export type VisualizerColor = 'blue' | 'cover' | 'white' | 'accent' | 'aurora' | 'custom';
 export type DoubleClickAction = 'replace' | 'insert';
 
 export interface Settings {
@@ -81,6 +104,17 @@ export interface Settings {
   lyricsSpinCover: boolean;
   /** Keep the display awake while the lyrics page is open and playing. */
   lyricsKeepAwake: boolean;
+  /** Lyrics page layout (see LyricsLayout). */
+  lyricsLayout: LyricsLayout;
+  /** Audio visualizer template (see VisualizerTemplate). */
+  lyricsVisualizer: VisualizerTemplate;
+  /** 经典唱片 only: a bottom strip to show along with the record. */
+  lyricsVinylEffect: VinylEffect;
+  lyricsVisualizerColor: VisualizerColor;
+  /** Hex used when lyricsVisualizerColor is 'custom'. */
+  lyricsVisualizerCustomColor: string;
+  /** Bar / point count multiplier: 'fine' doubles the density. */
+  lyricsVisualizerDensity: 'normal' | 'fine';
 
   /* 桌面歌词 */
   desktopFontSize: number;
@@ -152,6 +186,12 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricsOffset: 0,
   lyricsSpinCover: false,
   lyricsKeepAwake: true,
+  lyricsLayout: 'standard',
+  lyricsVisualizer: 'off',
+  lyricsVinylEffect: 'none',
+  lyricsVisualizerColor: 'blue',
+  lyricsVisualizerCustomColor: '#56a8ff',
+  lyricsVisualizerDensity: 'normal',
 
   desktopFontSize: 34,
   desktopColor: 'lavender',
@@ -226,6 +266,7 @@ const RULES: Record<keyof Settings, Rule> = {
   miniShowLyrics: bool, miniSpinRecord: bool,
   appShortcuts: bool, seekStep: oneOf(0, 5, 10, 15, 30), rememberSearches: bool,
   trialNotice: bool, showVipBadge: bool, titleShowsTrack: bool, lyricsKeepAwake: bool,
+  lyricsLayout: oneOf('standard', 'centered', 'lyrics'), lyricsVisualizer: oneOf(...VISUALIZER_TEMPLATES), lyricsVinylEffect: oneOf('none', 'lines', 'glow'), lyricsVisualizerColor: oneOf('blue', 'cover', 'white', 'accent', 'aurora', 'custom'), lyricsVisualizerCustomColor: { type: 'hex' }, lyricsVisualizerDensity: oneOf('normal', 'fine'),
   toastOnTrackChange: bool,
   showTray: bool, trayLyrics: bool, menuBarText: oneOf('white', 'black', 'auto'),
 };
@@ -247,6 +288,9 @@ function migrate(raw: Record<string, unknown>) {
   const next = { ...raw };
   if (typeof next.accent === 'string' && LEGACY_ACCENTS[next.accent]) next.accent = LEGACY_ACCENTS[next.accent];
   if (typeof next.systemMaterial === 'boolean' && next.windowEffect === undefined) next.windowEffect = next.systemMaterial ? 'acrylic' : 'none';
+  // Visualizer templates renamed / retired during development.
+  const templates: Record<string, string> = { bars: 'lines', particles: 'ripple', ring: 'scale', wave: 'melody' };
+  if (typeof next.lyricsVisualizer === 'string' && templates[next.lyricsVisualizer]) next.lyricsVisualizer = templates[next.lyricsVisualizer];
   return next;
 }
 

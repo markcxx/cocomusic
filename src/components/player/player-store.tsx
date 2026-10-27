@@ -4,14 +4,16 @@ import { persistentStorage } from '@/lib/persistent-storage';
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
+import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
 import { catalogApi, type SongSource } from '@/lib/catalog-client';
-import { localAudioUrl } from '@/lib/local-client';
+import { desktop, localAudioUrl } from '@/lib/local-client';
 import { emptyTrack } from '@/lib/mock-data';
 import { recentPlays } from '@/lib/recent-plays';
-import { settings as appSettings, useSettings } from '@/lib/settings';
+import { needsSamples, settings as appSettings, useSettings } from '@/lib/settings';
 import { useLatest } from '@/lib/use-latest';
 import { isPlayable, type Track } from '@/types/music';
 import { broadcastPlayer } from './player-broadcast';
+import { hasGraph, setGraphOutputDevice } from './visualizer/audio-graph';
 
 /** One cycling control: list loop → shuffle → single loop → in order (stops at the end). */
 export type PlayMode = 'loop' | 'shuffle' | 'one' | 'order';
@@ -34,6 +36,8 @@ type PlayerState = {
   level?: string;
   /** Re-fetch the current song's stream (e.g. after changing quality), keeping the position. */
   reloadStream: () => void;
+  /** The playback element (read-only use, e.g. the audio visualizer). */
+  audioElement: () => HTMLAudioElement | null;
   volume: number;
   mode: PlayMode;
   lyricsOpen: boolean;
@@ -47,6 +51,8 @@ type PlayerState = {
   playFromList: (track: Track, list: Track[]) => void;
   /** Append to the end of the play queue (skips tracks already queued). */
   enqueue: (tracks: Track[]) => void;
+  /** Ids of the live queue joined by "|" (read now, not at render), to tell whether it changed. */
+  queueIds: () => string;
   /** Insert right after the current track (下一首播放); moves it if already queued. */
   playNext: (tracks: Track[]) => void;
   /** Remove from the queue; removing the playing track moves on to the next. */
@@ -293,6 +299,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.removeAttribute('src');
     audio.load();
     const attach = (url: string) => {
+      // CORS mode lets the visualizer read online streams; only the desktop app
+      // adds the CORS header (a plain browser would fail to load them).
+      // Once the element feeds the visualizer graph it must stay in CORS mode:
+      // a tainted stream would play silent through Web Audio.
+      // Users without a visualizer keep the plain (non-CORS) request.
+      const wantsSamples = (desktop() && needsSamples(appSettings.get().lyricsVisualizer, appSettings.get().lyricsVinylEffect)) || hasGraph(audio);
+      if (wantsSamples && !track.localId) audio.crossOrigin = 'anonymous';
+      else if (!hasGraph(audio)) audio.removeAttribute('crossorigin');
       audio.src = url;
       if (resumeAt.current !== null) { audio.currentTime = resumeAt.current; resumeAt.current = null; }
       if (latest.current.playing) audio.play().catch(() => undefined);
@@ -307,6 +321,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setTrial(source.trial);
         setLevel(source.level);
         if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
+        // Previews can mean the login lapsed: let the account store verify it now.
+        if (source.trial) window.dispatchEvent(new Event(ACCOUNT_RECHECK_EVENT));
         attach(source.url);
       })
       .catch(error => {
@@ -328,6 +344,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [prefs.playbackRate, loadKey]);
   useEffect(() => {
     const audio = audioRef.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null;
+    // Routed through the visualizer's AudioContext, the context picks the device.
+    setGraphOutputDevice(audio, prefs.outputDevice);
     if (!audio?.setSinkId) return;
     audio.setSinkId(prefs.outputDevice).catch(() => {
       // Device unplugged or permission denied: fall back to the system default.
@@ -429,6 +447,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const currentIndex = () => queue.findIndex(item => item.id === track.id);
     return {
       track, queue, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
+      audioElement: audio,
       reloadStream: () => {
         const element = audio();
         if (!isPlayable(track) || track.localId) return;
@@ -467,6 +486,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         failures.current = 0;
         select(next);
       },
+      queueIds: () => latest.current.queue.map(item => item.id).join('|'),
       enqueue: tracks => setQueue(previous => {
         const known = new Set(previous.map(item => item.id));
         return [...previous, ...tracks.filter(item => !known.has(item.id))].slice(0, QUEUE_LIMIT);

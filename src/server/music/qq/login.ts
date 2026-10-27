@@ -168,8 +168,8 @@ export async function qqQrPoll(key: string): Promise<QQPollResult> {
       status: 'success',
       cookie: {
         uin, qm_keyst: musickey,
-        // Kept for a future token refresh (music.login.LoginServer/Login).
-        ...Object.fromEntries(['openid', 'unionid', 'access_token', 'refresh_token', 'refresh_key', 'encryptUin'].map(name => [name, String(data[name] ?? '')]).filter(([, value]) => value)),
+        // Used to renew the key before it expires (qq/auth.ts, music.login.LoginServer/Login).
+        ...Object.fromEntries(['openid', 'unionid', 'access_token', 'refresh_token', 'refresh_key', 'encryptUin', 'musickeyCreateTime', 'keyExpiresIn'].map(name => [name, String(data[name] ?? '')]).filter(([, value]) => value)),
         expired_at: String(data.expired_at ?? ''),
       },
     };

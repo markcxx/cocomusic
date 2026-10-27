@@ -129,8 +129,16 @@ export function attachWords(lines: LyricLine[], timed: readonly LyricLine[]): Ly
 }
 
 /**
+ * Without word timing, the fill finishes this share of the gap before the next
+ * line (at least 0.35 s, at most 1.6 s), so a line completes and rests a beat
+ * before switching instead of ending at the very instant the next one starts.
+ */
+const REST_SHARE = 0.18;
+
+/**
  * How much of a line has been sung (0–1, by characters). Uses word timing when
- * present, otherwise spreads the line evenly until the next line starts.
+ * present, otherwise spreads the line evenly over the gap to the next line,
+ * minus a short rest at the end.
  */
 export function lineProgress(line: LyricLine | undefined, next: LyricLine | undefined, seconds: number) {
   if (!line) return 0;
@@ -146,5 +154,7 @@ export function lineProgress(line: LyricLine | undefined, next: LyricLine | unde
     return Math.min(1, Math.max(0, sung / total));
   }
   if (!next) return 1;
-  return Math.min(1, Math.max(0, (seconds - line.time) / Math.max(0.6, next.time - line.time)));
+  const gap = Math.max(0.6, next.time - line.time);
+  const rest = Math.min(1.6, Math.max(0.35, gap * REST_SHARE), gap * 0.4);
+  return Math.min(1, Math.max(0, (seconds - line.time) / (gap - rest)));
 }

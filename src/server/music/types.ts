@@ -335,6 +335,11 @@ export interface AccountProvider {
    */
   qrCreate(): Promise<{ key: string; url: string; image?: string }>;
   qrCheck(key: string): Promise<QrLoginState>;
+  /**
+   * Current profile, or null when logged out. Also verifies the stored login is
+   * still accepted (renewing it where the platform allows); a rejected login is
+   * cleared with `session.clear(source, { expired: true })`.
+   */
   profile(): Promise<UserProfile | null>;
   /** Rich profile of the logged-in user for the account card. */
   detail(): Promise<UserDetail>;

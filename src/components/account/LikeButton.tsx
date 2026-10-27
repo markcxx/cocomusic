@@ -13,7 +13,8 @@ import styles from './LikeButton.module.css';
 
 /**
  * Red heart bound to the account's liked songs (`songId` is the platform id).
- * With `count`, the total is embedded in the heart's top-right corner.
+ * With `count`, the total is embedded in the outline heart's top-right corner
+ * (hidden once liked). The button keeps its width either way.
  * Songs from a platform other than the selected one cannot be liked (the
  * signed-in account belongs to the selected platform).
  */
@@ -23,6 +24,8 @@ export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, 
   const foreign = Boolean(source && source !== platform);
   const liked = !foreign && isLiked(songId);
   const label = foreign ? `${SOURCE_NAMES[source!]}的歌曲，切换到该平台后可收藏` : liked ? '取消喜欢' : '喜欢';
+  // The total sits on the outline heart only; once liked, the red heart stands alone.
+  const shown = liked ? undefined : count;
   return (
     <IconButton
       label={label}
@@ -34,7 +37,8 @@ export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, 
       className={cn(styles.button, liked && styles.liked, count !== undefined && styles.badged, className)}
       onClick={() => void toggleLike(songId)}
     >
-      <BadgedIcon count={count} cutout={false}>
+      {/* Same treatment as 评论: digits tuck into the glyph's corner, strokes cut away beneath them. */}
+      <BadgedIcon count={shown}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={String(liked)}

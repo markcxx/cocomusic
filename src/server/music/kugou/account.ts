@@ -187,11 +187,12 @@ export const kugouAccount: AccountProvider = {
       session.setProfile('kugou', profile);
       return profile;
     } catch (error) {
-      if (error instanceof KugouError && error.status === 401) { session.clear('kugou'); return null; }
+      if (error instanceof KugouError && error.status === 401) { session.clear('kugou', { expired: true }); return null; }
       if (error instanceof KugouError) return value.profile ?? null;
       throw error;
     }
   },
+
 
   async detail(): Promise<UserDetail> {
     const { userid, token, profile } = current();

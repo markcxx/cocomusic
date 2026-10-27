@@ -40,7 +40,8 @@ export function PlayModeButton({ size = 18 }: { size?: number }) {
   const Icon = modeIcons[mode];
   const next = playModes[(playModes.indexOf(mode) + 1) % playModes.length];
   return (
-    <IconButton label={playModeLabels[mode]} tooltip={`${playModeLabels[mode]} · 点击切换为${playModeLabels[next]}`} onClick={cycleMode} active={mode !== 'loop'} tone="muted">
+    // The icon itself shows the mode; no `active` fill (it read as a stuck hover background).
+    <IconButton label={playModeLabels[mode]} tooltip={`${playModeLabels[mode]} · 点击切换为${playModeLabels[next]}`} onClick={cycleMode} tone="muted">
       <Swap id={mode}><Icon size={size} strokeWidth={1.4} /></Swap>
     </IconButton>
   );
@@ -72,23 +73,30 @@ export function PlayPauseButton({ large = false }: { large?: boolean }) {
   );
 }
 
+/** 上一首 / 下一首, shared by the main bar and the lyrics page bar so both look the same. */
+export function SkipButton({ direction, size = 20 }: { direction: 'previous' | 'next'; size?: number }) {
+  const player = usePlayer();
+  const back = direction === 'previous';
+  const Icon = back ? SkipBack : SkipForward;
+  return (
+    <IconButton label={back ? '上一首' : '下一首'} onClick={back ? player.previous : player.next} iconHover={{ x: back ? -2 : 2, scale: 1.1 }} disabled={!player.queue.length}>
+      <Icon size={size} strokeWidth={1.4} />
+    </IconButton>
+  );
+}
+
 /** Like · previous · play · next · mode. */
 export function Transport({ likeCount, large = false }: { likeCount?: number; large?: boolean }) {
-  const player = usePlayer();
-  const { track } = player;
+  const { track } = usePlayer();
   const skip = large ? 22 : 20;
   return (
     <div className={cn(styles.buttons, large && styles.buttonsLarge)}>
       {track.songId
         ? <LikeButton songId={track.songId} source={track.source} size="md" iconSize={18} count={likeCount} />
         : <IconButton label="喜欢" disabled><Heart size={18} strokeWidth={1.4} /></IconButton>}
-      <IconButton label="上一首" onClick={player.previous} iconHover={{ x: -2, scale: 1.1 }} disabled={!player.queue.length}>
-        <SkipBack size={skip} strokeWidth={1.4} />
-      </IconButton>
+      <SkipButton direction="previous" size={skip} />
       <PlayPauseButton large={large} />
-      <IconButton label="下一首" onClick={player.next} iconHover={{ x: 2, scale: 1.1 }} disabled={!player.queue.length}>
-        <SkipForward size={skip} strokeWidth={1.4} />
-      </IconButton>
+      <SkipButton direction="next" size={skip} />
       <PlayModeButton />
     </div>
   );

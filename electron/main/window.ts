@@ -12,10 +12,26 @@ function openExternal(url: string) {
   if (/^https?:\/\//.test(url)) void shell.openExternal(url);
 }
 
+/**
+ * Song streams and artwork come straight from the platforms' CDNs, which send
+ * no (or a foreign) CORS origin. The lyrics-page visualizer reads the audio
+ * samples (crossOrigin="anonymous" on the player) and samples the cover's
+ * colour, so allow anonymous CORS for media and images only. Responses carry
+ * no credentials either way (anonymous mode never sends cookies).
+ */
+function allowMediaCors(origin: string) {
+  session.defaultSession.webRequest.onHeadersReceived({ urls: ['http://*/*', 'https://*/*'] }, (details, callback) => {
+    if ((details.resourceType !== 'media' && details.resourceType !== 'image') || details.url.startsWith(origin)) { callback({}); return; }
+    const headers = Object.fromEntries(Object.entries(details.responseHeaders ?? {}).filter(([name]) => !/^access-control-allow-(origin|credentials)$/i.test(name)));
+    callback({ responseHeaders: { ...headers, 'Access-Control-Allow-Origin': ['*'] } });
+  });
+}
+
 export async function createMainWindow(origin: string, token: string, options: { transparent?: boolean } = {}) {
   const transparent = Boolean(options.transparent);
   // Session cookie lets the renderer proxy reject requests from other local apps or web pages.
   await session.defaultSession.cookies.set({ url: origin, name: 'coco_token', value: token, httpOnly: true, sameSite: 'strict' });
+  allowMediaCors(origin);
 
   const initial = initialBounds();
   const window = new BrowserWindow({

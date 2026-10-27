@@ -2,6 +2,7 @@ import { buildLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
 import { createHash } from 'node:crypto';
 import { session } from '../session';
+import { qqEnsureLogin } from './auth';
 import { auth, QQError, qqRequest } from './client';
 import { https, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
@@ -45,6 +46,14 @@ async function vkey(mid: string, filename: string) {
 }
 
 export async function songSource(key: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
+  const source = await resolveSource(key, quality);
+  // A logged-in account getting only a preview often means the musickey lapsed:
+  // renew it and ask once more (a real non-VIP account just gets the preview again).
+  if (source.trial && auth() && (await qqEnsureLogin()) === 'renewed') return resolveSource(key, quality);
+  return source;
+}
+
+async function resolveSource(key: string, quality: AudioQuality): Promise<SongSource> {
   const { mid } = splitSongKey(key);
   const track = await trackInfo(mid);
   const file = record(track.file);

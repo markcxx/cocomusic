@@ -1,6 +1,6 @@
 'use client';
 
-import { Copy, Download, Link2, ListMusic, ListPlus, MoreHorizontal, Plus, Settings2, SkipBack, SkipForward, SquarePlus } from 'lucide-react';
+import { Copy, Download, Link2, ListMusic, ListPlus, MoreHorizontal, Plus, Settings2, SquarePlus } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { CreatePlaylistDialog } from '@/components/account/CreatePlaylistDialog';
 import { LikeButton } from '@/components/account/LikeButton';
@@ -12,7 +12,7 @@ import { IconButton, Menu, Slider, toast, type MenuItem } from '@/components/ui'
 import { settings, useSettings } from '@/lib/settings';
 import { shareUrl } from '@/lib/share-links';
 import type { AudioQuality, CatalogTrack } from '@/server/music/types';
-import { CommentButton, PlayModeButton, PlayPauseButton, VolumeControl } from './controls';
+import { CommentButton, PlayModeButton, PlayPauseButton, SkipButton, VolumeControl } from './controls';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { useSongStats } from './use-song-stats';
 import styles from './LyricsPlayerBar.module.css';
@@ -25,7 +25,7 @@ function Progress() {
   const { duration, seek } = usePlayer();
   const position = usePlaybackPosition();
   return (
-    <div className={styles.progress}>
+    <div className={styles.progress} data-lyrics-progress>
       <Slider value={Math.min(position, duration)} max={duration} onCommit={seek} label="播放进度" formatValue={formatTime} size="sm" />
     </div>
   );
@@ -160,14 +160,11 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
         </div>
 
         <div className={styles.transport}>
-          <PlayModeButton size={19} />
-          <IconButton label="上一首" onClick={player.previous} iconHover={{ x: -2, scale: 1.1 }} disabled={!player.queue.length}>
-            <SkipBack size={22} strokeWidth={0} fill="currentColor" />
-          </IconButton>
+          <PlayModeButton />
+          {/* Same skip buttons as the main player bar. */}
+          <SkipButton direction="previous" />
           <PlayPauseButton large />
-          <IconButton label="下一首" onClick={player.next} iconHover={{ x: 2, scale: 1.1 }} disabled={!player.queue.length}>
-            <SkipForward size={22} strokeWidth={0} fill="currentColor" />
-          </IconButton>
+          <SkipButton direction="next" />
           <span data-queue-toggle style={{ display: 'inline-flex' }}>
             <IconButton label="播放列表" tone="muted" onClick={() => setQueueOpen(!queueOpen)} active={queueOpen} pressed={queueOpen}>
               <ListMusic size={20} strokeWidth={1.4} />

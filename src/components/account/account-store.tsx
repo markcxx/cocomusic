@@ -1,10 +1,16 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { accountApi, type UserPlaylist, type UserProfile } from '@/lib/account-client';
+import { ACCOUNT_RECHECK_EVENT, accountApi, type UserPlaylist, type UserProfile } from '@/lib/account-client';
 import { useLatest } from '@/lib/use-latest';
 import { toast } from '@/components/ui/toast';
 import { useSettings } from '@/lib/settings';
+import { currentSource } from '@/lib/catalog-client';
+import { SOURCE_NAMES } from '@/server/music/ids';
+
+/** Background login check cadence, and the minimum gap between checks (focus can fire often). */
+const RECHECK_INTERVAL_MS = 3 * 60 * 60_000;
+const RECHECK_MIN_MS = 10 * 60_000;
 
 type AccountState = {
   /** undefined while the stored session is being checked. */
@@ -46,16 +52,63 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     if (lists.status === 'fulfilled') setPlaylists(lists.value.playlists);
   }, []);
 
+  /** The platform dropped the stored login: say so and offer to sign in again. */
+  const onExpired = useCallback(() => {
+    setProfile(null);
+    setLiked(new Set());
+    setPlaylists([]);
+    toast.error(`${SOURCE_NAMES[currentSource()]}登录已过期，请重新登录`);
+    setLoginOpen(true);
+  }, []);
+
   // Each platform has its own login: re-check whenever 设置 › 曲库 changes.
   const platform = useSettings().catalogSource;
   useEffect(() => {
     let cancelled = false;
     const reset = setTimeout(() => { if (!cancelled) { setProfile(undefined); setLiked(new Set()); setPlaylists([]); } }, 0);
     accountApi.me()
-      .then(({ profile: current }) => { if (cancelled) return; setProfile(current); if (current) void loadLibrary(); })
+      .then(({ profile: current, expired }) => {
+        if (cancelled) return;
+        if (expired) { onExpired(); return; }
+        setProfile(current);
+        if (current) void loadLibrary();
+      })
       .catch(() => { if (!cancelled) setProfile(null); });
     return () => { cancelled = true; clearTimeout(reset); };
-  }, [loadLibrary, platform]);
+  }, [loadLibrary, onExpired, platform]);
+
+  // Logins lapse while the app stays open for days: re-check (and let the server
+  // renew the key) every few hours and when the window comes back into focus.
+  useEffect(() => {
+    let last = Date.now();
+    let busy = false;
+    const check = (force = false) => {
+      if (busy || !profileRef.current || (!force && Date.now() - last < RECHECK_MIN_MS)) return;
+      busy = true;
+      last = Date.now();
+      accountApi.me()
+        .then(({ profile: current, expired }) => {
+          if (expired || (!current && profileRef.current)) onExpired();
+          else if (current) setProfile(current);
+        })
+        .catch(() => undefined)
+        .finally(() => { busy = false; });
+    };
+    const timer = setInterval(() => check(), RECHECK_INTERVAL_MS);
+    const onFocus = () => check();
+    const onVisible = () => { if (document.visibilityState === 'visible') check(); };
+    // The player asks right away when a logged-in account only gets a preview clip.
+    const onRequest = () => check(true);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener(ACCOUNT_RECHECK_EVENT, onRequest);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener(ACCOUNT_RECHECK_EVENT, onRequest);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [platform, profileRef, onExpired]);
 
   const requireLogin = useCallback(() => {
     if (profileRef.current) return true;

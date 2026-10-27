@@ -1,0 +1,90 @@
+.vinyl {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.disc {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle, #1c1c20 0 30%, #121214 31%, #1a1a1d 60%, #0f0f11 100%);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 26px 60px rgba(0, 0, 0, 0.5);
+  animation: spin 24s linear infinite;
+  animation-play-state: paused;
+}
+
+.playing .disc {
+  animation-play-state: running;
+}
+
+/* Fine concentric grooves. */
+.grooves {
+  position: absolute;
+  inset: 3%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(circle, rgba(255, 255, 255, 0) 0 2px, rgba(255, 255, 255, 0.045) 2.5px, rgba(255, 255, 255, 0) 3px);
+}
+
+/* Soft light catching the vinyl (turns with it, which reads as shimmer). */
+.sheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(from 30deg, transparent 0 8%, rgba(255, 255, 255, 0.07) 13%, transparent 20% 55%, rgba(255, 255, 255, 0.05) 61%, transparent 68%);
+}
+
+/* Artwork label: two thirds of the disc, so the picture reads at a glance. */
+.label {
+  position: absolute;
+  top: 16%;
+  left: 16%;
+  width: 68%;
+  height: 68%;
+  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.35);
+}
+
+.spindle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6%;
+  height: 6%;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(circle, #050506 0 55%, #2a2a2e 60%);
+}
+
+/* Tonearm: pivot above the record's top edge, swings onto it while playing. */
+.arm {
+  position: absolute;
+  top: -22%;
+  left: 48%;
+  width: 22%;
+  overflow: visible;
+  transform-origin: 20% 8.3%;
+  rotate: -26deg;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
+  transition: rotate 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.playing .arm {
+  rotate: 0deg;
+}
+
+@keyframes spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disc {
+    animation: none;
+  }
+
+  .arm {
+    transition: none;
+  }
+}

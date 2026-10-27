@@ -1,5 +1,6 @@
 import { session } from '../session';
 import type { AccountProvider, UserDetail, UserPlaylist, UserProfile } from '../types';
+import { qqEnsureLogin } from './auth';
 import { QQError, qqRequest } from './client';
 import { qqQrPoll, qqQrStart } from './login';
 import { https, mapPlaylistBasic, num, record, rows, splitSongKey, SOURCE, text, type Raw } from './mappers';
@@ -64,17 +65,20 @@ export const qqAccount: AccountProvider = {
   },
 
   async profile() {
+    // The base-info call below answers for any uin, so it cannot detect a dead
+    // key: check (and renew) the musickey itself first.
+    const state = await qqEnsureLogin();
+    if (state === 'none' || state === 'expired') return null;
     const value = session.get('qq');
-    if (!value?.cookie.uin || !value.cookie.qm_keyst) return null;
+    if (!value) return null;
     try {
       const profile = await fetchProfile(value.cookie.uin);
-      if (!profile) { session.clear('qq'); return null; }
+      if (!profile) return value.profile ?? null;
       session.setProfile('qq', profile);
       return profile;
     } catch (error) {
-      // Offline or expired key: keep the cached profile only when it was a network problem.
-      if (error instanceof QQError && error.status === 504) return value.profile ?? null;
-      if (error instanceof QQError && error.status === 401) { session.clear('qq'); return null; }
+      // Offline: keep the cached profile.
+      if (error instanceof QQError && error.status !== 401) return value.profile ?? null;
       throw error;
     }
   },

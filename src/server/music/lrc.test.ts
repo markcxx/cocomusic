@@ -50,7 +50,11 @@ test('line progress follows words, or spreads evenly without them', () => {
   assert.equal(lineProgress(line, undefined, 0), 0);
   assert.equal(lineProgress(line, undefined, 1), 0.5);
   assert.equal(lineProgress(line, undefined, 1.5), 0.75);
-  assert.equal(lineProgress({ time: 0, text: 'x' }, { time: 4, text: 'y' }, 2), 0.5);
+  // Even spread finishes before the next line (4 s gap → done at 3.28 s), then rests.
+  assert.ok(Math.abs(lineProgress({ time: 0, text: 'x' }, { time: 4, text: 'y' }, 1.64) - 0.5) < 1e-9);
+  assert.equal(lineProgress({ time: 0, text: 'x' }, { time: 4, text: 'y' }, 3.4), 1);
+  // Short lines still keep most of their time for the fill.
+  assert.ok(lineProgress({ time: 0, text: 'x' }, { time: 1, text: 'y' }, 0.5) < 1);
   const merged = attachWords([{ time: 0.05, text: 'abcd' }], [line]);
   assert.equal(merged[0].words?.length, 2);
 });

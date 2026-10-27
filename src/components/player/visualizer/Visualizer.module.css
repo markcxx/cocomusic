@@ -1,0 +1,37 @@
+/* 细线频谱 / 柔光波: standing on the lyrics bar's progress line, edge to edge (inside .strip). */
+.progress {
+  position: absolute;
+  right: 0;
+  /* The rail's half thickness: lines start right at its top edge. */
+  bottom: 1.5px;
+  left: 0;
+  width: 100%;
+  height: 64px;
+  pointer-events: none;
+}
+
+/* 柔光波 rises higher and melts into the page. */
+.progressGlow {
+  height: 110px;
+  opacity: 0.9;
+}
+
+/* Around the record: centred on it, 1.5 × (keep in sync with RING_SCALE). */
+.ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  height: 150%;
+  translate: -50% -50%;
+  pointer-events: none;
+}
+
+/* 倒影柱: under the artwork, as wide as it. */
+.mirror {
+  display: block;
+  width: 100%;
+  height: 92px;
+  margin-top: 28px;
+  pointer-events: none;
+}

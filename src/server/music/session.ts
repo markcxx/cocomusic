@@ -15,6 +15,8 @@ type Store = { deviceId: string; sessions: Partial<Record<CatalogSource, Platfor
 const dir = process.env.COCO_DATA_DIR || path.join(os.homedir(), '.cocomusic');
 const file = path.join(dir, 'sessions.json');
 let store: Store | null = null;
+/** Platforms whose login was dropped because the platform rejected it (not a user logout). */
+const expired = new Set<CatalogSource>();
 
 function load(): Store {
   if (store) return store;
@@ -41,14 +43,31 @@ export const session = {
   get(source: CatalogSource) { return load().sessions[source]; },
   set(source: CatalogSource, cookie: Record<string, string>, profile?: UserProfile) {
     load().sessions[source] = { cookie, profile, savedAt: Date.now() };
+    expired.delete(source);
+    save();
+  },
+  /** Merge refreshed credentials into the stored session, keeping the profile. */
+  updateCookie(source: CatalogSource, patch: Record<string, string>) {
+    const current = load().sessions[source];
+    if (!current) return;
+    current.cookie = { ...current.cookie, ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value)) };
     save();
   },
   setProfile(source: CatalogSource, profile: UserProfile) {
     const current = load().sessions[source];
     if (current) { current.profile = profile; save(); }
   },
-  clear(source: CatalogSource) {
+  /** `expired`: the platform rejected the credentials, so the UI should tell the user. */
+  clear(source: CatalogSource, options: { expired?: boolean } = {}) {
+    if (options.expired && load().sessions[source]) expired.add(source);
+    else expired.delete(source);
     delete load().sessions[source];
     save();
+  },
+  /** True once after the login was dropped as expired. */
+  takeExpired(source: CatalogSource) {
+    const value = expired.has(source);
+    expired.delete(source);
+    return value;
   },
 };

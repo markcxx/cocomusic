@@ -31,7 +31,7 @@ export const trackKey = (track: CatalogTrack) => `${track.source}:${track.id}`;
  * With an active `selection`, the index column becomes checkboxes and clicking
  * a row toggles it (shift-click selects a range).
  */
-export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover = true, loading = false, skeletonRows = 10, emptyText = '暂无歌曲', animateFrom = 0, selection, playlistId, onRemoved }: {
+export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover = true, loading = false, skeletonRows = 10, emptyText = '暂无歌曲', animateFrom = 0, selection, playlistId, onRemoved, onPlayTrack }: {
   tracks: CatalogTrack[];
   /** Number shown for the first row (for paged lists). */
   startIndex?: number;
@@ -46,6 +46,11 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
   /** The playlist being shown, enabling "从歌单中移除" when it is the user's own. */
   playlistId?: string;
   onRemoved?: (trackId: string) => void;
+  /**
+   * Paged lists: called when a row is played, so the owner can queue the
+   * whole collection (not only the rows loaded so far).
+   */
+  onPlayTrack?: (track: CatalogTrack, mode: 'play' | 'list') => void;
 }) {
   const player = usePlayer();
   const { navigate } = useNavigation();
@@ -96,7 +101,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
               // Earlier pages are already visible: show them instantly instead of replaying the entrance.
               variants={index >= animateFrom ? riseItem : stillItem}
               onClick={event => onRowClick(event, key)}
-              onDoubleClick={() => { if (!selecting) player.playFromList(track, queue); }}
+              onDoubleClick={() => { if (selecting) return; if (onPlayTrack) onPlayTrack(item, 'list'); else player.playFromList(track, queue); }}
             >
               <span role="cell" className={styles.index}>
                 {selecting && selection ? (
@@ -104,7 +109,7 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
                 ) : (
                   <>
                     {current && player.playing ? <Equalizer className={styles.indexEqualizer} /> : <span className={styles.indexNumber}>{String(startIndex + index + 1).padStart(2, '0')}</span>}
-                    <button type="button" className={styles.indexPlay} onClick={() => player.play(track, queue)} aria-label={`播放${track.title}`}>
+                    <button type="button" className={styles.indexPlay} onClick={() => (onPlayTrack ? onPlayTrack(item, 'play') : player.play(track, queue))} aria-label={`播放${track.title}`}>
                       <Play size={13} strokeWidth={0} fill="currentColor" />
                     </button>
                   </>

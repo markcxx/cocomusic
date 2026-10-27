@@ -18,6 +18,21 @@
   pointer-events: none;
 }
 
+/*
+ * Layer for the bottom visualizer strips: above the backdrop, below the
+ * lyrics page (z-index 1) and the bar, so lyrics are never covered. Its
+ * bottom edge sits on the bar's progress line.
+ */
+.strip {
+  position: absolute;
+  right: 0;
+  /* Fallback until the rail is measured (LyricsDrawer sets the exact value). */
+  bottom: 78px;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
 .backdropCover {
   width: 100%;
   height: 100%;
@@ -43,7 +58,8 @@
   padding-left: 84px;
 }
 
-.topBar button {
+.topBar button,
+.topActions {
   -webkit-app-region: no-drag;
 }
 
@@ -52,11 +68,11 @@
   flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
-  border-radius: 12px;
+  border-radius: 11px;
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
   backdrop-filter: blur(12px);
@@ -93,13 +109,23 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+/* Right side of the top bar: jump link + visualizer template button. */
+.topActions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
 .jump {
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 4px;
-  margin-left: auto;
-  padding: 6px 12px;
+  gap: 5px;
+  /* Same 36px pill as the visualizer button next to it. */
+  height: 36px;
+  padding: 0 14px;
   border: 0;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
@@ -136,18 +162,146 @@
 
 .stage {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* Artwork column a little narrower and the left padding smaller: art sits further left. */
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
   align-items: center;
-  gap: 64px;
+  gap: 72px;
   height: 100%;
   min-height: 420px;
-  padding: 0 8vw 12px;
+  padding: 0 6vw 12px 4vw;
   transform-origin: center top;
 }
 
 .art {
-  justify-self: end;
+  justify-self: center;
   width: min(360px, 30vw);
+}
+
+/* ───────── 布局: 居中 / 歌词 ───────── */
+
+/* 居中: one column — artwork (with title) above, two lyric lines below. */
+.stageCentered {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  justify-items: center;
+  gap: 28px;
+  padding: 0 8vw 28px;
+}
+
+.stageCentered .art {
+  align-self: end;
+  width: min(300px, 34vh, 30vw);
+}
+
+/* 歌词: the lyric column alone, centred and a little wider. */
+.stageLyrics {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  padding: 0 10vw 12px;
+}
+
+.stageLyrics .lyrics {
+  width: 100%;
+  max-width: 760px;
+}
+
+.stageLyrics .line {
+  text-align: center;
+}
+
+.stageLyrics .line {
+  align-items: center;
+  transform-origin: center;
+}
+
+.centeredMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin-top: 22px;
+  text-align: center;
+}
+
+.centeredMeta strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.centeredMeta small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.duoWrap {
+  width: 100%;
+  max-width: 760px;
+}
+
+.duo {
+  position: relative;
+  display: grid;
+  min-height: calc(var(--lyric-size, 18px) * 3.6);
+  text-align: center;
+}
+
+.duoPair {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.duoCurrent {
+  margin: 0;
+  font-size: calc(var(--lyric-size, 18px) * 1.18);
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+.duoNext {
+  grid-area: 1 / 1;
+  margin: 0;
+  font-size: var(--lyric-size, 18px);
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.duoPair .duoNext {
+  grid-area: auto;
+}
+
+/* 经典唱片: a bigger disc than the square cover. */
+.record {
+  position: relative;
+  width: 112%;
+  margin: 0 -6%;
+}
+
+/*
+ * Effects around the artwork: a round cover a little smaller than the square
+ * one, so the effect ring (RING_SCALE × the cover) still fits the column.
+ */
+.disc {
+  position: relative;
+  width: 84%;
+  margin: 0 auto;
+}
+
+.discCover {
+  width: 100%;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.22), 0 26px 56px rgba(0, 0, 0, 0.4);
 }
 
 .artCover {
@@ -170,8 +324,14 @@
   padding-top: 8px;
 }
 
+/* Title and artist centred over the lyric column (in every layout). */
 .heading {
   flex-shrink: 0;
+  text-align: center;
+}
+
+.heading p {
+  justify-content: center;
 }
 
 .heading h2 {

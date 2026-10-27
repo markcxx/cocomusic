@@ -6,6 +6,9 @@ import type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/serv
 export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
 
+/** Window event that asks the account store to verify the login now (e.g. a VIP song came back as a preview). */
+export const ACCOUNT_RECHECK_EVENT = 'coco:account-recheck';
+
 export class AccountError extends Error {
   constructor(message: string, public readonly status: number) {
     super(message);
@@ -28,7 +31,7 @@ async function call<T>(path: string, init: RequestInit & { query?: Record<string
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
 
 export const accountApi = {
-  me: () => call<{ profile: UserProfile | null }>('me'),
+  me: () => call<{ profile: UserProfile | null; expired?: boolean }>('me'),
   detail: (signal?: AbortSignal) => call<{ detail: UserDetail | null }>('me/detail', { signal }),
   logout: () => call<{ ok: true }>('me', { method: 'DELETE' }),
   qrCreate: () => call<{ key: string; url: string; svg: string }>('login/qr', { method: 'POST' }),
