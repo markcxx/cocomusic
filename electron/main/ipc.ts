@@ -136,9 +136,12 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
   handle(IPC.desktopLyricsLock, (_window, locked) => {
     if (typeof locked === 'boolean') lyrics()?.lock(locked);
   });
+  handle(IPC.desktopLyricsReady, window => {
+    if (lyrics()?.isLyricsWindow(window)) lyrics()?.syncLock();
+  });
   // These two only make sense from the lyrics window itself.
   handle(IPC.desktopLyricsInteractive, (window, value) => {
-    if (typeof value === 'boolean' && lyrics()?.isLyricsWindow(window)) lyrics()?.setInteractive(value);
+    if (typeof value === 'boolean' && lyrics()?.isLyricsWindow(window)) lyrics()?.setInteractive();
   });
   handle(IPC.desktopLyricsDrag, (window, phase) => {
     if ((phase === 'start' || phase === 'end') && lyrics()?.isLyricsWindow(window)) lyrics()?.drag(phase);

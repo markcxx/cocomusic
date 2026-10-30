@@ -31,8 +31,8 @@ export type LyricsLayout = 'standard' | 'centered' | 'lyrics';
  * cover: mirror; 'vinyl' = the classic record with no effect; around a round
  * spinning cover: melody / ripple / scale.
  */
-export type VisualizerTemplate = 'off' | 'lines' | 'glow' | 'mirror' | 'vinyl' | 'melody' | 'ripple' | 'scale';
-export const VISUALIZER_TEMPLATES: readonly VisualizerTemplate[] = ['off', 'lines', 'glow', 'mirror', 'vinyl', 'melody', 'ripple', 'scale'];
+export type VisualizerTemplate = 'off' | 'lines' | 'glow' | 'mirror' | 'vinyl' | 'melody' | 'ripple' | 'scale' | 'roaming';
+export const VISUALIZER_TEMPLATES: readonly VisualizerTemplate[] = ['off', 'lines', 'glow', 'mirror', 'vinyl', 'melody', 'ripple', 'scale', 'roaming'];
 /** Effects drawn around the artwork: it turns into a round, spinning cover for them. */
 export const isRingTemplate = (template: VisualizerTemplate) => template === 'melody' || template === 'ripple' || template === 'scale';
 /** Bottom strip that 经典唱片 can carry (the record itself has no effect). */
@@ -289,7 +289,7 @@ function migrate(raw: Record<string, unknown>) {
   if (typeof next.accent === 'string' && LEGACY_ACCENTS[next.accent]) next.accent = LEGACY_ACCENTS[next.accent];
   if (typeof next.systemMaterial === 'boolean' && next.windowEffect === undefined) next.windowEffect = next.systemMaterial ? 'acrylic' : 'none';
   // Visualizer templates renamed / retired during development.
-  const templates: Record<string, string> = { bars: 'lines', particles: 'ripple', ring: 'scale', wave: 'melody' };
+  const templates: Record<string, string> = { bars: 'lines', particles: 'ripple', ring: 'scale', wave: 'melody', diorama: 'roaming' };
   if (typeof next.lyricsVisualizer === 'string' && templates[next.lyricsVisualizer]) next.lyricsVisualizer = templates[next.lyricsVisualizer];
   return next;
 }

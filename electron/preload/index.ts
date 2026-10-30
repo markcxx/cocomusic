@@ -18,6 +18,7 @@ const IPC = {
   openFilesReady: 'files:ready',
   desktopLyrics: 'lyrics:desktop',
   desktopLyricsLock: 'lyrics:lock',
+  desktopLyricsReady: 'lyrics:ready',
   desktopLyricsChanged: 'lyrics:changed',
   desktopLyricsInteractive: 'lyrics:interactive',
   desktopLyricsDrag: 'lyrics:drag',
@@ -135,7 +136,12 @@ contextBridge.exposeInMainWorld('coco', {
     setDesktop: (visible: boolean | 'toggle') => ipcRenderer.send(IPC.desktopLyrics, visible),
     setLocked: (locked: boolean) => ipcRenderer.send(IPC.desktopLyricsLock, locked),
     onDesktopChange: (listener: (visible: boolean) => void) => listen(IPC.desktopLyricsChanged, value => value === true, listener),
-    onLockChange: (listener: (locked: boolean) => void) => listen(IPC.desktopLyricsLock, value => value === true, listener),
+    onLockChange: (listener: (locked: boolean) => void) => {
+      const off = listen(IPC.desktopLyricsLock, value => value === true, listener);
+      // Subscribe first: ready-to-show can precede React hydration (or a page reload).
+      ipcRenderer.send(IPC.desktopLyricsReady);
+      return off;
+    },
     setInteractive: (interactive: boolean) => ipcRenderer.send(IPC.desktopLyricsInteractive, interactive),
     drag: (phase: 'start' | 'end') => ipcRenderer.send(IPC.desktopLyricsDrag, phase),
   },

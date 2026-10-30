@@ -38,6 +38,13 @@ type PlayerState = {
   reloadStream: () => void;
   /** The playback element (read-only use, e.g. the audio visualizer). */
   audioElement: () => HTMLAudioElement | null;
+  /**
+   * MV and music are exclusive: the video calls `openMv` when it starts (music pauses),
+   * `closeMv` when its page goes away (music resumes if it was playing the same track).
+   */
+  openMv: () => void;
+  closeMv: () => void;
+  setMvMedia: (media: HTMLVideoElement | null) => void;
   volume: number;
   mode: PlayMode;
   lyricsOpen: boolean;
@@ -149,6 +156,8 @@ const readQueue = (): { queue: Track[]; current?: Track } => {
  */
 export function PlayerProvider({ children }: { children: ReactNode }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const mvMedia = useRef<HTMLVideoElement | null>(null);
+  const mvSession = useRef<{ id: string; playing: boolean } | null>(null);
   const [queue, setQueue] = useState<Track[]>([]);
   const [track, setTrack] = useState(emptyTrack);
   // Bumped to (re)load the current track, including the same one again.
@@ -177,6 +186,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const select = (next: Track, options: { autoplay?: boolean; remember?: boolean } = {}) => {
     if (options.remember !== false && isPlayable(latest.current.track)) history.current = [...history.current.slice(-49), latest.current.track];
+    mvMedia.current?.pause();
+    mvSession.current = null;
     setTrack(next);
     setPosition(0);
     setMediaDuration(undefined);
@@ -190,6 +201,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   /** Nothing left to play: back to the empty state. */
   const stop = () => {
+    mvMedia.current?.pause();
+    mvSession.current = null;
     const audio = audioRef.current;
     audio?.pause();
     audio?.removeAttribute('src');
@@ -379,6 +392,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const sync = () => setPosition(audio.currentTime);
     const onDuration = () => setMediaDuration(Number.isFinite(audio.duration) ? audio.duration : undefined);
     const onPlaying = () => {
+      if (mvSession.current) { audio.pause(); return; }
       failures.current = 0;
       setStatus('ready');
       // Count a play once the audio actually starts (not on mere selection).
@@ -391,6 +405,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     const onWaiting = () => setStatus('loading');
     const onEnded = () => {
+      if (mvSession.current) return;
       if (latest.current.mode === 'one') {
         audio.currentTime = 0;
         void audio.play().catch(() => undefined);
@@ -399,7 +414,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       latest.current.step(1, true);
     };
     const onError = () => {
-      if (!audio.getAttribute('src')) return;
+      if (mvSession.current || !audio.getAttribute('src')) return;
       const current = latest.current.track;
       // Catalog links expire after ~20 minutes; refetch once and resume where we were.
       if (!current.localId && audio.currentTime > 0 && resumeAt.current === null) {
@@ -448,6 +463,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return {
       track, queue, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
       audioElement: audio,
+      setMvMedia: media => { mvMedia.current = media; if (media) media.volume = volume; },
+      openMv: () => {
+        if (mvSession.current) return;
+        mvSession.current = { id: track.id, playing };
+        fade.current?.(); fade.current = null;
+        audio()?.pause();
+        setPlaying(false);
+      },
+      closeMv: () => {
+        mvMedia.current?.pause();
+        const saved = mvSession.current;
+        mvSession.current = null;
+        if (saved?.id === track.id && saved.playing) setPlaying(true);
+      },
       reloadStream: () => {
         const element = audio();
         if (!isPlayable(track) || track.localId) return;
@@ -456,6 +485,13 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       },
       duration: mediaDuration ?? (trial ? trial.end - trial.start : track.duration ?? 0),
       togglePlay: () => {
+        if (mvSession.current) {
+          // Music takes over from the MV: pause the video and resume the song.
+          mvMedia.current?.pause();
+          mvSession.current = null;
+          if (isPlayable(track)) setPlaying(true);
+          return;
+        }
         if (!isPlayable(track)) { toast.info('从歌单、排行榜、本地音乐或搜索中选一首歌开始播放'); return; }
         if (status === 'error') { select(track, { remember: false }); return; }
         setPlaying(current => !current);
@@ -533,7 +569,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         element.currentTime = Math.max(0, Math.min(max, seconds));
         setPosition(element.currentTime);
       },
-      setVolume: next => { if (next > 0) lastVolume.current = next; setVolumeState(next); },
+      setVolume: next => { if (next > 0) lastVolume.current = next; setVolumeState(next); if (mvMedia.current && mvMedia.current.volume !== next) mvMedia.current.volume = next; },
       toggleMute: () => setVolumeState(current => (current > 0 ? 0 : lastVolume.current || 0.62)),
       cycleMode: () => {
         // Side effect stays outside the updater (updaters may run twice in strict mode).
@@ -552,6 +588,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   // System media controls (keyboard media keys, OS now-playing panels).
   const controls = useLatest(value);
+  /** Shortcuts and system controls pause/resume whatever is playing: the MV while one is open. */
+  const toggleActive = () => {
+    const video = mvSession.current && mvMedia.current;
+    if (!video) { controls.current.togglePlay(); return; }
+    if (video.paused) void video.play().catch(() => {}); else video.pause();
+  };
   useEffect(() => {
     if (!('mediaSession' in navigator) || !isPlayable(track)) return;
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -561,8 +603,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       artwork: track.cover ? [{ src: new URL(track.cover, window.location.href).href, sizes: '200x200' }] : [],
     });
     const handlers: Array<[MediaSessionAction, () => void]> = [
-      ['play', () => { if (!controls.current.playing) controls.current.togglePlay(); }],
-      ['pause', () => { if (controls.current.playing) controls.current.togglePlay(); }],
+      ['play', () => { if (mvSession.current) { void mvMedia.current?.play().catch(() => {}); return; } if (!controls.current.playing) controls.current.togglePlay(); }],
+      ['pause', () => { if (mvSession.current) { mvMedia.current?.pause(); return; } if (controls.current.playing) controls.current.togglePlay(); }],
       ['previoustrack', () => controls.current.previous()],
       ['nexttrack', () => controls.current.next()],
     ];
@@ -581,10 +623,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [titleShowsTrack, track]);
   useEffect(() => { broadcastPlayer.publishClock(position, playing); }, [position, playing]);
   useEffect(() => broadcastPlayer.onCommand(command => {
-    if (command === 'toggle') controls.current.togglePlay();
+    if (command === 'toggle') toggleActive();
     else if (command === 'next') controls.current.next();
     else if (command === 'previous') controls.current.previous();
     else if (command === 'sync') broadcastPlayer.publishTrack(controls.current.track, controls.current.trial, true);
+    // toggleActive only reads refs.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [controls]);
 
   // In-app shortcuts (设置 › 快捷键): Space play/pause; ⌘/Ctrl + ←/→ previous/next; ⌘/Ctrl + ↑/↓ volume.
@@ -610,31 +654,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const step = appSettings.get().seekStep;
       if (step && !typing && !event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
         if (target?.closest('[role="slider"], [role="menu"], [role="listbox"], [role="radiogroup"]')) return;
+        const delta = event.key === 'ArrowRight' ? step : -step;
+        const video = mvSession.current && mvMedia.current;
+        if (video) { event.preventDefault(); video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta)); return; }
         const audio = audioRef.current;
         if (!audio?.getAttribute('src')) return;
         event.preventDefault();
-        controls.current.seek(audio.currentTime + (event.key === 'ArrowRight' ? step : -step));
+        controls.current.seek(audio.currentTime + delta);
         return;
       }
       if (event.code !== 'Space' || event.metaKey || event.ctrlKey) return;
       // Modal dialogs own the keyboard, except surfaces of the player itself (lyrics page).
       if (typing || target?.closest('button, [role="slider"], [role="menu"], [role="dialog"]:not([data-player-surface])')) return;
       event.preventDefault();
-      controls.current.togglePlay();
+      toggleActive();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [controls]);
 
   // System-wide shortcuts registered by the main process (设置 › 快捷键 › 全局快捷键).
   useEffect(() => window.coco?.app?.onShortcut(action => {
     const player = controls.current;
-    if (action === 'toggle') player.togglePlay();
+    if (action === 'toggle') toggleActive();
     else if (action === 'next') player.next();
     else if (action === 'previous') player.previous();
     else if (action === 'volume-up') player.setVolume(Math.min(1, Math.round((player.volume + 0.05) * 100) / 100));
     else if (action === 'volume-down') player.setVolume(Math.max(0, Math.round((player.volume - 0.05) * 100) / 100));
     else if (action === 'lyrics') window.coco?.lyrics?.setDesktop('toggle');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [controls]);
 
   return (

@@ -18,6 +18,17 @@
   pointer-events: none;
 }
 
+/* Keep the reserved height while sliding away, so lyrics never jump. */
+.playerBar {
+  position: relative;
+  z-index: 3;
+  flex-shrink: 0;
+}
+
+.playerBar[aria-hidden='true'] {
+  pointer-events: none;
+}
+
 /*
  * Layer for the bottom visualizer strips: above the backdrop, below the
  * lyrics page (z-index 1) and the bar, so lyrics are never covered. Its
@@ -547,3 +558,5 @@
 @keyframes artSpin {
   to { rotate: 360deg; }
 }
+
+.roamingStage { height: 100%; min-height: 0; transform-origin: center top; }

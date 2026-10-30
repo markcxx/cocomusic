@@ -359,7 +359,7 @@ export function SettingsView() {
             <Row title="布局" description="也可在歌词页右上角的「播放器模式」卡片中切换">
               <Segmented value={s.lyricsLayout} onChange={set('lyricsLayout')} label="布局" options={[{ value: 'standard', label: '标准' }, { value: 'centered', label: '居中' }, { value: 'lyrics', label: '歌词' }]} />
             </Row>
-            <Row title="播放器模式" description="歌词页的音频可视化效果，也可在歌词页右上角预览和切换">
+            <Row title="播放器模式" description="歌词页的音频可视化与 3D 歌词效果，也可在歌词页右上角预览和切换">
               <Select
                 value={s.lyricsVisualizer}
                 onChange={value => pickTemplate(s.lyricsVisualizer, value, player.reloadStream)}

@@ -13,6 +13,7 @@ import { settings, useSettings } from '@/lib/settings';
 import { shareUrl } from '@/lib/share-links';
 import type { AudioQuality, CatalogTrack } from '@/server/music/types';
 import { CommentButton, PlayModeButton, PlayPauseButton, SkipButton, VolumeControl } from './controls';
+import { MvButton } from './mv/MvButton';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { useSongStats } from './use-song-stats';
 import styles from './LyricsPlayerBar.module.css';
@@ -49,7 +50,7 @@ function QualityButton() {
     { type: 'section', label: '在线播放音质' },
     ...QUALITY_ORDER.map((quality): MenuItem => ({
       label: QUALITY_LABELS[quality],
-      hint: quality === preferred ? '当前' : undefined,
+      selected: quality === preferred,
       onSelect: () => {
         settings.set('quality', quality);
         player.reloadStream();
@@ -173,6 +174,7 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
         </div>
 
         <div className={styles.tools}>
+          <MvButton />
           <QualityButton />
           <AddToPlaylistButton />
           <IconButton label={desktopLyrics.visible ? '关闭桌面歌词' : '打开桌面歌词'} tone="muted" onClick={desktopLyrics.toggle} disabled={!desktopLyrics.available} active={desktopLyrics.visible} pressed={desktopLyrics.visible}>

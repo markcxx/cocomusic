@@ -34,6 +34,7 @@
    (equal side columns); extras flank it. Each button has its own soft glass
    chip so it stays legible over the lyrics and any wallpaper. */
 .controlsWrap {
+  z-index: 2;
   position: absolute;
   top: 6px;
   right: 14px;
@@ -139,6 +140,7 @@
 }
 
 .stage {
+  pointer-events: none;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -209,6 +211,7 @@
 }
 
 .align-left .stage {
+  pointer-events: none;
   align-items: flex-start;
 }
 
@@ -218,6 +221,7 @@
 }
 
 .align-right .stage {
+  pointer-events: none;
   align-items: flex-end;
 }
 

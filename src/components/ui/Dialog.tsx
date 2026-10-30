@@ -4,20 +4,23 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useLatest } from '@/lib/use-latest';
+import { cn } from '@/lib/cn';
 import { IconButton } from './IconButton';
 import styles from './Dialog.module.css';
 
 /** Centered modal with a soft scrim. Escape / scrim click closes; focus returns on close. */
-export function Dialog({ open, onClose, title, children, width }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; width?: number }) {
+export function Dialog({ open, onClose, title, children, width, className, ariaLabel }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; width?: number; className?: string; ariaLabel?: string }) {
   const panel = useRef<HTMLDivElement>(null);
+  const close = useLatest(onClose);
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') close.current(); };
     window.addEventListener('keydown', onKey);
     requestAnimationFrame(() => panel.current?.querySelector<HTMLElement>('input, button:not([data-dialog-close])')?.focus() ?? panel.current?.focus());
     return () => { window.removeEventListener('keydown', onKey); previous?.focus?.(); };
-  }, [open, onClose]);
+  }, [open, close]);
 
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -28,9 +31,9 @@ export function Dialog({ open, onClose, title, children, width }: { open: boolea
             ref={panel}
             role="dialog"
             aria-modal="true"
-            aria-label={title}
+            aria-label={ariaLabel ?? title}
             tabIndex={-1}
-            className={styles.dialog}
+            className={cn(styles.dialog, className)}
             style={width ? { width: `min(${width}px, calc(100vw - 48px))` } : undefined}
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}

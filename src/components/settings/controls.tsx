@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check, ChevronDown, RotateCcw } from 'lucide-react';
+import { ChevronDown, RotateCcw } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { Menu, Slider, type MenuItem } from '@/components/ui';
 import { cn } from '@/lib/cn';
@@ -69,7 +69,7 @@ export function Select<T extends string>({ value, options, onChange, label, plac
   const items: MenuItem[] = options.map(option => ({
     label: option.label,
     hint: option.hint,
-    icon: option.value === value ? <Check size={14} strokeWidth={2} /> : <span style={{ width: 14 }} />,
+    selected: option.value === value,
     onSelect: () => onChange(option.value),
   }));
   return (

@@ -5,6 +5,7 @@ import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics
 import { useNavigation } from '@/components/layout/navigation';
 import { IconButton } from '@/components/ui';
 import { CommentButton, Transport, VolumeControl } from './controls';
+import { MvButton } from './mv/MvButton';
 import { usePlayer } from './player-store';
 import { ProgressBar } from './ProgressBar';
 import { TrackInfo } from './TrackInfo';
@@ -41,6 +42,7 @@ export function PlayerBar() {
       </div>
 
       <div className={styles.tools}>
+        <MvButton />
         <CommentButton count={stats.commentCount} onClick={openComments} disabled={!track.songId} active={viewingComments} />
         <VolumeControl />
         <IconButton

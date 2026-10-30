@@ -30,6 +30,7 @@ export const IPC = {
   desktopLyrics: 'lyrics:desktop',
   /** renderer → main: desktop lyrics click-through lock on/off. */
   desktopLyricsLock: 'lyrics:lock',
+  desktopLyricsReady: 'lyrics:ready',
   /** main → renderer: desktop lyrics window shown (true) or hidden (false). */
   desktopLyricsChanged: 'lyrics:changed',
   /** lyrics window → main: pointer is over a control while locked (take mouse input back). */

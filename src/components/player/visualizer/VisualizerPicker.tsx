@@ -20,6 +20,7 @@ export const TEMPLATES: Array<{ value: VisualizerTemplate; label: string }> = [
   { value: 'melody', label: '跳动旋律' },
   { value: 'ripple', label: '迷幻水波' },
   { value: 'scale', label: '动感音阶' },
+  { value: 'roaming', label: '星河漫游' },
 ];
 
 const LAYOUTS: Array<{ value: LyricsLayout; label: string }> = [
@@ -66,9 +67,21 @@ const VINYL_EFFECTS: Array<{ value: VinylEffect; label: string }> = [
   { value: 'glow', label: '柔光波' },
 ];
 
-/** Tiny lyrics page in the card: artwork (or record) + three lyric lines + the template live. */
+/** Tiny lyrics page in the card: artwork (or record) + three lyric lines + a fixed template frame. */
 function Thumb({ template, color, tint, seed, src, strip }: { template: VisualizerTemplate; color: VisualizerColor; tint: string; seed: string; src?: string; strip: 'lines' | 'glow' | null }) {
   const ring = isRingTemplate(template);
+  if (template === 'roaming') return <span className={cn(styles.thumb, styles.thumbRoaming)} style={{ '--tint': tint } as React.CSSProperties} aria-hidden>
+    <Cover seed={seed} src={src} className={styles.roamingCover} radius={0} />
+    <span className={styles.roamingShade} />
+    <span className={styles.roamingLyrics}>
+      <span className={styles.roamingDistant}>沿着旋律</span>
+      <span className={styles.roamingUpcoming}>走向下一句</span>
+      <span className={styles.roamingCurrent}>让音乐靠近</span>
+    </span>
+    <span className={styles.roamingNotes}>
+      <i>♪</i><i>♫</i><i>♩</i><i>♪</i><i>♫</i><i>♬</i>
+    </span>
+  </span>;
   return (
     <span className={styles.thumb} style={{ '--tint': tint } as React.CSSProperties}>
       <span className={cn(styles.thumbArt, template === 'mirror' && styles.thumbArtHigh)}>
@@ -79,7 +92,7 @@ function Thumb({ template, color, tint, seed, src, strip }: { template: Visualiz
             <span className={styles.thumbArm} />
           </>
         ) : ring ? (
-          // Effects around a round, spinning cover (no record).
+          // Effects around a round cover (no record).
           <>
             <TemplatePreview template={template} color={color} tint={tint} className={styles.thumbRing} />
             <Cover seed={seed} src={src} radius={999} className={styles.thumbRound} />
@@ -98,7 +111,7 @@ function Thumb({ template, color, tint, seed, src, strip }: { template: Visualiz
 }
 
 /**
- * 歌词页右上角的「播放器模式」按钮与卡片。每个模式都是一张会动的小歌词页预览；
+ * 歌词页右上角的「播放器模式」按钮与卡片。每个模式都是一张静态的小歌词页预览；
  * 选择立即生效并保存到 设置 › 歌词页（配色、密度也在那里）。
  */
 export function VisualizerPicker() {
@@ -165,11 +178,11 @@ export function VisualizerPicker() {
         onClick={() => setOpen(value => !value)}
         aria-haspopup="dialog"
         aria-expanded={open}
-        aria-label="播放器模式"
+        aria-label="播放模式"
         whileTap={{ scale: 0.92 }}
       >
         <AudioLines size={15} strokeWidth={1.6} />
-        {TEMPLATES.find(item => item.value === prefs.lyricsVisualizer)?.label ?? '播放器模式'}
+        播放模式
         <motion.span className={styles.caret} animate={{ rotate: open ? 180 : 0 }}><ChevronDown size={13} strokeWidth={1.8} /></motion.span>
       </motion.button>
 

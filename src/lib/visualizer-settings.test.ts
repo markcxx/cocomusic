@@ -17,3 +17,9 @@ test('audio is read only when something actually reacts to it', () => {
   assert.equal(needsSamples('vinyl', 'lines'), true);
   assert.equal(needsSamples('melody', 'none'), true);
 });
+
+test('空间漫游 reads audio for particle response without a bottom strip', () => {
+  assert.equal(needsSamples('roaming', 'none'), true);
+  assert.equal(needsSamples('roaming', 'glow'), true);
+  assert.equal(stripTemplate('roaming', 'glow'), null);
+});

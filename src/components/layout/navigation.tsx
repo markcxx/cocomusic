@@ -19,7 +19,9 @@ export type Route =
   | { name: 'artist'; id: string; title?: string }
   | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' }
   /** Song comments; carries display info so the header renders before data loads. */
-  | { name: 'comments'; songId: string; source?: 'netease' | 'qq' | 'kugou'; title?: string; artist?: string; cover?: string };
+  | { name: 'comments'; songId: string; source?: 'netease' | 'qq' | 'kugou'; title?: string; artist?: string; cover?: string }
+  /** The song's official MV; same display info as comments. */
+  | { name: 'mv'; songId: string; source?: 'netease' | 'qq' | 'kugou'; title?: string; artist?: string; cover?: string };
 
 export type RouteName = Route['name'];
 
@@ -38,13 +40,14 @@ export const routeTitles: Record<RouteName, string> = {
   artist: '歌手',
   search: '搜索',
   comments: '评论',
+  mv: 'MV',
 };
 
 export const routeKey = (route: Route) => {
   switch (route.name) {
     case 'playlist': case 'album': case 'artist': return `${route.name}:${route.id}`;
     case 'search': return `search:${route.keyword}:${route.type ?? 'song'}`;
-    case 'comments': return `comments:${route.source ?? 'netease'}:${route.songId}`;
+    case 'comments': case 'mv': return `${route.name}:${route.source ?? 'netease'}:${route.songId}`;
     default: return route.name;
   }
 };
@@ -55,6 +58,8 @@ type History = { stack: Entry[]; index: number; source: string };
 
 /** Routes whose ids belong to one platform; they are dropped when the user switches platform. */
 const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked']);
+/** Song pages carry their own source, but the stack still drops them on a platform switch. */
+const SONG_ROUTES = new Set<RouteName>(['comments', 'mv']);
 
 
 type NavigationState = {
@@ -90,7 +95,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // current page stays mounted when it is neutral, otherwise we land on home.
   if (history.source !== source) {
     const currentEntry = history.stack[history.index];
-    const keep = history.stack.filter(entry => !PLATFORM_ROUTES.has(entry.route.name) && entry.route.name !== 'comments');
+    const keep = history.stack.filter(entry => !PLATFORM_ROUTES.has(entry.route.name) && !SONG_ROUTES.has(entry.route.name));
     let stack = keep;
     let index = stack.indexOf(currentEntry);
     if (index < 0) {

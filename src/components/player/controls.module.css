@@ -44,6 +44,13 @@
   height: 54px;
 }
 
+/* Inline with 34px icon buttons (MV player controls). */
+.playCompact {
+  width: 34px;
+  height: 34px;
+  margin: 0;
+}
+
 /* Gentle breathing ring while audio plays. */
 .playing {
   animation: breathe 2.6s ease-in-out infinite;
@@ -150,4 +157,15 @@
 
 :global([data-theme='dark']) .playButton:hover {
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+}
+
+/* Text glyph for the MV button, sized to sit with the 18px line icons. */
+.mvGlyph {
+  padding: 1px 3px;
+  border: 1.4px solid currentColor;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 11px;
+  letter-spacing: 0.02em;
 }

@@ -50,13 +50,18 @@ export function PlayModeButton({ size = 18 }: { size?: number }) {
 export function PlayPauseButton({ large = false }: { large?: boolean }) {
   const player = usePlayer();
   const buffering = player.playing && player.status === 'loading';
-  const label = player.playing ? '暂停' : '播放';
-  const glyph = large ? 22 : 18;
+  return <PlaybackButton playing={player.playing} buffering={buffering} onToggle={player.togglePlay} large={large} />;
+}
+
+/** Shared audio/video play control with the same size, icon transition and focus behaviour. */
+export function PlaybackButton({ playing, buffering = false, onToggle, large = false, compact = false }: { playing: boolean; buffering?: boolean; onToggle: () => void; large?: boolean; compact?: boolean }) {
+  const label = playing ? '暂停' : '播放';
+  const glyph = large ? 22 : compact ? 15 : 18;
   return (
     <motion.button
       type="button"
-      className={cn(styles.playButton, large && styles.playLarge, player.playing && styles.playing)}
-      onClick={player.togglePlay}
+      className={cn(styles.playButton, large && styles.playLarge, compact && styles.playCompact, playing && styles.playing)}
+      onClick={onToggle}
       aria-label={label}
       data-tooltip={label}
       data-tooltip-shortcut="Space"
@@ -64,10 +69,10 @@ export function PlayPauseButton({ large = false }: { large?: boolean }) {
       whileTap={{ scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 520, damping: 20 }}
     >
-      <Swap id={buffering ? 'loading' : player.playing ? 'pause' : 'play'}>
+      <Swap id={buffering ? 'loading' : playing ? 'pause' : 'play'}>
         {buffering
           ? <Loader2 size={glyph} strokeWidth={2} className={styles.spin} aria-label="缓冲中" />
-          : player.playing ? <Pause size={glyph} strokeWidth={0} fill="currentColor" /> : <Play size={glyph} strokeWidth={0} fill="currentColor" className={styles.playGlyph} />}
+          : playing ? <Pause size={glyph} strokeWidth={0} fill="currentColor" /> : <Play size={glyph} strokeWidth={0} fill="currentColor" className={styles.playGlyph} />}
       </Swap>
     </motion.button>
   );
@@ -125,8 +130,9 @@ export function CommentButton({ count, onClick, active, disabled }: { count?: nu
  * while dragging, or while the slider has keyboard focus. Wheel over the
  * icon or the popover nudges the volume.
  */
-export function VolumeControl({ className }: { className?: string }) {
-  const player = usePlayer();
+export function VolumeControl({ className, controls }: { className?: string; controls?: { volume: number; setVolume: (value: number) => void; toggleMute: () => void } }) {
+  const audio = usePlayer();
+  const player = controls ?? audio;
   const VolumeIcon = player.volume === 0 ? VolumeX : player.volume < 0.5 ? Volume1 : Volume2;
   const [open, setOpen] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);

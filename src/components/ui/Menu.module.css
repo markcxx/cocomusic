@@ -33,6 +33,19 @@
   outline: none;
 }
 
+/* Current choice: tinted fill instead of a check icon. */
+.selected,
+.selected:hover:not(:disabled),
+.selected:focus-visible {
+  background: rgba(var(--accent-rgb), 0.22);
+  font-weight: 500;
+  color: var(--accent-strong);
+}
+
+.selected .icon {
+  color: inherit;
+}
+
 .item:disabled {
   color: var(--text-muted);
   cursor: default;

@@ -3,6 +3,7 @@ import path from 'node:path';
 import { app, BrowserWindow, screen, type Rectangle } from 'electron';
 import { IPC } from '../shared/ipc';
 import { refreshSystemMenus } from './system-integration';
+import { overLyricsUnlock } from './desktop-lyrics-input';
 
 /**
  * Desktop lyrics: a transparent, frameless, always-on-top window that loads
@@ -26,7 +27,8 @@ function readState(): State {
 
 let state: State = { locked: false, visible: false };
 let lyricsWindow: BrowserWindow | undefined;
-let interactive = false;
+let unlockTimer: NodeJS.Timeout | undefined;
+let ignoringMouse: boolean | undefined;
 let dragTimer: NodeJS.Timeout | undefined;
 let owner: BrowserWindow | undefined;
 let saveTimer: NodeJS.Timeout | undefined;
@@ -57,16 +59,27 @@ function notify() {
   if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.webContents.send(IPC.desktopLyricsLock, state.locked);
 }
 
-function applyLock() {
+/** Native cursor checks also work when Electron forwards no DOM pointer events. */
+function updateMouseInput() {
   if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
-  // Locked: clicks pass through to whatever is underneath. `forward` keeps
-  // mousemove coming so hovering can still reveal the unlock button, and the
-  // renderer briefly takes input back while the pointer is on that button.
-  lyricsWindow.setIgnoreMouseEvents(state.locked && !interactive, { forward: true });
+  const ignore = state.locked && !overLyricsUnlock(lyricsWindow.getContentBounds(), screen.getCursorScreenPoint(), lyricsWindow.webContents.getZoomFactor());
+  if (ignore === ignoringMouse) return;
+  lyricsWindow.setIgnoreMouseEvents(ignore, { forward: true });
+  ignoringMouse = ignore;
+}
+
+function applyLock() {
+  clearInterval(unlockTimer);
+  unlockTimer = undefined;
+  if (!lyricsWindow || lyricsWindow.isDestroyed()) return;
+  if (state.locked) { clearInterval(dragTimer); dragTimer = undefined; }
+  updateMouseInput();
   lyricsWindow.setResizable(!state.locked);
+  if (state.locked) unlockTimer = setInterval(updateMouseInput, 50);
 }
 
 function create(origin: string, preload: string) {
+  ignoringMouse = undefined;
   const window = new BrowserWindow({
     ...initialBounds(),
     minWidth: 360,
@@ -102,6 +115,11 @@ function create(origin: string, preload: string) {
   window.on('moved', track);
   window.on('resized', track);
   window.on('closed', () => {
+    clearInterval(unlockTimer);
+    clearInterval(dragTimer);
+    unlockTimer = undefined;
+    dragTimer = undefined;
+    ignoringMouse = undefined;
     lyricsWindow = undefined;
     if (state.visible) { state.visible = false; save(); notify(); }
   });
@@ -136,9 +154,12 @@ export function setupDesktopLyrics(main: BrowserWindow, origin: string, preload:
       applyLock();
       notify();
     },
-    setInteractive(value: boolean) {
-      interactive = value;
-      applyLock();
+    syncLock() {
+      if (lyricsWindow && !lyricsWindow.isDestroyed()) lyricsWindow.webContents.send(IPC.desktopLyricsLock, state.locked);
+    },
+    setInteractive() {
+      // Old renderers can request an immediate check; native bounds remain authoritative.
+      updateMouseInput();
     },
     /**
      * Manual drag: follows the cursor from where the press happened. Used instead

@@ -17,11 +17,14 @@ import { LyricsPlayerBar } from './LyricsPlayerBar';
 import { usePlayer } from './player-store';
 import { usePageSnap } from './use-page-snap';
 import { useSongStats } from './use-song-stats';
+import { useIdlePlayerBar } from './use-idle-player-bar';
 import { Vinyl } from './visualizer/Vinyl';
 import { MirrorVisualizer, ProgressVisualizer, RingVisualizer, useVisualizer } from './visualizer/Visualizer';
 import { isRingTemplate } from '@/lib/settings';
 import { VisualizerPicker } from './visualizer/VisualizerPicker';
 import styles from './LyricsDrawer.module.css';
+import dynamic from 'next/dynamic';
+const RoamingPlayer = dynamic(() => import('./roaming/RoamingPlayer'), { ssr: false });
 
 /** Page 1: comment header (title + sort) fixed at the top, list scrolling beneath it. */
 function CommentsPage({ songId, source, total }: { songId: string; source?: Track['source']; total?: number }) {
@@ -71,6 +74,11 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
   const scale = useTransform(progress, [0, 1], [1, 0.94]);
   const { template } = useVisualizer();
   const ringTemplate = isRingTemplate(template);
+  if (prefs.lyricsVisualizer === 'roaming') return (
+    <motion.div className={styles.roamingStage} style={{ opacity, scale }}>
+      <RoamingPlayer />
+    </motion.div>
+  );
   return (
     <motion.div className={cn(styles.stage, layout === 'centered' && styles.stageCentered, layout === 'lyrics' && styles.stageLyrics)} style={{ opacity, scale }}>
       <AnimatePresence mode="popLayout" initial={false}>
@@ -148,9 +156,9 @@ function Stage({ progress }: { progress: MotionValue<number> }) {
  * A dedicated dark player bar replaces the main one while open.
  */
 export function LyricsDrawer() {
-  const { lyricsOpen, closeLyrics, track, playing } = usePlayer();
+  const { lyricsOpen, closeLyrics, track, playing, queueOpen } = usePlayer();
   const stats = useSongStats(track.songId, track.source);
-  const { lyricsBackground, lyricsKeepAwake } = useSettings();
+  const { lyricsBackground, lyricsKeepAwake, reduceMotion } = useSettings();
 
   // 设置 › 歌词页 › 保持屏幕常亮: hold a screen wake lock while lyrics are open and playing.
   useEffect(() => {
@@ -178,7 +186,7 @@ export function LyricsDrawer() {
   useEffect(() => {
     if (!lyricsOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
+      if (event.key !== 'Escape' || document.querySelector('[aria-label="MV 播放器"]')) return;
       // Escape steps back: comments → lyrics → closed.
       if (onComments) goTo(0); else closeLyrics();
     };
@@ -188,6 +196,8 @@ export function LyricsDrawer() {
 
   // Native listener: React's wheel handlers are passive and cannot preventDefault.
   const [drawer, setDrawer] = useState<HTMLElement | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
+  const barHidden = useIdlePlayerBar(drawer, lyricsOpen && !onComments && !queueOpen);
   useEffect(() => {
     if (!drawer) return;
     drawer.addEventListener('wheel', onWheel, { passive: false });
@@ -201,9 +211,10 @@ export function LyricsDrawer() {
   const [railBottom, setRailBottom] = useState<number>();
   useEffect(() => {
     const rail = drawer?.querySelector<HTMLElement>('[data-lyrics-progress] [role="slider"]');
-    if (!drawer || !rail) return;
+    const bar = barRef.current;
+    if (!drawer || !rail || !bar) return;
     const place = () => {
-      const box = drawer.getBoundingClientRect();
+      const box = bar.getBoundingClientRect();
       const slider = rail.getBoundingClientRect();
       // Centre of the slider = the rail line.
       setRailBottom(Math.round(box.bottom - (slider.top + slider.height / 2)));
@@ -211,6 +222,7 @@ export function LyricsDrawer() {
     place();
     const observer = new ResizeObserver(place);
     observer.observe(drawer);
+    observer.observe(bar);
     observer.observe(rail);
     return () => observer.disconnect();
   }, [drawer]);
@@ -223,6 +235,7 @@ export function LyricsDrawer() {
           className={styles.drawer}
           data-theme="dark"
           data-player-surface
+          data-lyrics-drawer
           role="dialog"
           aria-modal="true"
           aria-label="歌词"
@@ -237,9 +250,9 @@ export function LyricsDrawer() {
           </div>
 
           {/* Bottom strips sit on the backdrop, under the lyrics and the bar (never covering text). */}
-          <div className={styles.strip} style={railBottom !== undefined ? { bottom: railBottom } : undefined} aria-hidden>
+          <motion.div className={styles.strip} style={railBottom !== undefined ? { bottom: railBottom } : undefined} animate={{ y: barHidden ? (railBottom ?? 78) : 0 }} transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }} aria-hidden>
             <ProgressVisualizer />
-          </div>
+          </motion.div>
 
           <div className={styles.topBar}>
             <motion.button type="button" className={styles.close} onClick={closeLyrics} aria-label="收起歌词" data-tooltip="收起" data-tooltip-placement="right" data-tooltip-shortcut="Esc" whileHover={{ y: 2 }} whileTap={{ scale: 0.9 }}>
@@ -271,7 +284,18 @@ export function LyricsDrawer() {
             </motion.div>
           </div>
 
-          <LyricsPlayerBar onComments={() => goTo(1)} />
+          <motion.div
+            ref={barRef}
+            className={styles.playerBar}
+            data-lyrics-player-bar
+            inert={barHidden}
+            aria-hidden={barHidden}
+            initial={false}
+            animate={{ y: barHidden ? '100%' : 0, opacity: barHidden ? 0 : 1 }}
+            transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <LyricsPlayerBar onComments={() => goTo(1)} />
+          </motion.div>
         </motion.section>
       )}
     </AnimatePresence>

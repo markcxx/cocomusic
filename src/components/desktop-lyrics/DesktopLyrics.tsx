@@ -47,10 +47,7 @@ function Controls({ locked, playing, fontSize, translation }: { locked: boolean;
     <button
       type="button"
       className={cn(styles.tool, locked && styles.on)}
-      onClick={() => { window.coco?.lyrics?.setLocked(!locked); window.coco?.lyrics?.setInteractive(false); }}
-      // Locked windows ignore clicks; take input back only while over this button.
-      onPointerEnter={() => { if (locked) window.coco?.lyrics?.setInteractive(true); }}
-      onPointerLeave={() => window.coco?.lyrics?.setInteractive(false)}
+      onClick={() => window.coco?.lyrics?.setLocked(!locked)}
       aria-label={locked ? '解锁' : '锁定'}
       data-tooltip={locked ? '解锁桌面歌词' : '锁定（鼠标可穿透）'}
     >
@@ -93,8 +90,7 @@ function Controls({ locked, playing, fontSize, translation }: { locked: boolean;
  * Desktop lyrics window content. Transparent page: only the text (with a soft
  * outline for legibility on any wallpaper) and, on hover, a control strip.
  * Style comes from 设置 › 桌面歌词 and follows changes live from the main window.
- * Locked: the window ignores the mouse (set by main); hovering still shows the
- * lock button so it can be unlocked.
+ * Locked: text passes clicks through; the visible unlock button has a native hit area.
  */
 export function DesktopLyrics() {
   const [track, setTrack] = useState<FollowedTrack | null>(null);
@@ -114,7 +110,7 @@ export function DesktopLyrics() {
     // Ask the main window for the current song (we may open mid-song).
     playerFollower.send('sync');
     const offLock = window.coco?.lyrics?.onLockChange(setLocked);
-    return () => { off(); offLock?.(); };
+    return () => { off(); offLock?.(); clearTimeout(hideTimer.current); window.coco?.lyrics?.drag('end'); };
   }, []);
 
   const lyrics = useTrackLyrics(track ?? {});
@@ -142,6 +138,9 @@ export function DesktopLyrics() {
     <main
       className={cn(styles.root, hover && !locked && styles.hovering, locked && styles.locked, !prefs.desktopStroke && styles.noStroke, styles[`align-${prefs.desktopAlign}`])}
       style={{ '--size': `${prefs.desktopFontSize}px`, '--from': color.from, '--to': color.to, '--weight': prefs.desktopFontWeight } as React.CSSProperties}
+      onMouseEnter={onEnter}
+      onMouseMove={onEnter}
+      onMouseLeave={onLeave}
       onPointerEnter={onEnter}
       onPointerMove={onEnter}
       onPointerLeave={onLeave}
@@ -156,7 +155,7 @@ export function DesktopLyrics() {
       onLostPointerCapture={() => window.coco?.lyrics?.drag('end')}
     >
       <AnimatePresence>
-        {hover && (
+        {(hover || locked) && (
           <motion.div className={styles.controlsWrap} initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
             <Controls locked={locked} playing={Boolean(clock?.playing)} fontSize={prefs.desktopFontSize} translation={prefs.desktopShowTranslation} />
           </motion.div>

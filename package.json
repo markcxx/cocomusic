@@ -1,7 +1,7 @@
 {
   "name": "cocomusic",
   "productName": "CoCo Music",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "private": true,
   "description": "CoCo Music 多平台音乐桌面播放器",
   "author": "markcxx",
@@ -37,7 +37,9 @@
     "node-taglib-sharp": "6.0.3",
     "qrcode": "1.5.4",
     "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "react-dom": "19.2.3",
+    "three": "0.185.1",
+    "video.js": "^8.24.2"
   },
   "devDependencies": {
     "@types/node": "22.20.5",
@@ -45,6 +47,7 @@
     "@types/react": "19.2.8",
     "@types/react-dom": "19.2.3",
     "@types/react-test-renderer": "19.1.0",
+    "@types/three": "0.185.4",
     "electron": "45.0.0",
     "electron-builder": "26.15.3",
     "eslint": "9.39.5",
