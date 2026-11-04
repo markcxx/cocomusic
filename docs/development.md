@@ -27,6 +27,7 @@ npm run dev
 | `npm run typecheck` | 检查前端和 Electron 类型 |
 | `npm run lint` | 运行 ESLint |
 | `npm test` | 运行单元与集成测试 |
+| `npm run test:taskbar-lyrics` | Windows 实际任务栏歌词、交互及前台切换测试 |
 | `npm run build` | 构建界面、本机服务和 Electron |
 | `npm start` | 从已有构建启动应用 |
 | `npm run dist:dir` | 生成未压缩的应用目录 |
@@ -44,6 +45,20 @@ Windows 主进程使用 Koffi 调用 `DwmSetWindowAttribute`、`DwmSetIconicThum
 运行 `npm run test:taskbar` 可在隐藏 Electron 窗口验证原生模块、窗口消息回调和位图资源释放。隐藏窗口提交可能返回 `E_INVALIDARG`，此测试不能代替真实任务栏外观验收。
 
 手动验收：运行 `npm run dev`，播放在线/本地有封面的歌曲，hover 任务栏图标；检查封面与三按钮，切歌时封面更新、暂停时按钮变化；切换页面、最小化和恢复后重复检查；无封面或断网时显示默认图标。Windows 自身决定预览边框、标题与显示时机。
+
+## Windows 任务栏歌词
+
+从「设置 → 任务栏歌词」开启，默认关闭。自动布局从主屏幕横向任务栏最左侧的可用区域开始，避让小组件、开始菜单、应用按钮和通知区域；开始菜单靠左时自动寻找其后的空位。支持调整位置、宽度、字号、翻译和文字/高亮颜色。常规字重、透明背景，悬停时显示小圆角背景，歌词向右移动并展开上一首、播放/暂停、下一首与喜欢按钮；右键可打开设置或关闭歌词。
+
+`electron/main/taskbar-lyrics.ts` 管理透明窗口和生命周期，`build/windows/taskbar-layout.ps1` 在独立进程读取 Explorer 控件位置、系统明暗、DPI 与前台窗口。窗口复用托盘的播放器状态和操作 IPC。普通最大化窗口不视为全屏；切换应用时更新窗口层级，短暂 UI Automation 失败保留未变化的位置。真正全屏、自动隐藏任务栏或可用空间不足时收起，恢复后重新显示。当前支持主屏幕横向任务栏。
+
+`npm run test:taskbar-lyrics` 使用隔离的偏好目录与本机服务，不读取音乐账号。测试会短暂显示一个测试窗口，验证真实前台最大化、Win32 命中窗口、全屏收起与恢复，以及歌词右移动画、按钮 IPC、自定义颜色和开关清理。测试截图保存在 `docs/screenshots/taskbar-lyrics-*.png`；桌面实拍只保存歌词窗口区域。
+
+闲置状态与悬停状态（Windows 11 实拍）：
+
+![任务栏歌词：透明闲置状态](screenshots/taskbar-lyrics-desktop-idle.png)
+
+![任务栏歌词：悬停时展开控制按钮](screenshots/taskbar-lyrics-desktop-hover.png)
 
 ## 项目结构
 

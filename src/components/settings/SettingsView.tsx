@@ -54,6 +54,7 @@ const SECTIONS = [
   { id: 'playback', label: '播放', icon: Play },
   { id: 'lyrics', label: '歌词页', icon: Type },
   { id: 'desktop-lyrics', label: '桌面歌词', icon: Mic2 },
+  { id: 'taskbar-lyrics', label: '任务栏歌词', icon: Mic2 },
   { id: 'mini', label: '迷你模式', icon: PictureInPicture2 },
   { id: 'downloads', label: '下载', icon: Download },
   { id: 'library', label: '本地与数据', icon: HardDrive },
@@ -219,7 +220,7 @@ export function SettingsView() {
 
       <div className={styles.layout}>
         <nav className={styles.index} aria-label="设置分类">
-          {SECTIONS.map(({ id, label, icon: Icon }) => (
+          {SECTIONS.filter(section => section.id !== 'taskbar-lyrics' || app.result?.info.platform === 'win32').map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" className={cn(styles.indexItem, active === id && styles.indexActive)} onClick={() => jump(id, performance.now())} aria-current={active === id ? 'true' : undefined}>
               <Icon size={15} strokeWidth={1.6} />{label}
             </button>
@@ -444,6 +445,36 @@ export function SettingsView() {
               <Button icon={<Mic2 size={15} strokeWidth={1.5} />} onClick={previewDesktopLyrics} disabled={!desktop}>{desktop ? '显示桌面歌词' : '需要桌面客户端'}</Button>
             </Row>
           </Section>
+
+          {/* ───────── Windows 任务栏歌词 ───────── */}
+          {desktop && !isMac() && app.result?.info.platform === 'win32' && <Section id="taskbar-lyrics" icon={<Mic2 size={17} strokeWidth={1.6} />} title="任务栏歌词" description="透明歌词融入任务栏，悬停时展开播放控制" onReset={() => settings.reset(keysOf('taskbarLyrics', 'taskbarWidth', 'taskbarPosition', 'taskbarFontSize', 'taskbarTranslation', 'taskbarCustomColors', 'taskbarTextColor', 'taskbarHighlightColor'))}>
+            <Row title="显示任务栏歌词" description="跟随歌曲同步高亮；全屏、任务栏隐藏或空间不足时自动收起">
+              <Switch checked={s.taskbarLyrics} onChange={set('taskbarLyrics')} label="显示任务栏歌词" />
+            </Row>
+            <Row title="显示位置" description="自动从任务栏最左侧的可用位置显示，并避让小组件和应用按钮" disabled={!s.taskbarLyrics}>
+              <Segmented value={s.taskbarPosition} onChange={set('taskbarPosition')} label="任务栏歌词位置" options={[{ value: 'auto', label: '自动' }, { value: 'left', label: '左侧优先' }, { value: 'right', label: '右侧优先' }]} />
+            </Row>
+            <Row title="最大宽度" description="根据任务栏剩余空间自动缩小" disabled={!s.taskbarLyrics}>
+              <Range value={s.taskbarWidth} min={180} max={560} step={10} onChange={set('taskbarWidth')} label="任务栏歌词宽度" format={value => `${value} px`} />
+            </Row>
+            <Row title="歌词字号" disabled={!s.taskbarLyrics}>
+              <Range value={s.taskbarFontSize} min={12} max={18} onChange={set('taskbarFontSize')} label="任务栏歌词字号" format={value => `${value} px`} />
+            </Row>
+            <Row title="自定义歌词配色" description="关闭时随系统明暗使用柔和灰色文字与蓝色高亮" disabled={!s.taskbarLyrics}>
+              <Switch checked={s.taskbarCustomColors} onChange={set('taskbarCustomColors')} label="自定义任务栏歌词配色" disabled={!s.taskbarLyrics} />
+            </Row>
+            {s.taskbarCustomColors && <>
+              <Row title="文字颜色" description="尚未唱到的歌词颜色" disabled={!s.taskbarLyrics}>
+                <ThemeColorControl label="任务栏歌词文字颜色" value={s.taskbarTextColor} presets={[{ label: '柔灰', color: '#626771' }, { label: '浅灰', color: '#bfc4cc' }, { label: '纯白', color: '#ffffff' }, { label: '深灰', color: '#30343b' }]} onChange={set('taskbarTextColor')} />
+              </Row>
+              <Row title="高亮颜色" description="随演唱进度填充的颜色" disabled={!s.taskbarLyrics}>
+                <ThemeColorControl label="任务栏歌词高亮颜色" value={s.taskbarHighlightColor} presets={[{ label: '晴空蓝', color: '#0078d4' }, { label: '薰衣草', color: '#a799d4' }, { label: '薄荷', color: '#4fb797' }, { label: '暖橙', color: '#dd9b53' }]} onChange={set('taskbarHighlightColor')} />
+              </Row>
+            </>}
+            <Row title="显示翻译" description="有翻译时显示在第二行，其他情况显示歌名与歌手" disabled={!s.taskbarLyrics}>
+              <Switch checked={s.taskbarTranslation} onChange={set('taskbarTranslation')} label="任务栏歌词显示翻译" disabled={!s.taskbarLyrics} />
+            </Row>
+          </Section>}
 
           {/* ───────── 迷你模式 ───────── */}
           <Section id="mini" icon={<PictureInPicture2 size={17} strokeWidth={1.6} />} title="迷你模式" description="悬浮播放条" onReset={() => settings.reset(keysOf('miniShowLyrics', 'miniSpinRecord'))}>

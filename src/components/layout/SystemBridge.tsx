@@ -6,7 +6,7 @@ import { useNavigation } from '@/components/layout/navigation';
 import { playModes, usePlaybackPosition, usePlayer, type PlayMode } from '@/components/player/player-store';
 import { useTrackLyrics } from '@/components/player/use-track-lyrics';
 import { useLatest } from '@/lib/use-latest';
-import { desktopLyricColor, useSettings } from '@/lib/settings';
+import { desktopLyricColor, settings as appSettings, useSettings } from '@/lib/settings';
 import { activeLineIndex, lineProgress } from '@/server/music/lrc';
 
 /**
@@ -32,6 +32,7 @@ export function SystemBridge() {
   const time = position + (trial?.start ?? 0) + 0.15 + prefs.lyricsOffset;
   const index = synced && lines ? activeLineIndex(lines, time) : -1;
   const lyric = index >= 0 && lines ? lines[index].text : '';
+  const lyricTranslation = index >= 0 && lines ? lines[index].translation ?? '' : '';
   // Sung fraction of the line in 5% steps: enough for a smooth karaoke fill without flooding IPC.
   const progress = index >= 0 && lines ? Math.round(lineProgress(lines[index], lines[index + 1], time) * 20) / 20 : 0;
 
@@ -43,9 +44,10 @@ export function SystemBridge() {
   const cover = track.cover && (/^https:\/\//.test(track.cover) || /^\/api\/local\/[a-f0-9]{20}\?part=cover$/.test(track.cover)) ? track.cover : '';
   const nickname = account.profile?.nickname ?? '';
   const state = useMemo<CocoSystemPlayerState>(() => ({
-    hasTrack, title: track.title, artist: track.artist, playing, liked, mode, lyric, progress, volume, cover, nickname,
+    hasTrack, title: track.title, artist: track.artist, playing, liked, mode, lyric, lyricTranslation, progress, volume, cover, nickname,
     showTray: prefs.showTray, trayLyrics: prefs.trayLyrics, menuBarText: prefs.menuBarText, lyricColor: desktopLyricColor(prefs).to,
-  }), [hasTrack, track.title, track.artist, playing, liked, mode, lyric, progress, volume, cover, nickname, prefs]);
+    taskbarLyrics: prefs.taskbarLyrics, taskbarWidth: prefs.taskbarWidth, taskbarPosition: prefs.taskbarPosition,
+  }), [hasTrack, track.title, track.artist, playing, liked, mode, lyric, lyricTranslation, progress, volume, cover, nickname, prefs]);
 
   useEffect(() => { window.coco?.system?.setPlayerState(state); }, [state]);
 
@@ -59,6 +61,7 @@ export function SystemBridge() {
     else if (action === 'settings') { current.closeLyrics(); go({ name: 'settings' }); }
     else if (action === 'account') { current.closeLyrics(); if (acc.profile) go({ name: 'settings' }); else acc.openLogin(); }
     else if (action === 'cycle-mode') current.cycleMode();
+    else if (action === 'taskbar-off') appSettings.set('taskbarLyrics', false);
     else if (action.startsWith('volume:')) {
       const value = Number(action.slice(7));
       if (Number.isFinite(value)) current.setVolume(Math.min(1, Math.max(0, value / 100)));

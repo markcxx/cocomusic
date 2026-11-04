@@ -104,6 +104,8 @@ win:
   icon: build/icon.ico
   # DWM artwork bridge: load the FFI module from a real directory outside asar.
   extraResources:
+    - from: build/windows/taskbar-layout.ps1
+      to: windows/taskbar-layout.ps1
     - from: node_modules/koffi
       to: native/koffi
       filter:

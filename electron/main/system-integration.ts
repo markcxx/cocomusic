@@ -9,6 +9,7 @@ import {
 import { createPanel, createStrip, destroyStrip, destroyTrayWindows, hidePanel, isPanel, isStrip, sendToPanel, sendToStrip, stripAlive, togglePanel } from './tray-windows';
 import { isMini, toggleMini } from './window';
 import { setupTaskbarArtwork } from './taskbar-windows';
+import { setupTaskbarLyrics } from './taskbar-lyrics';
 
 /**
  * Everything the OS shows outside the window, from one player state:
@@ -32,6 +33,7 @@ let origin = '';
 let preload = '';
 let hovering = false;
 let taskbarArtwork: ReturnType<typeof setupTaskbarArtwork>;
+let taskbarLyrics: ReturnType<typeof setupTaskbarLyrics>;
 const images = new Map<string, NativeImage>();
 
 /** build/tray/* in dev; resources/tray/* when packaged (extraResources). */
@@ -217,7 +219,8 @@ function render() {
   const current = panelState();
   sendToPanel(current);
   sendToStrip({ ...current, hover: hovering });
-  const menuKey = JSON.stringify({ ...current, lyric: '', progress: 0, volume: 0 });
+  taskbarLyrics?.update(state);
+  const menuKey = JSON.stringify({ ...current, lyric: '', lyricTranslation: '', progress: 0, volume: 0 });
   if (menuKey === lastMenuKey) { if (tray && !tray.isDestroyed()) tray.setToolTip(trayTooltip(state)); return; }
   lastMenuKey = menuKey;
   renderTray();
@@ -233,6 +236,7 @@ export function setupSystemIntegration(window: BrowserWindow, options: { origin:
   preload = options.preload;
   lyrics = options.desktopLyrics;
   taskbarArtwork = setupTaskbarArtwork(window, origin);
+  taskbarLyrics = setupTaskbarLyrics(window, origin, preload, runAction);
   onAppMenu = options.appMenu;
   if (isMac || isWindows) createPanel(origin, preload);
   setupJumpList();
@@ -240,16 +244,17 @@ export function setupSystemIntegration(window: BrowserWindow, options: { origin:
   nativeTheme.on('updated', refreshSystemMenus);
   // System dark/light switch (for 菜单栏文字颜色 = 跟随系统), independent of the app's own theme.
   if (isMac) systemPreferences.subscribeNotification('AppleInterfaceThemeChangedNotification', refreshSystemMenus);
-  window.on('closed', () => { taskbarArtwork?.dispose(); taskbarArtwork = undefined; tray?.destroy(); tray = null; destroyTrayWindows(); main = undefined; });
+  window.on('closed', () => { taskbarLyrics?.dispose(); taskbarLyrics = undefined; taskbarArtwork?.dispose(); taskbarArtwork = undefined; tray?.destroy(); tray = null; destroyTrayWindows(); main = undefined; });
   // Windows drops thumbnail buttons when the window is re-shown.
   window.on('show', refreshSystemMenus);
 }
 
 /** A tray page (panel or strip) is the sender. */
-export const isTrayPage = (window: BrowserWindow | null) => isPanel(window) || isStrip(window);
+export const isTrayPage = (window: BrowserWindow | null) => isPanel(window) || isStrip(window) || Boolean(taskbarLyrics?.isWindow(window));
 
 /** Panel / strip asked for the current state (just loaded). */
 export function sendTrayState(window: BrowserWindow) {
+  if (taskbarLyrics?.isWindow(window)) { taskbarLyrics.send(); return; }
   window.webContents.send(IPC.trayState, { ...panelState(), hover: hovering });
 }
 

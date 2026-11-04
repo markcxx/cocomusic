@@ -95,6 +95,8 @@ interface CocoTrayState extends CocoSystemPlayerState {
   platform: string;
   /** Menu-bar strip is hovered: show the four buttons. */
   hover?: boolean;
+  /** Windows taskbar appearance, independent of the main window's theme. */
+  taskbarDark?: boolean;
 }
 
 interface CocoSystemPlayerState {
@@ -106,6 +108,7 @@ interface CocoSystemPlayerState {
   liked: boolean | null;
   mode: 'loop' | 'shuffle' | 'one' | 'order';
   lyric: string;
+  lyricTranslation?: string;
   progress: number;
   lyricColor: string;
   volume: number;
@@ -114,6 +117,9 @@ interface CocoSystemPlayerState {
   showTray: boolean;
   trayLyrics: boolean;
   menuBarText: 'white' | 'black' | 'auto';
+  taskbarLyrics: boolean;
+  taskbarWidth: number;
+  taskbarPosition: 'auto' | 'left' | 'right';
 }
 
 interface CocoAppSettings {

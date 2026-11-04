@@ -20,6 +20,7 @@ export interface PlayerState {
   mode: PlayMode;
   /** Current synced lyric line ('' when none). */
   lyric: string;
+  lyricTranslation?: string;
   /** Sung fraction of that line, 0–1 (word timing when available). */
   progress: number;
   /** Fill colour of the sung part (设置 › 桌面歌词 › 歌词颜色). */
@@ -35,9 +36,12 @@ export interface PlayerState {
   trayLyrics: boolean;
   /** 设置 › 系统 (macOS): menu-bar lyric text colour; 'auto' follows the system's dark mode. */
   menuBarText: 'white' | 'black' | 'auto';
+  taskbarLyrics: boolean;
+  taskbarWidth: number;
+  taskbarPosition: 'auto' | 'left' | 'right';
 }
 
-export const EMPTY_STATE: PlayerState = { hasTrack: false, title: '', artist: '', playing: false, liked: null, mode: 'loop', lyric: '', progress: 0, lyricColor: '#c9b4ff', volume: 0.62, cover: '', nickname: '', showTray: true, trayLyrics: true, menuBarText: 'white' };
+export const EMPTY_STATE: PlayerState = { hasTrack: false, title: '', artist: '', playing: false, liked: null, mode: 'loop', lyric: '', progress: 0, lyricColor: '#c9b4ff', volume: 0.62, cover: '', nickname: '', showTray: true, trayLyrics: true, menuBarText: 'white', taskbarLyrics: false, taskbarWidth: 340, taskbarPosition: 'auto' };
 
 export type MenuAction = 'show' | 'toggle' | 'previous' | 'next' | 'like' | `mode:${PlayMode}` | 'cycle-mode' | 'lyrics' | 'lyrics-lock' | 'mini' | 'settings' | 'account' | 'quit' | `volume:${number}`;
 
@@ -159,6 +163,7 @@ export function parsePlayerState(raw: unknown): PlayerState | null {
     liked: typeof value.liked === 'boolean' ? value.liked : null,
     mode: PLAY_MODES.includes(value.mode as PlayMode) ? (value.mode as PlayMode) : 'loop',
     lyric: text(value.lyric, 300),
+    lyricTranslation: text(value.lyricTranslation, 300),
     progress: typeof value.progress === 'number' && Number.isFinite(value.progress) ? Math.min(1, Math.max(0, value.progress)) : 0,
     lyricColor: typeof value.lyricColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.lyricColor) ? value.lyricColor : '#c9b4ff',
     volume: typeof value.volume === 'number' && Number.isFinite(value.volume) ? Math.min(1, Math.max(0, value.volume)) : 0.62,
@@ -168,6 +173,9 @@ export function parsePlayerState(raw: unknown): PlayerState | null {
     showTray: bool(value.showTray, true),
     trayLyrics: bool(value.trayLyrics, true),
     menuBarText: value.menuBarText === 'black' || value.menuBarText === 'auto' ? value.menuBarText : 'white',
+    taskbarLyrics: bool(value.taskbarLyrics, false),
+    taskbarWidth: typeof value.taskbarWidth === 'number' && Number.isFinite(value.taskbarWidth) ? Math.round(Math.max(180, Math.min(560, value.taskbarWidth))) : 340,
+    taskbarPosition: value.taskbarPosition === 'left' || value.taskbarPosition === 'right' ? value.taskbarPosition : 'auto',
   };
 }
 

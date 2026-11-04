@@ -154,6 +154,15 @@ export interface Settings {
   trayLyrics: boolean;
   /** macOS: menu-bar lyric text colour ('auto' = follow the system's dark mode). */
   menuBarText: 'white' | 'black' | 'auto';
+  /** Windows: lyric capsule in a free taskbar region. */
+  taskbarLyrics: boolean;
+  taskbarWidth: number;
+  taskbarPosition: 'auto' | 'left' | 'right';
+  taskbarFontSize: number;
+  taskbarTranslation: boolean;
+  taskbarCustomColors: boolean;
+  taskbarTextColor: string;
+  taskbarHighlightColor: string;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -214,6 +223,14 @@ export const DEFAULT_SETTINGS: Settings = {
   showTray: true,
   trayLyrics: true,
   menuBarText: 'white',
+  taskbarLyrics: false,
+  taskbarWidth: 340,
+  taskbarPosition: 'auto',
+  taskbarFontSize: 14,
+  taskbarTranslation: true,
+  taskbarCustomColors: false,
+  taskbarTextColor: '#626771',
+  taskbarHighlightColor: '#0078d4',
 
   toastOnTrackChange: false,
 };
@@ -272,6 +289,8 @@ const RULES: Record<keyof Settings, Rule> = {
   lyricsLayout: oneOf('standard', 'centered', 'lyrics'), lyricsVisualizer: oneOf(...VISUALIZER_TEMPLATES), lyricsVinylEffect: oneOf('none', 'lines', 'glow'), lyricsVisualizerColor: oneOf('blue', 'cover', 'white', 'accent', 'aurora', 'custom'), lyricsVisualizerCustomColor: { type: 'hex' }, lyricsVisualizerDensity: oneOf('normal', 'fine'),
   toastOnTrackChange: bool,
   showTray: bool, trayLyrics: bool, menuBarText: oneOf('white', 'black', 'auto'),
+  taskbarLyrics: bool, taskbarWidth: num(180, 560), taskbarPosition: oneOf('auto', 'left', 'right'), taskbarFontSize: num(12, 18), taskbarTranslation: bool,
+  taskbarCustomColors: bool, taskbarTextColor: { type: 'hex' }, taskbarHighlightColor: { type: 'hex' },
 };
 
 function valid<K extends keyof Settings>(key: K, value: unknown): value is Settings[K] {

@@ -48,10 +48,10 @@ export function supportedEffect(effect: WindowEffect, platform: string | undefin
 }
 
 /** Colour scheme + theme colour only (secondary windows such as the tray panel). */
-export function useSchemeAndAccent(options: { notifyMain?: boolean } = {}) {
+export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'light' | 'dark' } = {}) {
   const s = useSettings();
   const systemDark = useSystemDark();
-  const scheme = s.themeMode === 'system' ? (systemDark ? 'dark' : 'light') : s.themeMode;
+  const scheme = options.scheme ?? (s.themeMode === 'system' ? (systemDark ? 'dark' : 'light') : s.themeMode);
   const notifyMain = options.notifyMain ?? false;
 
   // Scheme first: surface tokens read the per-scheme base RGB values.

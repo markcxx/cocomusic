@@ -1,0 +1,49 @@
+@property --taskbar-progress {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+.capsule {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-strong);
+  user-select: none;
+  -webkit-app-region: no-drag;
+  font-family: "Segoe UI", var(--font-sans);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
+}
+.capsule:hover, .capsule:has(:focus-visible) {
+  background: rgba(var(--surface-pinned-rgb), 0.72);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-rgb), 0.09);
+}
+.capsule button { display: inline-grid; place-items: center; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; }
+.artwork { flex-shrink: 0; width: 28px; height: 28px; border-radius: 4px; overflow: hidden; }
+.artwork img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.content { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+.copy { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; }
+.words { width: 100%; min-width: 0; }
+.viewport { overflow: hidden; white-space: nowrap; mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 10px), transparent); }
+.line { display: block; width: max-content; font-size: var(--lyric-size, 14px); font-weight: 400; line-height: 1.2; white-space: nowrap; color: transparent; background-image: linear-gradient(90deg, var(--taskbar-highlight) var(--taskbar-progress), var(--taskbar-text) var(--taskbar-progress)); background-clip: text; transition: transform 200ms linear, --taskbar-progress 200ms linear; }
+.secondary { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--taskbar-text); opacity: 0.78; font-size: 11px; font-weight: 400; line-height: 1.2; }
+.controls { display: flex; align-items: center; justify-content: flex-start; flex-shrink: 0; width: 112px; max-width: 0; height: 100%; overflow: hidden; opacity: 0; gap: 2px; pointer-events: none; transition: max-width 320ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease; }
+.controls button { flex-shrink: 0; width: 26px; height: 27px; border-radius: 4px; transition: background-color 130ms ease, transform 100ms ease; }
+.controls button:hover:not(:disabled) { background: rgba(var(--accent-rgb), 0.14); }
+.controls button:active:not(:disabled) { transform: scale(0.94); }
+.controls button:disabled { opacity: 0.35; cursor: default; }
+.controls .play { color: var(--text-strong); }
+.controls .liked { color: var(--like); }
+.capsule:hover .controls, .capsule:has(:focus-visible) .controls { max-width: 112px; opacity: 1; pointer-events: auto; }
+@media (max-width: 260px) {
+  .controls { width: 84px; }
+  .controls .favorite { display: none; }
+  .capsule:hover .controls, .capsule:has(:focus-visible) .controls { max-width: 84px; }
+}
+@media (max-height: 34px) { .artwork { width: 20px; height: 20px; } .secondary { display: none; } .capsule { padding-block: 2px; } }
+@media (prefers-reduced-motion: reduce) { .capsule * { transition: none !important; } }
+html[data-reduce-motion='true'] .capsule * { transition: none !important; }
