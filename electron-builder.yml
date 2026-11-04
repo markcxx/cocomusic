@@ -102,6 +102,15 @@ dmg:
 
 win:
   icon: build/icon.ico
+  # DWM artwork bridge: load the FFI module from a real directory outside asar.
+  extraResources:
+    - from: node_modules/koffi
+      to: native/koffi
+      filter:
+        - index.js
+        - package.json
+        - LICENSE.txt
+        - build/koffi/win32_x64/**/*
   target:
     - target: nsis
       arch: [x64]

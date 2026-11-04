@@ -40,7 +40,7 @@ export function SystemBridge() {
   const hasTrack = Boolean(track.songId || track.localId);
 
   const volume = Math.round(player.volume * 100) / 100;
-  const cover = track.cover && /^https:\/\//.test(track.cover) ? track.cover : '';
+  const cover = track.cover && (/^https:\/\//.test(track.cover) || /^\/api\/local\/[a-f0-9]{20}\?part=cover$/.test(track.cover)) ? track.cover : '';
   const nickname = account.profile?.nickname ?? '';
   const state = useMemo<CocoSystemPlayerState>(() => ({
     hasTrack, title: track.title, artist: track.artist, playing, liked, mode, lyric, progress, volume, cover, nickname,

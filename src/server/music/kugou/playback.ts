@@ -1,9 +1,13 @@
 import { inflateSync } from 'node:zlib';
 import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
-import { APPID, CLIENTVER, device, KugouError, kugouRequest, songKey as streamKey } from './client';
-import { image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
+import { createKugouClient, KugouError, md5, type KugouClient } from './client';
+import { createKugouMappers, image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
+export function createKugouPlayback(client: KugouClient = createKugouClient()) {
+const { APPID, CLIENTVER, device, kugouRequest, paramsKey } = client;
+const SOURCE = client.source;
+const streamKey = client.songKey;
 // Endpoints follow KugouMusicAPI module/song_url, search_lyric + lyric, comment_music(_classify), favorite_count.
 
 /** Requested quality → Kugou quality names, best first. 128 is the only one free accounts get. */
@@ -30,7 +34,7 @@ async function streamUrl(hash: string, albumId: string, albumAudioId: string, qu
   return { json, url: urls[0]?.replace(/^http:\/\//, 'https://') ?? '' };
 }
 
-export async function songSource(key: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
+async function songSource(key: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
   const { hash, albumId, albumAudioId } = splitSongKey(key);
   const start = Math.max(0, ORDER.indexOf(quality === 'hires' ? 'lossless' : quality === 'higher' ? 'standard' : quality));
   const candidates = QUALITIES.filter(item => ORDER.indexOf(item.level) >= start);
@@ -56,14 +60,14 @@ export async function songSource(key: string, quality: AudioQuality = 'exhigh'):
 
 /** KRC: base64 → skip 4-byte "krc1" header → XOR with Kugou's key → zlib (KugouMusicAPI util decodeLyrics). */
 const KRC_KEY = [64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105];
-export function decodeKrc(content: string) {
+function decodeKrc(content: string) {
   if (!content) return '';
   const bytes = Buffer.from(content, 'base64').subarray(4);
   for (let index = 0; index < bytes.length; index += 1) bytes[index] ^= KRC_KEY[index % KRC_KEY.length];
   return inflateSync(bytes).toString('utf8');
 }
 
-export async function lyrics(key: string): Promise<Lyrics> {
+async function lyrics(key: string): Promise<Lyrics> {
   const { hash, albumAudioId } = splitSongKey(key);
   const found = await kugouRequest<Raw>({
     base: 'https://lyrics.kugou.com', path: '/v1/search', clear: true, raw: true,
@@ -108,7 +112,7 @@ function mapComment(item: Raw): SongComment {
  * time-ordered feed, so 最新 reorders each page of the default thread by time.
  * Cursor: next page number.
  */
-export async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
+async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
   const { albumAudioId } = splitSongKey(key);
   if (!albumAudioId) return { items: [], total: 0, hasMore: false };
   const page = Math.max(1, Number(cursor) || 1);
@@ -135,7 +139,7 @@ export async function comments(key: string, sort: CommentSort, cursor: string | 
   return { items, total, hasMore, cursor: hasMore ? String(page + 1) : undefined };
 }
 
-export async function songStats(key: string): Promise<SongStats> {
+async function songStats(key: string): Promise<SongStats> {
   const { albumAudioId } = splitSongKey(key);
   if (!albumAudioId) return {};
   const [fav, thread] = await Promise.allSettled([
@@ -147,3 +151,7 @@ export async function songStats(key: string): Promise<SongStats> {
     commentCount: thread.status === 'fulfilled' ? thread.value.total : undefined,
   };
 }
+
+return { songSource, lyrics, songStats, comments };
+}
+export const { songSource, lyrics, songStats, comments } = createKugouPlayback();

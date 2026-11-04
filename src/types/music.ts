@@ -13,7 +13,7 @@ export interface Track {
   /** Platform song id; drives likes, comments, online lyrics. Downloads keep it too. */
   songId?: string;
   /** Platform of `songId` (default netease for tracks saved by older versions). */
-  source?: 'netease' | 'qq' | 'kugou';
+  source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite';
   /** Library id of a local file; when set, playback streams the file instead of the network. */
   localId?: string;
   /** Local file is a downloaded preview clip (its own .lrc only; no online lyrics fallback). */

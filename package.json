@@ -26,11 +26,13 @@
     "preview:menus": "node --experimental-strip-types --no-warnings scripts/preview-system-menus.mjs",
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
     "test": "node --import tsx --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\"",
+    "test:taskbar": "npm run build:electron && electron scripts/test-taskbar.cjs",
     "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
     "framer-motion": "12.26.2",
+    "koffi": "2.15.6",
     "lucide-react": "0.562.0",
     "music-metadata": "12.2.3",
     "next": "16.1.2",

@@ -5,6 +5,14 @@ import { actionFromArgv, buildPlayerMenu, EMPTY_STATE, parsePlayerState, stripHi
 const playing: PlayerState = { ...EMPTY_STATE, hasTrack: true, title: '晴天', artist: '周杰伦', playing: true, liked: false, lyric: '刮风这天 我试过握着你手' };
 const labels = (nodes: MenuNode[]) => nodes.map(node => (node.type === 'separator' ? '—' : node.label));
 
+test('system artwork accepts only HTTPS or indexed local covers', () => {
+  const local = '/api/local/0123456789abcdef0123?part=cover';
+  assert.equal(parsePlayerState({ cover: local })?.cover, local);
+  for (const cover of ['file:///C:/secret.png', '/api/local/../../secret', 'http://example.com/a.jpg', '//evil.test/a.png']) {
+    assert.equal(parsePlayerState({ cover })?.cover, '');
+  }
+});
+
 test('dock, tray and app menus share the same player controls', () => {
   const context = { desktopLyrics: false, mini: false, platform: 'darwin' };
   const dock = labels(buildPlayerMenu(playing, { ...context, surface: 'dock' }));

@@ -162,9 +162,9 @@ export function parsePlayerState(raw: unknown): PlayerState | null {
     progress: typeof value.progress === 'number' && Number.isFinite(value.progress) ? Math.min(1, Math.max(0, value.progress)) : 0,
     lyricColor: typeof value.lyricColor === 'string' && /^#[0-9a-f]{6}$/i.test(value.lyricColor) ? value.lyricColor : '#c9b4ff',
     volume: typeof value.volume === 'number' && Number.isFinite(value.volume) ? Math.min(1, Math.max(0, value.volume)) : 0.62,
-    // Only remote https artwork (or nothing): the popup window loads it directly.
+    // Only HTTPS artwork or an indexed local cover, never arbitrary filesystem paths.
     nickname: text(value.nickname, 60),
-    cover: typeof value.cover === 'string' && /^https:\/\//.test(value.cover) ? value.cover.slice(0, 1000) : '',
+    cover: typeof value.cover === 'string' && (/^https:\/\//.test(value.cover) || /^\/api\/local\/[a-f0-9]{20}\?part=cover$/.test(value.cover)) ? value.cover.slice(0, 1000) : '',
     showTray: bool(value.showTray, true),
     trayLyrics: bool(value.trayLyrics, true),
     menuBarText: value.menuBarText === 'black' || value.menuBarText === 'auto' ? value.menuBarText : 'white',

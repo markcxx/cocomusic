@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto';
 import { CatalogError } from '../errors';
 import { session } from '../session';
+import { KUGOU_CONFIG, type KugouSource } from './config';
 
 // Request pipeline follows KugouMusicAPI util/request.js + util/helper.js.
 
 export const APPID = 1005;
 export const CLIENTVER = 12569;
-const ANDROID_SALT = 'OIlwieks28dk2k092lksi2UIkp';
+
 const WEB_SALT = 'NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt';
 const UA = 'Android15-1070-11083-46-0-DiscoveryDRADProtocol-wifi';
 const TIMEOUT_MS = 12_000;
@@ -22,29 +23,34 @@ export class KugouError extends CatalogError {
 type Params = Record<string, string | number | boolean | undefined>;
 const serialize = (value: unknown) => (typeof value === 'object' && value !== null ? JSON.stringify(value) : String(value));
 
+export function createKugouClient(source: KugouSource = 'kugou') {
+  const config = KUGOU_CONFIG[source];
+  const APPID = config.appid;
+  const CLIENTVER = config.clientver;
+  const ANDROID_SALT = config.salt;
 /** Android signature: md5(salt + sorted "k=v" + body + salt). */
-export function androidSign(params: Params, body = '') {
+function androidSign(params: Params, body = '') {
   return md5(ANDROID_SALT + Object.keys(params).sort().map(key => `${key}=${serialize(params[key])}`).join('') + body + ANDROID_SALT);
 }
 
 /** Web signature (login endpoints): md5(salt + sorted list of "k=v" + salt). */
-export function webSign(params: Params) {
+function webSign(params: Params) {
   return md5(WEB_SALT + Object.keys(params).map(key => `${key}=${serialize(params[key])}`).sort().join('') + WEB_SALT);
 }
 
 /** `key` inside some bodies: md5(appid + salt + clientver + clienttime). */
-export const paramsKey = (clienttime: string | number) => md5(`${APPID}${ANDROID_SALT}${CLIENTVER}${clienttime}`);
+const paramsKey = (clienttime: string | number) => md5(`${APPID}${ANDROID_SALT}${CLIENTVER}${clienttime}`);
 
 /** Device identity: KugouMusicAPI uses dfid '-' anonymously, mid = md5(dfid). */
-export function device() {
-  const cookie = session.get('kugou')?.cookie ?? {};
+function device() {
+  const cookie = session.get(source)?.cookie ?? {};
   const dfid = cookie.dfid || '-';
   const mid = md5(dfid);
   return { dfid, mid, uuid: md5(dfid + mid), userid: cookie.userid || '0', token: cookie.token || '' };
 }
 
 /** song_url `key`: md5(hash + salt + appid + mid + userid). */
-export const songKey = (hash: string, mid: string, userid: string) => md5(`${hash}57ae12eb6890223e355ccfcb74edf70d${APPID}${mid}${userid || 0}`);
+const songKey = (hash: string, mid: string, userid: string) => md5(`${hash}${config.streamSalt}${APPID}${mid}${userid || 0}`);
 
 type Raw = Record<string, unknown>;
 
@@ -53,7 +59,7 @@ type Raw = Record<string, unknown>;
  * backend service). Default params (dfid, mid, appid, …, token when logged in)
  * are merged under the module's own unless `clear` is set.
  */
-export async function kugouRequest<T = Raw>(options: {
+async function kugouRequest<T = Raw>(options: {
   method?: 'GET' | 'POST';
   base?: string;
   path: string;
@@ -83,7 +89,7 @@ export async function kugouRequest<T = Raw>(options: {
       method,
       body: method === 'GET' ? undefined : body,
       headers: {
-        'User-Agent': UA, dfid, mid, clienttime: String(clienttime),
+        'User-Agent': UA, dfid, mid, clienttime: String(clienttime), 'kg-rc': '1', 'kg-thash': '5d816a0', 'kg-rec': '1', 'kg-rf': 'B9EDA08A64250DEFFBCADDEE00F8F25F',
         ...(options.router ? { 'x-router': options.router } : {}),
         ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
         ...options.headers,
@@ -108,3 +114,8 @@ export async function kugouRequest<T = Raw>(options: {
   }
   return json as T;
 }
+
+return { source, config, APPID, CLIENTVER, device, androidSign, webSign, paramsKey, songKey, kugouRequest };
+}
+export type KugouClient = ReturnType<typeof createKugouClient>;
+export const { device, androidSign, webSign, paramsKey, songKey, kugouRequest } = createKugouClient();

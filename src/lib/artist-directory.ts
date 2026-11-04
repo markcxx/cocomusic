@@ -15,7 +15,7 @@ const types = (ids: string[]) => options(ids.map((id, index) => [id, ['男歌手
 const initials: ArtistFilter = { key: 'initial', label: '索引', options: options([['', '热门'], ...Array.from({ length: 26 }, (_, i): [string, string] => [String.fromCharCode(65 + i), String.fromCharCode(65 + i)]), ['#', '其他']]) };
 
 /** Only expose filters the selected platform actually implements. Empty ids mean all. */
-export const ARTIST_FILTERS: Record<CatalogSource, ArtistFilter[]> = {
+const BASE_FILTERS: Record<Exclude<CatalogSource, 'kugou-lite'>, ArtistFilter[]> = {
   netease: [
     { key: 'area', label: '地区', options: options([['7', '华语'], ['96', '欧美'], ['8', '日本'], ['16', '韩国'], ['0', '其他']]) },
     { key: 'type', label: '类型', options: types(['1', '2', '3']) }, initials,
@@ -30,3 +30,5 @@ export const ARTIST_FILTERS: Record<CatalogSource, ArtistFilter[]> = {
     { key: 'type', label: '类型', options: types(['1', '2', '3']) }, initials,
   ],
 };
+
+export const ARTIST_FILTERS: Record<CatalogSource, ArtistFilter[]> = { ...BASE_FILTERS, 'kugou-lite': BASE_FILTERS.kugou };

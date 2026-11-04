@@ -9,6 +9,7 @@ export function shareUrl(source: CatalogSource | undefined, kind: 'playlist' | '
       if (kind === 'album') return `https://y.qq.com/n/ryqq/albumDetail/${encoded}`;
       if (kind === 'song') return `https://y.qq.com/n/ryqq/songDetail/${encodeURIComponent(id.split('.')[0])}`;
       return `https://y.qq.com/n/ryqq/profile/like/song?uin=${encoded}`;
+    case 'kugou-lite':
     case 'kugou':
       if (kind === 'playlist') return `https://www.kugou.com/songlist/${encoded}/`;
       if (kind === 'album') return `https://www.kugou.com/album/info/${encoded}/`;

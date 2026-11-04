@@ -52,7 +52,7 @@ export type DoubleClickAction = 'replace' | 'insert';
 export interface Settings {
   /* 曲库 */
   /** Platform for browsing, search and the account (songs already queued keep their own). */
-  catalogSource: 'netease' | 'qq' | 'kugou';
+  catalogSource: 'netease' | 'qq' | 'kugou' | 'kugou-lite';
 
   /* 外观 */
   themeMode: ThemeMode;
@@ -255,7 +255,7 @@ const bool: Rule = { type: 'boolean' };
 const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values });
 
 const RULES: Record<keyof Settings, Rule> = {
-  catalogSource: oneOf('netease', 'qq', 'kugou'),
+  catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
   themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },

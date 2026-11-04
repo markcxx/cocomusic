@@ -16,6 +16,7 @@ const SCAN_HINTS = {
   netease: '使用网易云音乐 App 扫码登录',
   qq: '使用手机 QQ 扫码，授权登录 QQ 音乐',
   kugou: '使用酷狗音乐 App 扫码登录',
+  'kugou-lite': '使用酷狗概念版 App 扫码登录',
 } as const;
 
 type Phase =

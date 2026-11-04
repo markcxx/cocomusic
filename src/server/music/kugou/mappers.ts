@@ -1,3 +1,4 @@
+import type { KugouSource } from './config';
 import type { CatalogAlbum, CatalogArtist, CatalogPlaylist, CatalogTrack } from '../types';
 
 export type Raw = Record<string, unknown>;
@@ -36,7 +37,8 @@ type TrackInput = {
   album?: unknown; cover?: unknown; durationMs?: unknown; durationSec?: unknown; vip?: boolean;
 };
 
-export function track(input: TrackInput): CatalogTrack {
+export function createKugouMappers(SOURCE: KugouSource) {
+function track(input: TrackInput): CatalogTrack {
   const artists = input.artists.map(item => ({ id: text(item.id), name: text(item.name) })).filter(item => item.name);
   const seconds = num(input.durationSec) ?? (num(input.durationMs) ? Math.round(Number(input.durationMs) / 1000) : undefined);
   return {
@@ -54,7 +56,7 @@ export function track(input: TrackInput): CatalogTrack {
 }
 
 /** Song shapes from rank/audio, artist audios and album songs. */
-export function mapRichSong(raw: Raw): CatalogTrack {
+function mapRichSong(raw: Raw): CatalogTrack {
   const base = record(raw.base);
   const audio = record(raw.audio_info);
   const album = record(raw.album_info);
@@ -73,7 +75,7 @@ export function mapRichSong(raw: Raw): CatalogTrack {
 }
 
 /** Search hits. */
-export function mapSearchSong(raw: Raw): CatalogTrack {
+function mapSearchSong(raw: Raw): CatalogTrack {
   return track({
     hash: raw.FileHash, albumId: raw.AlbumID, albumAudioId: raw.MixSongID,
     title: raw.OriSongName ?? raw.SongName ?? raw.FileName,
@@ -84,7 +86,7 @@ export function mapSearchSong(raw: Raw): CatalogTrack {
 }
 
 /** Playlist track (pubsongs get_other_list_file_nofilt). */
-export function mapListSong(raw: Raw): CatalogTrack {
+function mapListSong(raw: Raw): CatalogTrack {
   const album = record(raw.albuminfo);
   return track({
     hash: raw.hash, albumId: raw.album_id ?? album.id, albumAudioId: raw.mixsongid ?? raw.audio_id,
@@ -93,7 +95,7 @@ export function mapListSong(raw: Raw): CatalogTrack {
   });
 }
 
-export function mapPlaylist(raw: Raw, tag?: string): CatalogPlaylist {
+function mapPlaylist(raw: Raw, tag?: string): CatalogPlaylist {
   return {
     id: text(raw.global_collection_id ?? raw.gid ?? raw.specialid),
     source: SOURCE,
@@ -106,7 +108,7 @@ export function mapPlaylist(raw: Raw, tag?: string): CatalogPlaylist {
   };
 }
 
-export function mapAlbum(raw: Raw): CatalogAlbum {
+function mapAlbum(raw: Raw): CatalogAlbum {
   const date = text(raw.publish_date ?? raw.publishtime ?? raw.publish_time);
   return {
     id: text(raw.album_id ?? raw.albumid),
@@ -119,7 +121,7 @@ export function mapAlbum(raw: Raw): CatalogAlbum {
   };
 }
 
-export function mapArtist(raw: Raw): CatalogArtist {
+function mapArtist(raw: Raw): CatalogArtist {
   return {
     id: text(raw.singerid ?? raw.AuthorId ?? raw.author_id),
     source: SOURCE,
@@ -129,3 +131,7 @@ export function mapArtist(raw: Raw): CatalogArtist {
     albumCount: num(raw.AlbumCount ?? raw.album_count),
   };
 }
+
+return { track, mapRichSong, mapSearchSong, mapListSong, mapPlaylist, mapAlbum, mapArtist };
+}
+export const { track, mapRichSong, mapSearchSong, mapListSong, mapPlaylist, mapAlbum, mapArtist } = createKugouMappers('kugou');

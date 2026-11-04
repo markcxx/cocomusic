@@ -8,6 +8,7 @@ import {
 } from './system-menu';
 import { createPanel, createStrip, destroyStrip, destroyTrayWindows, hidePanel, isPanel, isStrip, sendToPanel, sendToStrip, stripAlive, togglePanel } from './tray-windows';
 import { isMini, toggleMini } from './window';
+import { setupTaskbarArtwork } from './taskbar-windows';
 
 /**
  * Everything the OS shows outside the window, from one player state:
@@ -30,6 +31,7 @@ let onAppMenu: ((items: MenuItemConstructorOptions[]) => void) | undefined;
 let origin = '';
 let preload = '';
 let hovering = false;
+let taskbarArtwork: ReturnType<typeof setupTaskbarArtwork>;
 const images = new Map<string, NativeImage>();
 
 /** build/tray/* in dev; resources/tray/* when packaged (extraResources). */
@@ -177,6 +179,7 @@ function renderDock() {
 
 function renderThumbar() {
   if (!isWindows || !main || main.isDestroyed()) return;
+  taskbarArtwork?.update(state.hasTrack ? state.cover : '');
   const flags = state.hasTrack ? [] : ['disabled' as const];
   main.setThumbarButtons([
     { tooltip: '上一首', icon: asset('thumb-prev.png'), flags, click: () => runAction('previous') },
@@ -229,6 +232,7 @@ export function setupSystemIntegration(window: BrowserWindow, options: { origin:
   origin = options.origin;
   preload = options.preload;
   lyrics = options.desktopLyrics;
+  taskbarArtwork = setupTaskbarArtwork(window, origin);
   onAppMenu = options.appMenu;
   if (isMac || isWindows) createPanel(origin, preload);
   setupJumpList();
@@ -236,7 +240,7 @@ export function setupSystemIntegration(window: BrowserWindow, options: { origin:
   nativeTheme.on('updated', refreshSystemMenus);
   // System dark/light switch (for 菜单栏文字颜色 = 跟随系统), independent of the app's own theme.
   if (isMac) systemPreferences.subscribeNotification('AppleInterfaceThemeChangedNotification', refreshSystemMenus);
-  window.on('closed', () => { tray?.destroy(); tray = null; destroyTrayWindows(); main = undefined; });
+  window.on('closed', () => { taskbarArtwork?.dispose(); taskbarArtwork = undefined; tray?.destroy(); tray = null; destroyTrayWindows(); main = undefined; });
   // Windows drops thumbnail buttons when the window is re-shown.
   window.on('show', refreshSystemMenus);
 }

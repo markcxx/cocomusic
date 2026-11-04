@@ -2,13 +2,17 @@ import type {
   ArtistInfo, BestMatch, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogTrack, CategoryGroup, CollectionDetail, HomeFeatured,
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType,
 } from '../types';
-import { APPID, CLIENTVER, device, KugouError, kugouRequest, paramsKey } from './client';
-import { image, mapAlbum, mapArtist, mapListSong, mapPlaylist, mapRichSong, mapSearchSong, num, record, rows, SOURCE, text, type Raw } from './mappers';
+import { createKugouClient, KugouError, md5, type KugouClient } from './client';
+import { createKugouMappers, image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
 // Endpoints follow KugouMusicAPI module/* (rank_*, top_*, playlist_*, album_*, artist_*, search_*).
 
 /* ───────── Charts ───────── */
 
+export function createKugouCatalog(client: KugouClient = createKugouClient()) {
+const { APPID, CLIENTVER, device, kugouRequest, paramsKey } = client;
+const SOURCE = client.source;
+const { mapAlbum, mapArtist, mapListSong, mapPlaylist, mapRichSong, mapSearchSong } = createKugouMappers(SOURCE);
 async function rankSongs(rankId: string, page: number, pagesize: number) {
   const json = await kugouRequest<Raw>({
     method: 'POST', path: '/openapi/kmr/v2/rank/audio', headers: { 'kg-tid': '369' },
@@ -23,7 +27,7 @@ async function rankList() {
   return rows(record(json.data).info);
 }
 
-export async function charts(limit: number): Promise<CatalogChart[]> {
+async function charts(limit: number): Promise<CatalogChart[]> {
   const lists = (await rankList()).slice(0, limit);
   return Promise.all(lists.map(async (list): Promise<CatalogChart> => {
     const id = text(list.rankid);
@@ -61,12 +65,12 @@ async function newSongs(pagesize: number) {
   return rows(json.data).map(mapRichSong);
 }
 
-export async function featured(): Promise<HomeFeatured> {
+async function featured(): Promise<HomeFeatured> {
   const [special, tracks, chartList] = await Promise.all([specialRecommend(0, 1, 12), newSongs(9), charts(2)]);
   return { playlists: special.items.slice(0, 12).map(item => mapPlaylist(item, text(item.show) || '推荐歌单')), tracks, charts: chartList };
 }
 
-export async function newReleases() {
+async function newReleases() {
   const [tracks, albums] = await Promise.all([
     newSongs(9),
     kugouRequest<Raw>({ method: 'POST', path: '/musicadservice/v1/mobile_newalbum_sp', data: { apiver: 20, token: '', page: 1, pagesize: 12, withpriv: 1 } }),
@@ -77,7 +81,7 @@ export async function newReleases() {
   return { tracks, albums: list.slice(0, 12).map(mapAlbum) };
 }
 
-export async function topArtists(limit: number): Promise<CatalogArtist[]> {
+async function topArtists(limit: number): Promise<CatalogArtist[]> {
   const json = await kugouRequest<Raw>({ path: '/ocean/v6/singer/list', params: { musician: 0, sextype: 0, showtype: 2, type: 0, hotsize: Math.max(limit, 10), filter: 0 } });
   return rows(record(json.data).info).flatMap(group => rows(group.singer)).slice(0, limit).map(mapArtist);
 }
@@ -86,7 +90,7 @@ export async function topArtists(limit: number): Promise<CatalogArtist[]> {
 
 let categoryIds: Map<string, number> | null = null;
 
-export async function categories(): Promise<CategoryGroup[]> {
+async function categories(): Promise<CategoryGroup[]> {
   const json = await kugouRequest<Raw>({ method: 'POST', path: '/pubsongs/v1/get_tags_by_type', data: { tag_type: 'collection', tag_id: 0, source: 3 } });
   categoryIds = new Map();
   return rows(json.data).map(group => {
@@ -96,7 +100,7 @@ export async function categories(): Promise<CategoryGroup[]> {
   }).filter(group => group.options.length);
 }
 
-export async function playlists({ category, cursor, limit }: { category: string; order: PlaylistOrder; cursor?: string; limit: number }): Promise<PlaylistPage> {
+async function playlists({ category, cursor, limit }: { category: string; order: PlaylistOrder; cursor?: string; limit: number }): Promise<PlaylistPage> {
   if (category && !categoryIds) await categories().catch(() => undefined);
   // Kugou's recommendation feed has a single order, so 'hot' and 'quality' share it.
   const id = (category && categoryIds?.get(category)) || 0;
@@ -136,7 +140,7 @@ async function chartDetail(id: string, offset: number, limit: number): Promise<C
   };
 }
 
-export async function playlistDetail(id: string, offset: number, limit: number): Promise<CollectionDetail> {
+async function playlistDetail(id: string, offset: number, limit: number): Promise<CollectionDetail> {
   if (isRankId(id)) return chartDetail(id, offset, limit);
   const { userid, token } = device();
   const [info, songs] = await Promise.all([
@@ -184,7 +188,7 @@ async function albumSongs(id: string) {
   return { tracks, total: total || tracks.length };
 }
 
-export async function albumDetail(id: string): Promise<CollectionDetail> {
+async function albumDetail(id: string): Promise<CollectionDetail> {
   const [info, songs] = await Promise.all([
     kugouRequest<Raw>({ method: 'POST', path: '/kmr/v2/albums', router: 'openapi.kugou.com', headers: { 'kg-tid': '255' }, data: { data: [{ album_id: id }], is_buy: 0 } }),
     albumSongs(id),
@@ -225,7 +229,7 @@ async function authorAlbums(id: string, page: number, pagesize: number) {
   });
 }
 
-export async function artistInfo(id: string): Promise<ArtistInfo> {
+async function artistInfo(id: string): Promise<ArtistInfo> {
   const json = await kugouRequest<Raw>({ method: 'POST', path: '/kmr/v3/author', router: 'openapi.kugou.com', headers: { 'kg-tid': '36' }, data: { author_id: id } });
   const data = record(json.data);
   if (!text(data.author_name)) throw new KugouError('歌手不存在', 404);
@@ -245,14 +249,14 @@ export async function artistInfo(id: string): Promise<ArtistInfo> {
 /** Page number for offset paging (the services page by 1-based index). */
 const pageOf = (offset: number, limit: number) => Math.floor(offset / limit) + 1;
 
-export async function artistSongs(id: string, offset: number, limit: number) {
+async function artistSongs(id: string, offset: number, limit: number) {
   const json = await authorSongs(id, pageOf(offset, limit), limit);
   const items = rows(json.data).map(mapRichSong);
   const total = num(json.total) ?? offset + items.length;
   return { items, total, hasMore: items.length > 0 && offset + items.length < total };
 }
 
-export async function artistAlbums(id: string, offset: number, limit: number): Promise<{ items: CatalogAlbum[]; total: number; hasMore: boolean }> {
+async function artistAlbums(id: string, offset: number, limit: number): Promise<{ items: CatalogAlbum[]; total: number; hasMore: boolean }> {
   const json = await authorAlbums(id, pageOf(offset, limit), limit);
   const items = rows(json.data).map(mapAlbum);
   const total = num(json.total) ?? offset + items.length;
@@ -272,7 +276,7 @@ async function searchRaw(keyword: string, type: SearchType, page: number, pagesi
   return { list: rows(data.lists), total: num(data.total) ?? 0 };
 }
 
-export async function search(keyword: string, type: SearchType, offset: number, limit: number): Promise<SearchResult> {
+async function search(keyword: string, type: SearchType, offset: number, limit: number): Promise<SearchResult> {
   const { list, total } = await searchRaw(keyword, type, pageOf(offset, limit), limit);
   const page = <T>(items: T[]) => ({ items, total: Math.max(total, offset + items.length), hasMore: items.length > 0 && offset + items.length < total });
   if (type === 'playlist') return { type, ...page(list.map(item => mapPlaylist(item))) };
@@ -283,7 +287,7 @@ export async function search(keyword: string, type: SearchType, offset: number, 
 
 const close = (keyword: string, name: string) => Boolean(name) && (name === keyword || keyword.includes(name) || name.includes(keyword));
 
-export async function bestMatch(keyword: string): Promise<BestMatch> {
+async function bestMatch(keyword: string): Promise<BestMatch> {
   const [artists, albums] = await Promise.allSettled([searchRaw(keyword, 'artist', 1, 1), searchRaw(keyword, 'album', 1, 1)]);
   const artist = artists.status === 'fulfilled' ? artists.value.list[0] : undefined;
   const album = albums.status === 'fulfilled' ? albums.value.list[0] : undefined;
@@ -293,7 +297,7 @@ export async function bestMatch(keyword: string): Promise<BestMatch> {
   };
 }
 
-export async function suggest(keyword: string): Promise<SearchSuggestion> {
+async function suggest(keyword: string): Promise<SearchSuggestion> {
   const [tips, songs, artists, lists] = await Promise.allSettled([
     kugouRequest<Raw>({ path: '/v2/getSearchTip', router: 'searchtip.kugou.com', params: { AlbumTipCount: 0, CorrectTipCount: 0, MVTipCount: 0, MusicTipCount: 8, radiotip: 0, keyword } }),
     searchRaw(keyword, 'song', 1, 4),
@@ -313,7 +317,7 @@ export async function suggest(keyword: string): Promise<SearchSuggestion> {
   };
 }
 
-export async function searchDiscovery(): Promise<SearchDiscovery> {
+async function searchDiscovery(): Promise<SearchDiscovery> {
   const json = await kugouRequest<Raw>({ path: '/api/v3/search/hot_tab', router: 'msearch.kugou.com', params: { navid: 1, plat: 2 } });
   const tab = rows(record(json.data).list)[0];
   const hot = rows(tab?.keywords).map(item => ({
@@ -322,3 +326,7 @@ export async function searchDiscovery(): Promise<SearchDiscovery> {
   })).filter(item => item.keyword);
   return { hot: hot.slice(0, 20) };
 }
+
+return { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums };
+}
+export const { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums } = createKugouCatalog();

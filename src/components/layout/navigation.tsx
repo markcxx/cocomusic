@@ -19,9 +19,9 @@ export type Route =
   | { name: 'artist'; id: string; title?: string }
   | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' }
   /** Song comments; carries display info so the header renders before data loads. */
-  | { name: 'comments'; songId: string; source?: 'netease' | 'qq' | 'kugou'; title?: string; artist?: string; cover?: string }
+  | { name: 'comments'; songId: string; source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite'; title?: string; artist?: string; cover?: string }
   /** The song's official MV; same display info as comments. */
-  | { name: 'mv'; songId: string; source?: 'netease' | 'qq' | 'kugou'; title?: string; artist?: string; cover?: string };
+  | { name: 'mv'; songId: string; source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite'; title?: string; artist?: string; cover?: string };
 
 export type RouteName = Route['name'];
 

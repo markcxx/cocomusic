@@ -34,6 +34,7 @@ const PLATFORMS = [
   { value: 'netease', label: '网易云音乐' },
   { value: 'qq', label: 'QQ 音乐' },
   { value: 'kugou', label: '酷狗音乐' },
+  { value: 'kugou-lite', label: '酷狗概念版' },
 ] as const;
 
 const WINDOW_EFFECT_HINTS: Record<string, string> = {
@@ -228,7 +229,7 @@ export function SettingsView() {
           {/* ───────── 曲库 ───────── */}
           <Section id="catalog" icon={<Disc3 size={17} strokeWidth={1.6} />} title="曲库" description="选择浏览、搜索和登录所使用的音乐平台">
             <Row title="音乐平台" description="首页、发现、排行榜、搜索和账号都会切换到所选平台；播放列表中已有的歌曲仍从原平台播放">
-              <Segmented value={s.catalogSource} onChange={set('catalogSource')} label="音乐平台" options={[...PLATFORMS]} />
+              <Select value={s.catalogSource} onChange={set('catalogSource')} label="音乐平台" options={[...PLATFORMS]} />
             </Row>
             <Row
               title="账号"

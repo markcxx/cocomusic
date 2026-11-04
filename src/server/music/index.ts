@@ -1,6 +1,6 @@
 import { CatalogError } from './errors';
 import { SOURCE_NAMES } from './ids';
-import { kugouProvider } from './kugou/provider';
+import { kugouProvider, kugouLiteProvider } from './kugou/provider';
 import { neteaseProvider } from './netease/provider';
 import { NeteaseError } from './netease/client';
 import { qqProvider } from './qq/provider';
@@ -11,6 +11,7 @@ const providers: Record<CatalogSource, CatalogProvider> = {
   netease: neteaseProvider,
   qq: qqProvider,
   kugou: kugouProvider,
+  'kugou-lite': kugouLiteProvider,
 };
 
 export const DEFAULT_SOURCE: CatalogSource = 'netease';

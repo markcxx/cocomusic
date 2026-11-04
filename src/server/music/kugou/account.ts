@@ -1,9 +1,12 @@
 import { constants, createCipheriv, createDecipheriv, publicEncrypt, randomBytes } from 'node:crypto';
 import { session } from '../session';
 import type { AccountProvider, UserDetail, UserPlaylist, UserProfile } from '../types';
-import { APPID, CLIENTVER, device, KugouError, kugouRequest, md5, paramsKey } from './client';
-import { image, num, record, rows, splitSongKey, SOURCE, text, type Raw } from './mappers';
+import { createKugouClient, KugouError, md5, type KugouClient } from './client';
+import { createKugouMappers, image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
+export function createKugouAccount(client: KugouClient = createKugouClient()) {
+const { APPID, CLIENTVER, device, kugouRequest, paramsKey } = client;
+const SOURCE = client.source;
 // Endpoints follow KugouMusicAPI module/login_qr_*, user_detail, user_playlist,
 // playlist_add/del, playlist_tracks_add/del, playlist_track_all_new.
 
@@ -34,7 +37,7 @@ function playlistAesDecrypt(bytes: Buffer, key: string): Raw {
 }
 
 function current() {
-  const value = session.get('kugou');
+  const value = session.get(SOURCE);
   if (!value?.cookie.token || !value.cookie.userid) throw new KugouError('请先登录酷狗音乐账号', 401);
   return { userid: value.cookie.userid, token: value.cookie.token, profile: value.profile };
 }
@@ -148,7 +151,7 @@ async function deleteList(userid: string, token: string, listid: number) {
 
 /* ───────── Provider ───────── */
 
-export const kugouAccount: AccountProvider = {
+const kugouAccount: AccountProvider = {
   async qrCreate() {
     const json = await kugouRequest<Raw>({
       base: LOGIN_BASE, path: '/v2/qrcode', sign: 'web', clear: false,
@@ -171,23 +174,23 @@ export const kugouAccount: AccountProvider = {
     const token = text(data.token);
     if (!userid || !token) throw new KugouError('登录状态校验失败，请重新扫码');
     const { dfid } = device();
-    session.set('kugou', { userid, token, dfid });
+    session.set(SOURCE, { userid, token, dfid });
     const info = await myInfo(userid, token).catch(() => ({} as Raw));
     const profile = toProfile(userid, info) ?? { id: userid, source: SOURCE, nickname: text(data.nickname) || '酷狗用户', avatar: image(data.pic, 240) };
-    session.setProfile('kugou', profile);
+    session.setProfile(SOURCE, profile);
     return { status: 'success', profile };
   },
 
   async profile() {
-    const value = session.get('kugou');
+    const value = session.get(SOURCE);
     if (!value?.cookie.token || !value.cookie.userid) return null;
     try {
       const profile = toProfile(value.cookie.userid, await myInfo(value.cookie.userid, value.cookie.token));
       if (!profile) return value.profile ?? null;
-      session.setProfile('kugou', profile);
+      session.setProfile(SOURCE, profile);
       return profile;
     } catch (error) {
-      if (error instanceof KugouError && error.status === 401) { session.clear('kugou', { expired: true }); return null; }
+      if (error instanceof KugouError && error.status === 401) { session.clear(SOURCE, { expired: true }); return null; }
       if (error instanceof KugouError) return value.profile ?? null;
       throw error;
     }
@@ -211,7 +214,7 @@ export const kugouAccount: AccountProvider = {
   },
 
   async logout() {
-    session.clear('kugou');
+    session.clear(SOURCE);
   },
 
   async likedIds() {
@@ -285,3 +288,7 @@ export const kugouAccount: AccountProvider = {
     else await deleteSongs(userid, token, list.listid, trackIds);
   },
 };
+
+return { kugouAccount };
+}
+export const { kugouAccount } = createKugouAccount();

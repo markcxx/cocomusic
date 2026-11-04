@@ -12,7 +12,7 @@ import type { CatalogSource } from './types';
  */
 export type IdKind = 'song' | 'playlist' | 'album' | 'artist';
 
-const PATTERNS: Record<CatalogSource, Record<IdKind, RegExp>> = {
+const PATTERNS: Record<Exclude<CatalogSource, 'kugou-lite'>, Record<IdKind, RegExp>> = {
   netease: { song: /^\d{1,20}$/, playlist: /^\d{1,20}$/, album: /^\d{1,20}$/, artist: /^\d{1,20}$/ },
   qq: {
     song: /^[0-9A-Za-z]{6,24}(\.\d{1,20})?$/,
@@ -29,10 +29,10 @@ const PATTERNS: Record<CatalogSource, Record<IdKind, RegExp>> = {
 };
 
 export function validId(source: CatalogSource, kind: IdKind, id: string) {
-  return PATTERNS[source]?.[kind].test(id) ?? false;
+  return PATTERNS[source === 'kugou-lite' ? 'kugou' : source]?.[kind].test(id) ?? false;
 }
 
-export const isSource = (value: unknown): value is CatalogSource => value === 'netease' || value === 'qq' || value === 'kugou';
+export const isSource = (value: unknown): value is CatalogSource => value === 'netease' || value === 'qq' || value === 'kugou' || value === 'kugou-lite';
 
 /** Display names, used in errors and the settings page. */
-export const SOURCE_NAMES: Record<CatalogSource, string> = { netease: '网易云音乐', qq: 'QQ 音乐', kugou: '酷狗音乐' };
+export const SOURCE_NAMES: Record<CatalogSource, string> = { netease: '网易云音乐', qq: 'QQ 音乐', kugou: '酷狗音乐', 'kugou-lite': '酷狗概念版' };

@@ -48,7 +48,7 @@ const store = jsonStore<LibraryFile>('library.json', () => ({ folders: [], track
     };
     for (const job of history.jobs ?? []) {
       const track = job.localId ? data.tracks[job.localId] : undefined;
-      if (track && track.path === job.path && !track.source && ['netease', 'qq', 'kugou'].includes(job.source ?? '')) {
+      if (track && track.path === job.path && !track.source && ['netease', 'qq', 'kugou', 'kugou-lite'].includes(job.source ?? '')) {
         track.source = job.source;
         track.trial = Boolean(job.trial);
       }

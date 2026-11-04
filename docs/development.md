@@ -35,6 +35,16 @@ npm run dev
 
 安装包输出到 `release/`。
 
+## Windows 任务栏封面预览
+
+任务栏 hover 预览通过 DWM 自定义位图显示当前歌曲封面，下方沿用原生的上一首、播放/暂停、下一首按钮。支持 HTTPS 封面与本地索引封面；无封面、加载中或加载失败时使用应用图标。快速切歌会取消旧请求，封面不随主界面导航变化。
+
+Windows 主进程使用 Koffi 调用 `DwmSetWindowAttribute`、`DwmSetIconicThumbnail` 和 GDI；仅在 Windows 加载。打包配置将 Windows x64 原生模块复制到 `resources/native/koffi`，避免从 asar 加载。初始化不可用时保留普通窗口预览和原有按钮。
+
+运行 `npm run test:taskbar` 可在隐藏 Electron 窗口验证原生模块、窗口消息回调和位图资源释放。隐藏窗口提交可能返回 `E_INVALIDARG`，此测试不能代替真实任务栏外观验收。
+
+手动验收：运行 `npm run dev`，播放在线/本地有封面的歌曲，hover 任务栏图标；检查封面与三按钮，切歌时封面更新、暂停时按钮变化；切换页面、最小化和恢复后重复检查；无封面或断网时显示默认图标。Windows 自身决定预览边框、标题与显示时机。
+
 ## 项目结构
 
 ```text
