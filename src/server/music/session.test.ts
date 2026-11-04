@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
@@ -38,4 +38,25 @@ test('refreshed credentials merge into the stored cookie, ignoring blanks', () =
   session.set('qq', { uin: '1', qm_keyst: 'old', refresh_key: 'r1' });
   session.updateCookie('qq', { qm_keyst: 'new', refresh_key: '' });
   assert.deepEqual(session.get('qq')?.cookie, { uin: '1', qm_keyst: 'new', refresh_key: 'r1' });
+});
+
+test('new credentials written by another route instance are observed and survive unrelated profile updates', () => {
+  session.set('kugou-lite', { userid: '1', token: 'old-token' });
+  session.set('qq', { uin: '2', qm_keyst: 'qq-key' });
+  const file = path.join(dir, 'sessions.json');
+  const disk = JSON.parse(readFileSync(file, 'utf8'));
+  disk.sessions['kugou-lite'].cookie.token = 'new-token';
+  writeFileSync(file, JSON.stringify(disk));
+  session.setProfile('qq', { id: '2', source: 'qq', nickname: 'QQ profile' });
+  assert.equal(session.get('kugou-lite')?.cookie.token, 'new-token');
+  const persisted = JSON.parse(readFileSync(file, 'utf8'));
+  assert.equal(persisted.sessions['kugou-lite'].cookie.token, 'new-token');
+});
+
+test('a stale profile response cannot overwrite a newer authenticated session', () => {
+  session.set('kugou-lite', { userid: '1', token: 'old-token' });
+  const previous = session.get('kugou-lite')!;
+  session.set('kugou-lite', { userid: '1', token: 'new-token' }, { id: '1', source: 'kugou-lite', nickname: 'new-profile' });
+  assert.equal(session.setProfile('kugou-lite', { id: '1', source: 'kugou-lite', nickname: 'stale-profile' }, previous.cookie), false);
+  assert.equal(session.get('kugou-lite')?.profile?.nickname, 'new-profile');
 });

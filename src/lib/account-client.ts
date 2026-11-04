@@ -1,13 +1,15 @@
 'use client';
 
 import { currentSource } from './catalog-client';
+import type { ConceptMembership } from '@/server/music/kugou/membership';
+import type { CheckInResult } from '@/server/music/kugou/auto-check-in';
+import { requestKugouVerification } from './kugou-verification';
+import { requestAccountRecheck } from './account-events';
+export { ACCOUNT_RECHECK_EVENT } from './account-events';
 import type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
 export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
-
-/** Window event that asks the account store to verify the login now (e.g. a VIP song came back as a preview). */
-export const ACCOUNT_RECHECK_EVENT = 'coco:account-recheck';
 
 export class AccountError extends Error {
   constructor(message: string, public readonly status: number) {
@@ -24,13 +26,20 @@ async function call<T>(path: string, init: RequestInit & { query?: Record<string
     signal: init.signal ?? AbortSignal.timeout(20000),
   });
   const data = await response.json().catch(() => ({ error: '账号服务返回了无法解析的数据' }));
-  if (!response.ok) throw new AccountError(data.error || '账号请求失败，请稍后重试', response.status);
+  if (!response.ok) {
+    if (response.status === 401 && path !== 'me') requestAccountRecheck(query.get('source')!);
+    requestKugouVerification(data.verificationUrl);
+    throw new AccountError(data.error || '账号请求失败，请稍后重试', response.status);
+  }
   return data as T;
 }
 
 const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
 
 export const accountApi = {
+  autoCheckIn: (retry = false) => call<CheckInResult>('membership', { method: 'POST', body: JSON.stringify({ action: 'auto', retry }), query: { source: 'kugou-lite' } }),
+  membership: (signal?: AbortSignal) => call<ConceptMembership>('membership', { signal }),
+  claimMembership: () => post<ConceptMembership>('membership', {}),
   me: () => call<{ profile: UserProfile | null; expired?: boolean }>('me'),
   detail: (signal?: AbortSignal) => call<{ detail: UserDetail | null }>('me/detail', { signal }),
   logout: () => call<{ ok: true }>('me', { method: 'DELETE' }),

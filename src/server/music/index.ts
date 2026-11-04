@@ -66,7 +66,9 @@ export async function respond(load: () => Promise<unknown>) {
     const status = known ? error.status : 502;
     const message = known ? error.message : '曲库服务暂时不可用，请稍后重试';
     if (!known) console.error('[catalog]', error);
-    return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
+    const code = known && 'code' in error && typeof error.code === 'number' ? error.code : undefined;
+    const verificationUrl = known && 'verificationUrl' in error && typeof error.verificationUrl === 'string' ? error.verificationUrl : undefined;
+    return Response.json({ error: message, ...(code === undefined ? {} : { code }), ...(verificationUrl ? { verificationUrl } : {}) }, { status, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 

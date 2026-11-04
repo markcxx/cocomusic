@@ -25,4 +25,4 @@ export interface Track {
 }
 
 /** Whether a track has anything to play (catalog stream or local file). */
-export const isPlayable = (track: Track) => Boolean(track.songId || track.localId);
+export const isPlayable = (track: Track) => Boolean(track.localId || (track.songId && ((track.source !== 'kugou' && track.source !== 'kugou-lite') || /^[0-9a-f]{32}(\.\d{0,20}){0,2}$/i.test(track.songId))));

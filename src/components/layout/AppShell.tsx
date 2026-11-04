@@ -3,6 +3,7 @@
 import { useEffect, type ReactNode } from 'react';
 import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
+import { ConceptAutoCheckIn } from '@/components/account/ConceptAutoCheckIn';
 import { ApplyAppearance } from '@/components/settings/ApplyAppearance';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
@@ -50,6 +51,7 @@ export function AppShell({ children }: { children: ReactNode }) {
     <ApplyAppearance>
       <NavigationProvider>
         <AccountProvider>
+          <ConceptAutoCheckIn />
           <PlayerProvider>
             <div className="backdrop" aria-hidden />
             {/* The full UI stays mounted under the mini bar: playback and state carry over. */}

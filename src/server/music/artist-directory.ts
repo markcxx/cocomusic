@@ -3,10 +3,10 @@ import type { CatalogArtist, CatalogSource } from './types';
 import { CatalogError } from './errors';
 import { neteaseRequest } from './netease/client';
 import { qqRequest } from './qq/client';
-import { kugouRequest } from './kugou/client';
+import { kugouRequest, createKugouClient } from './kugou/client';
 import { mapArtist as neteaseArtist } from './netease/mappers';
 import { mapArtist as qqArtist } from './qq/mappers';
-import { mapArtist as kugouArtist } from './kugou/mappers';
+import { createKugouMappers } from './kugou/mappers';
 import { record, rows, num, text } from './netease/mappers';
 import { cached } from './index';
 
@@ -39,7 +39,9 @@ export async function artistDirectory(source: CatalogSource, query: ArtistDirect
     const total = num(page.total) ?? offset + items.length;
     return { items, total, hasMore: items.length > 0 && offset + items.length < total };
   }
-  const response = await cached(`artist-directory:kugou-native:${area}:${type}`, () => kugouRequest({ path: '/ocean/v6/singer/list', params: { musician: 0, sextype: type || 0, showtype: 2, type: area || 0, hotsize: 200 } }), 30 * 60_000);
+  const request = source === 'kugou-lite' ? createKugouClient(source).kugouRequest : kugouRequest;
+  const { mapArtist: kugouArtist } = createKugouMappers(source);
+  const response = await cached(`artist-directory:${source}-native:${area}:${type}`, () => request({ path: '/ocean/v6/singer/list', params: { musician: 0, sextype: type || 0, showtype: 2, type: area || 0, hotsize: 200 } }), 30 * 60_000);
   const groups = rows(record(response.data).info);
   const raw = (initial ? groups.filter(group => text(group.title) === initial) : groups).flatMap(group => rows(group.singer));
   const unique = new Map<string, CatalogArtist>();

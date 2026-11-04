@@ -27,9 +27,10 @@ export function splitSongKey(key: string) {
 }
 
 /** "歌手 - 歌名" (Kugou's file name) → title when no separate field exists. */
-const titleFrom = (fileName: string) => {
-  const index = fileName.indexOf(' - ');
-  return index > 0 ? fileName.slice(index + 3) : fileName;
+  const titleFrom = (fileName: string) => {
+    const name = fileName.replace(/\.(mp3|flac|m4a|aac|ogg|opus|wav|ape)$/i, '');
+    const index = name.indexOf(' - ');
+    return index > 0 ? name.slice(index + 3) : name;
 };
 
 type TrackInput = {
@@ -38,100 +39,100 @@ type TrackInput = {
 };
 
 export function createKugouMappers(SOURCE: KugouSource) {
-function track(input: TrackInput): CatalogTrack {
-  const artists = input.artists.map(item => ({ id: text(item.id), name: text(item.name) })).filter(item => item.name);
-  const seconds = num(input.durationSec) ?? (num(input.durationMs) ? Math.round(Number(input.durationMs) / 1000) : undefined);
-  return {
-    id: songKey(input.hash, input.albumId, input.albumAudioId),
-    source: SOURCE,
-    title: titleFrom(text(input.title)) || '未知歌曲',
-    artist: artists.map(item => item.name).join(' / ') || '未知歌手',
-    artists,
-    album: text(input.album) || undefined,
-    albumId: num(input.albumId) ? text(input.albumId) : undefined,
-    cover: image(input.cover, 240),
-    duration: seconds,
-    vip: input.vip,
-  };
-}
+  function track(input: TrackInput): CatalogTrack {
+    const artists = input.artists.map(item => ({ id: text(item.id), name: text(item.name) })).filter(item => item.name);
+    const seconds = num(input.durationSec) ?? (num(input.durationMs) ? Math.round(Number(input.durationMs) / 1000) : undefined);
+    return {
+      id: songKey(input.hash, input.albumId, input.albumAudioId),
+      source: SOURCE,
+      title: titleFrom(text(input.title)) || '未知歌曲',
+      artist: artists.map(item => item.name).join(' / ') || '未知歌手',
+      artists,
+      album: text(input.album) || undefined,
+      albumId: num(input.albumId) ? text(input.albumId) : undefined,
+      cover: image(input.cover, 240),
+      duration: seconds,
+      vip: input.vip,
+    };
+  }
 
-/** Song shapes from rank/audio, artist audios and album songs. */
-function mapRichSong(raw: Raw): CatalogTrack {
-  const base = record(raw.base);
-  const audio = record(raw.audio_info);
-  const album = record(raw.album_info);
-  const authors = rows(raw.authors);
-  return track({
-    hash: audio.hash_128 ?? audio.hash ?? raw.hash,
-    albumId: raw.album_id ?? base.album_id ?? album.album_id,
-    albumAudioId: raw.album_audio_id ?? base.album_audio_id ?? raw.audio_id,
-    title: raw.songname ?? raw.audio_name ?? base.audio_name ?? raw.filename,
-    artists: authors.length ? authors.map(item => ({ id: item.author_id, name: item.author_name })) : [{ id: '', name: raw.author_name ?? base.author_name }],
-    album: album.album_name ?? raw.album_name,
-    cover: album.sizable_cover ?? album.cover ?? record(raw.trans_param).union_cover,
-    durationMs: audio.duration_128 ?? audio.duration ?? raw.timelength,
-    vip: Number(record(raw.privilege_download).fail_process) > 0 || Number(raw.pay_type ?? 0) > 0,
-  });
-}
+  /** Song shapes from rank/audio, artist audios and album songs. */
+  function mapRichSong(raw: Raw): CatalogTrack {
+    const base = record(raw.base);
+    const audio = record(raw.audio_info);
+    const album = record(raw.album_info);
+    const authors = rows(raw.authors);
+    return track({
+      hash: audio.hash_128 ?? audio.hash ?? raw.hash,
+      albumId: raw.album_id ?? base.album_id ?? album.album_id,
+      albumAudioId: raw.album_audio_id ?? base.album_audio_id ?? raw.audio_id,
+      title: raw.songname ?? raw.audio_name ?? base.audio_name ?? raw.filename,
+      artists: authors.length ? authors.map(item => ({ id: item.author_id, name: item.author_name })) : [{ id: '', name: raw.author_name ?? base.author_name }],
+      album: album.album_name ?? raw.album_name,
+      cover: album.sizable_cover ?? album.cover ?? record(raw.trans_param).union_cover,
+      durationMs: audio.duration_128 ?? audio.duration ?? raw.timelength,
+      vip: Number(record(raw.privilege_download).fail_process) > 0 || Number(raw.pay_type ?? 0) > 0,
+    });
+  }
 
-/** Search hits. */
-function mapSearchSong(raw: Raw): CatalogTrack {
-  return track({
-    hash: raw.FileHash, albumId: raw.AlbumID, albumAudioId: raw.MixSongID,
-    title: raw.OriSongName ?? raw.SongName ?? raw.FileName,
-    artists: rows(raw.Singers).map(item => ({ id: item.id, name: item.name })),
-    album: raw.AlbumName, cover: raw.Image, durationSec: raw.Duration,
-    vip: Number(raw.PayType) > 0,
-  });
-}
+  /** Search hits. */
+  function mapSearchSong(raw: Raw): CatalogTrack {
+    return track({
+      hash: raw.FileHash, albumId: raw.AlbumID, albumAudioId: raw.MixSongID,
+      title: raw.OriSongName ?? raw.SongName ?? raw.FileName,
+      artists: rows(raw.Singers).map(item => ({ id: item.id, name: item.name })),
+      album: raw.AlbumName, cover: raw.Image, durationSec: raw.Duration,
+      vip: Number(raw.PayType) > 0,
+    });
+  }
 
-/** Playlist track (pubsongs get_other_list_file_nofilt). */
-function mapListSong(raw: Raw): CatalogTrack {
-  const album = record(raw.albuminfo);
-  return track({
-    hash: raw.hash, albumId: raw.album_id ?? album.id, albumAudioId: raw.mixsongid ?? raw.audio_id,
-    title: raw.name, artists: rows(raw.singerinfo).map(item => ({ id: item.id, name: item.name })),
-    album: album.name, cover: raw.cover, durationMs: raw.timelen,
-  });
-}
+  /** Playlist track (pubsongs get_other_list_file_nofilt). */
+  function mapListSong(raw: Raw): CatalogTrack {
+    const album = record(raw.albuminfo);
+    return track({
+      hash: raw.hash, albumId: raw.album_id ?? album.id, albumAudioId: raw.mixsongid ?? raw.audio_id,
+      title: raw.name, artists: rows(raw.singerinfo).map(item => ({ id: item.id, name: item.name })),
+      album: album.name, cover: raw.cover, durationMs: raw.timelen,
+    });
+  }
 
-function mapPlaylist(raw: Raw, tag?: string): CatalogPlaylist {
-  return {
-    id: text(raw.global_collection_id ?? raw.gid ?? raw.specialid),
-    source: SOURCE,
-    name: text(raw.specialname ?? raw.name),
-    cover: image(raw.flexible_cover ?? raw.imgurl ?? raw.img ?? raw.pic, 400),
-    trackCount: num(raw.song_count ?? raw.songcount ?? raw.count),
-    playCount: num(raw.play_count ?? raw.playcount),
-    creator: text(raw.nickname ?? raw.list_create_username) || undefined,
-    tag: tag || text(rows(raw.tags)[0]?.tag_name) || undefined,
-  };
-}
+  function mapPlaylist(raw: Raw, tag?: string): CatalogPlaylist {
+    return {
+      id: text(raw.global_collection_id ?? raw.gid ?? raw.specialid),
+      source: SOURCE,
+      name: text(raw.specialname ?? raw.name),
+      cover: image(raw.flexible_cover ?? raw.imgurl ?? raw.img ?? raw.pic, 400),
+      trackCount: num(raw.song_count ?? raw.songcount ?? raw.count),
+      playCount: num(raw.play_count ?? raw.playcount),
+      creator: text(raw.nickname ?? raw.list_create_username) || undefined,
+      tag: tag || text(rows(raw.tags)[0]?.tag_name) || undefined,
+    };
+  }
 
-function mapAlbum(raw: Raw): CatalogAlbum {
-  const date = text(raw.publish_date ?? raw.publishtime ?? raw.publish_time);
-  return {
-    id: text(raw.album_id ?? raw.albumid),
-    source: SOURCE,
-    name: text(raw.album_name ?? raw.albumname),
-    artist: text(raw.author_name ?? raw.singername ?? raw.singer) || '未知歌手',
-    cover: image(raw.sizable_cover ?? raw.imgurl ?? raw.img, 400),
-    trackCount: num(raw.songcount ?? raw.song_count),
-    publishTime: date ? Date.parse(date.slice(0, 10)) || undefined : undefined,
-  };
-}
+  function mapAlbum(raw: Raw): CatalogAlbum {
+    const date = text(raw.publish_date ?? raw.publishtime ?? raw.publish_time);
+    return {
+      id: text(raw.album_id ?? raw.albumid),
+      source: SOURCE,
+      name: text(raw.album_name ?? raw.albumname),
+      artist: text(raw.author_name ?? raw.singername ?? raw.singer) || '未知歌手',
+      cover: image(raw.sizable_cover ?? raw.imgurl ?? raw.img, 400),
+      trackCount: num(raw.songcount ?? raw.song_count),
+      publishTime: date ? Date.parse(date.slice(0, 10)) || undefined : undefined,
+    };
+  }
 
-function mapArtist(raw: Raw): CatalogArtist {
-  return {
-    id: text(raw.singerid ?? raw.AuthorId ?? raw.author_id),
-    source: SOURCE,
-    name: text(raw.singername ?? raw.AuthorName ?? raw.author_name),
-    avatar: image(raw.imgurl ?? raw.Avatar ?? raw.sizable_avatar, 400),
-    songCount: num(raw.AudioCount ?? raw.song_count),
-    albumCount: num(raw.AlbumCount ?? raw.album_count),
-  };
-}
+  function mapArtist(raw: Raw): CatalogArtist {
+    return {
+      id: text(raw.singerid ?? raw.AuthorId ?? raw.author_id),
+      source: SOURCE,
+      name: text(raw.singername ?? raw.AuthorName ?? raw.author_name),
+      avatar: image(raw.imgurl ?? raw.Avatar ?? raw.sizable_avatar, 400),
+      songCount: num(raw.AudioCount ?? raw.song_count),
+      albumCount: num(raw.AlbumCount ?? raw.album_count),
+    };
+  }
 
-return { track, mapRichSong, mapSearchSong, mapListSong, mapPlaylist, mapAlbum, mapArtist };
+  return { track, mapRichSong, mapSearchSong, mapListSong, mapPlaylist, mapAlbum, mapArtist };
 }
 export const { track, mapRichSong, mapSearchSong, mapListSong, mapPlaylist, mapAlbum, mapArtist } = createKugouMappers('kugou');

@@ -27,6 +27,8 @@
     "typecheck": "tsc --noEmit && tsc -p electron/tsconfig.json --noEmit",
     "test": "node --import tsx --no-warnings --test \"src/**/*.test.ts\" \"electron/**/*.test.ts\"",
     "test:taskbar": "npm run build:electron && electron scripts/test-taskbar.cjs",
+    "test:kugou:live": "node --import tsx scripts/check-kugou-live.ts",
+    "test:kugou:http": "node scripts/check-kugou-http.mjs",
     "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {

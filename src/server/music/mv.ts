@@ -3,7 +3,8 @@ import { neteaseEapi } from './netease/client';
 import { record, rows, text } from './netease/mappers';
 import { qqRequest } from './qq/client';
 import { splitSongKey as qqKey } from './qq/mappers';
-import { device, kugouRequest, songKey } from './kugou/client';
+import { createKugouClient } from './kugou/client';
+import type { KugouSource } from './kugou/config';
 import { splitSongKey as kugouKey } from './kugou/mappers';
 import type { CatalogSource } from './types';
 
@@ -54,7 +55,8 @@ export async function musicVideo(source: CatalogSource, songId: string): Promise
     const info = record(record(metadata)[id]);
     return { id, source, title: text(info.name || track.name), artist: rows(track.singer).map(x => text(x.name)).join(' / '), cover: mediaUrl(info.cover_pic), qualities };
   }
-  if (source === 'kugou') {
+  if (source === 'kugou' || source === 'kugou-lite') {
+    const { kugouRequest } = createKugouClient(source);
     const { albumAudioId } = kugouKey(songId);
     if (!albumAudioId) throw unavailable();
     const result = await kugouRequest({ method: 'POST', path: '/kmr/v1/audio/mv', router: 'openapi.kugou.com', headers: { 'KG-TID': '38' }, data: { data: [{ album_audio_id: albumAudioId }], fields: 'h264,authors' } });
@@ -68,7 +70,7 @@ export async function musicVideo(source: CatalogSource, songId: string): Promise
       const hash = text(formats[`${quality}_hash`]).toLowerCase();
       if (!/^[a-f0-9]{32}$/.test(hash)) return null;
       const size = Math.min(Number(formats[`${quality}_width`]), Number(formats[`${quality}_height`]));
-      return { id: quality, label: size ? `${size}P` : quality.toUpperCase(), url: `/api/music/mv/stream?hash=${hash}` };
+      return { id: quality, label: size ? `${size}P` : quality.toUpperCase(), url: `/api/music/mv/stream?hash=${hash}${source === 'kugou-lite' ? '&source=kugou-lite' : ''}` };
     }));
     const qualities = results.flatMap(result => result.status === 'fulfilled' && result.value ? [result.value] : []);
     if (!qualities.length) throw unavailable();
@@ -78,7 +80,8 @@ export async function musicVideo(source: CatalogSource, songId: string): Promise
 }
 
 /** Kugou's video CDN is HTTP-only; resolve server-side without weakening TLS checks. */
-export async function kugouVideoUrl(hash: string) {
+export async function kugouVideoUrl(hash: string, source: KugouSource = 'kugou') {
+  const { device, kugouRequest, songKey } = createKugouClient(source);
   if (!/^[a-f0-9]{32}$/i.test(hash)) throw new CatalogError('视频标识无效', 400);
   const { mid, userid } = device();
   const result = await kugouRequest({ path: '/v2/interface/index', router: 'trackermv.kugou.com', params: { backupdomain: 1, cmd: 123, ext: 'mp4', ismp3: 0, hash, pid: 1, type: 1, key: songKey(hash, mid, userid) } });

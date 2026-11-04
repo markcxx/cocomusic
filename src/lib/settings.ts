@@ -53,6 +53,7 @@ export interface Settings {
   /* 曲库 */
   /** Platform for browsing, search and the account (songs already queued keep their own). */
   catalogSource: 'netease' | 'qq' | 'kugou' | 'kugou-lite';
+  conceptAutoCheckIn: boolean;
 
   /* 外观 */
   themeMode: ThemeMode;
@@ -157,6 +158,7 @@ export interface Settings {
 
 export const DEFAULT_SETTINGS: Settings = {
   catalogSource: 'netease',
+  conceptAutoCheckIn: false,
   themeMode: 'system',
   windowEffect: 'acrylic',
   windowOpacity: 100,
@@ -256,6 +258,7 @@ const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values }
 
 const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
+  conceptAutoCheckIn: bool,
   themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },

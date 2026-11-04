@@ -74,7 +74,7 @@ export function Select<T extends string>({ value, options, onChange, label, plac
   }));
   return (
     <>
-      <button ref={anchor} type="button" className={styles.select} onClick={() => setOpen(current => !current)} aria-haspopup="listbox" aria-expanded={open} aria-label={label}>
+      <button ref={anchor} type="button" className={styles.select} onClick={() => setOpen(current => !current)} aria-haspopup="menu" aria-expanded={open} aria-label={label}>
         <span>{current?.label ?? placeholder ?? '请选择'}</span>
         <motion.span animate={{ rotate: open ? 180 : 0 }} className={styles.selectCaret}><ChevronDown size={14} strokeWidth={1.8} /></motion.span>
       </button>

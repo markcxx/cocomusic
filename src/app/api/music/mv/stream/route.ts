@@ -6,7 +6,9 @@ export async function GET(request: Request) {
     const hash = new URL(request.url).searchParams.get('hash') ?? '';
     const range = request.headers.get('range');
     if (range && !/^bytes=\d*-\d*$/.test(range)) throw new CatalogError('无效的视频范围', 416);
-    const url = await kugouVideoUrl(hash);
+    const source = new URL(request.url).searchParams.get('source') ?? 'kugou';
+    if (source !== 'kugou' && source !== 'kugou-lite') throw new CatalogError('未知的曲库来源', 400);
+    const url = await kugouVideoUrl(hash, source);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 15_000);
     let upstream: Response;

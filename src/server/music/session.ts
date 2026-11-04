@@ -18,12 +18,12 @@ let store: Store | null = null;
 /** Platforms whose login was dropped because the platform rejected it (not a user logout). */
 const expired = new Set<CatalogSource>();
 
-function load(): Store {
-  if (store) return store;
+function load(refresh = false): Store {
+  if (store && !refresh) return store;
   try {
     if (existsSync(file)) store = JSON.parse(readFileSync(file, 'utf8')) as Store;
   } catch {
-    store = null;
+    // Keep the last valid snapshot if a transient read fails.
   }
   // A stable 52-hex device id per install, like the official desktop client.
   if (!store?.deviceId) store = { deviceId: randomBytes(26).toString('hex').toUpperCase(), sessions: store?.sessions ?? {} };
@@ -40,28 +40,33 @@ function save() {
 
 export const session = {
   deviceId: () => load().deviceId,
-  get(source: CatalogSource) { return load().sessions[source]; },
+  // Route modules, dev reloads and helper processes must see newer logins.
+  get(source: CatalogSource) { return load(true).sessions[source]; },
   set(source: CatalogSource, cookie: Record<string, string>, profile?: UserProfile) {
-    load().sessions[source] = { cookie, profile, savedAt: Date.now() };
+    load(true).sessions[source] = { cookie, profile, savedAt: Date.now() };
     expired.delete(source);
     save();
   },
   /** Merge refreshed credentials into the stored session, keeping the profile. */
   updateCookie(source: CatalogSource, patch: Record<string, string>) {
-    const current = load().sessions[source];
+    const current = load(true).sessions[source];
     if (!current) return;
     current.cookie = { ...current.cookie, ...Object.fromEntries(Object.entries(patch).filter(([, value]) => value)) };
     save();
   },
-  setProfile(source: CatalogSource, profile: UserProfile) {
-    const current = load().sessions[source];
-    if (current) { current.profile = profile; save(); }
+  setProfile(source: CatalogSource, profile: UserProfile, expectedCookie?: Record<string, string>) {
+    const current = load(true).sessions[source];
+    if (!current || (expectedCookie && Object.entries(expectedCookie).some(([key, value]) => current.cookie[key] !== value))) return false;
+    current.profile = profile;
+    save();
+    return true;
   },
   /** `expired`: the platform rejected the credentials, so the UI should tell the user. */
   clear(source: CatalogSource, options: { expired?: boolean } = {}) {
-    if (options.expired && load().sessions[source]) expired.add(source);
+    const current = load(true);
+    if (options.expired && current.sessions[source]) expired.add(source);
     else expired.delete(source);
-    delete load().sessions[source];
+    delete current.sessions[source];
     save();
   },
   /** True once after the login was dropped as expired. */

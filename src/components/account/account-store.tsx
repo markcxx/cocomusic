@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/toast';
 import { useSettings } from '@/lib/settings';
 import { currentSource } from '@/lib/catalog-client';
 import { SOURCE_NAMES } from '@/server/music/ids';
+import { accountRecheckMatches } from '@/lib/account-events';
 
 /** Background login check cadence, and the minimum gap between checks (focus can fire often). */
 const RECHECK_INTERVAL_MS = 3 * 60 * 60_000;
@@ -47,10 +48,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const profileRef = useLatest(profile);
 
   const loadLibrary = useCallback(async () => {
+    const source = currentSource();
     const [likes, lists] = await Promise.allSettled([accountApi.likes(), accountApi.playlists()]);
+    if (currentSource() !== source || !profileRef.current || profileRef.current.source !== source) return;
     if (likes.status === 'fulfilled') setLiked(new Set(likes.value.ids));
     if (lists.status === 'fulfilled') setPlaylists(lists.value.playlists);
-  }, []);
+  }, [profileRef]);
 
   /** The platform dropped the stored login: say so and offer to sign in again. */
   const onExpired = useCallback(() => {
@@ -82,12 +85,14 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let last = Date.now();
     let busy = false;
+    let cancelled = false;
     const check = (force = false) => {
       if (busy || !profileRef.current || (!force && Date.now() - last < RECHECK_MIN_MS)) return;
       busy = true;
       last = Date.now();
       accountApi.me()
         .then(({ profile: current, expired }) => {
+          if (cancelled || currentSource() !== platform) return;
           if (expired || (!current && profileRef.current)) onExpired();
           else if (current) setProfile(current);
         })
@@ -98,11 +103,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     const onFocus = () => check();
     const onVisible = () => { if (document.visibilityState === 'visible') check(); };
     // The player asks right away when a logged-in account only gets a preview clip.
-    const onRequest = () => check(true);
+    const onRequest = (event: Event) => { if (accountRecheckMatches(event, platform)) check(true); };
     window.addEventListener('focus', onFocus);
     window.addEventListener(ACCOUNT_RECHECK_EVENT, onRequest);
     document.addEventListener('visibilitychange', onVisible);
     return () => {
+      cancelled = true;
       clearInterval(timer);
       window.removeEventListener('focus', onFocus);
       window.removeEventListener(ACCOUNT_RECHECK_EVENT, onRequest);
@@ -124,6 +130,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     openLogin: () => setLoginOpen(true),
     closeLogin: () => setLoginOpen(false),
     onLoggedIn: next => {
+      if (next.source !== currentSource()) return;
       setProfile(next);
       setLoginOpen(false);
       toast.success(`欢迎回来，${next.nickname}`);

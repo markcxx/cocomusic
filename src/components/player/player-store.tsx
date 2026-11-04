@@ -5,12 +5,13 @@ import { persistentStorage } from '@/lib/persistent-storage';
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
 import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
-import { catalogApi, type SongSource } from '@/lib/catalog-client';
+import { catalogApi, CatalogRequestError, type SongSource } from '@/lib/catalog-client';
 import { desktop, localAudioUrl } from '@/lib/local-client';
 import { emptyTrack } from '@/lib/mock-data';
 import { recentPlays } from '@/lib/recent-plays';
 import { needsSamples, settings as appSettings, useSettings } from '@/lib/settings';
 import { useLatest } from '@/lib/use-latest';
+import { requestKugouVerification } from '@/lib/kugou-verification';
 import { isPlayable, type Track } from '@/types/music';
 import { broadcastPlayer } from './player-broadcast';
 import { hasGraph, setGraphOutputDevice } from './visualizer/audio-graph';
@@ -340,6 +341,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       })
       .catch(error => {
         if (controller.signal.aborted) return;
+        if (error instanceof CatalogRequestError && error.status === 401) {
+          setStatus('error'); setPlaying(false);
+          toast.error(error.message);
+          return;
+        }
+        if (error instanceof CatalogRequestError && error.code === 20028) {
+          setStatus('error'); setPlaying(false);
+          requestKugouVerification(error.verificationUrl);
+          toast.error(error.message);
+          return;
+        }
         latest.current.fail(error instanceof Error ? error.message : '无法获取播放地址');
       });
     return () => controller.abort();

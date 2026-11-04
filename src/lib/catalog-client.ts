@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { settings as appSettings, useSettings } from './settings';
+import { requestAccountRecheck } from './account-events';
 import type { ArtistDirectoryQuery } from './artist-directory';
 import type { ArtistDirectoryPage } from '@/server/music/artist-directory';
 import { useLatest } from './use-latest';
@@ -34,12 +35,19 @@ export const currentSource = (): CatalogSource => {
   return source;
 };
 
+export class CatalogRequestError extends Error {
+  constructor(message: string, public readonly status: number, public readonly code?: number, public readonly verificationUrl?: string) { super(message); }
+}
+
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}, signal?: AbortSignal, from: CatalogSource = currentSource()): Promise<T> {
   const query = new URLSearchParams({ source: from });
   for (const [key, value] of Object.entries(params)) if (value !== undefined && value !== '') query.set(key, String(value));
   const response = await fetch(`/api/music/${path}?${query}`, { signal: signal ?? AbortSignal.timeout(30000) });
   const data = await response.json().catch(() => ({ error: '曲库返回了无法解析的数据' }));
-  if (!response.ok) throw new Error(data.error || '曲库请求失败，请稍后重试');
+  if (!response.ok) {
+    if (response.status === 401) requestAccountRecheck(from);
+    throw new CatalogRequestError(data.error || '曲库请求失败，请稍后重试', response.status, data.code, data.verificationUrl);
+  }
   return data as T;
 }
 
