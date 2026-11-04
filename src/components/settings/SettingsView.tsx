@@ -344,7 +344,7 @@ export function SettingsView() {
           </Section>
 
           {/* ───────── 歌词页 ───────── */}
-          <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor', 'lyricsVisualizerDensity'))}>
+          <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor'))}>
             <Row title="歌词字号">
               <Range value={s.lyricsFontSize} min={14} max={32} onChange={set('lyricsFontSize')} label="歌词字号" format={value => `${value}px`} />
             </Row>
@@ -385,9 +385,6 @@ export function SettingsView() {
                 <ThemeColorControl value={s.lyricsVisualizerCustomColor} presets={VISUALIZER_COLOR_PRESETS} onChange={set('lyricsVisualizerCustomColor')} label="自定义颜色" />
               </Row>
             )}
-            <Row title="播放器模式密度" description="细密：频谱更多、更细" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
-              <Segmented value={s.lyricsVisualizerDensity} onChange={set('lyricsVisualizerDensity')} label="播放器模式密度" options={[{ value: 'normal', label: '舒展' }, { value: 'fine', label: '细密' }]} />
-            </Row>
             <Row title="歌词偏移" description="歌词总是快或慢时微调，桌面歌词和迷你模式同样生效">
               <Range value={s.lyricsOffset} min={-3} max={3} step={0.1} onChange={value => settings.set('lyricsOffset', Math.round(value * 10) / 10)} label="歌词偏移" format={value => (value === 0 ? '0 秒' : `${value > 0 ? '提前' : '延后'} ${Math.abs(value).toFixed(1)} 秒`)} />
             </Row>

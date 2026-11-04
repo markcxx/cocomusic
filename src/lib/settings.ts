@@ -114,8 +114,6 @@ export interface Settings {
   lyricsVisualizerColor: VisualizerColor;
   /** Hex used when lyricsVisualizerColor is 'custom'. */
   lyricsVisualizerCustomColor: string;
-  /** Bar / point count multiplier: 'fine' doubles the density. */
-  lyricsVisualizerDensity: 'normal' | 'fine';
 
   /* 桌面歌词 */
   desktopFontSize: number;
@@ -202,7 +200,6 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricsVinylEffect: 'none',
   lyricsVisualizerColor: 'blue',
   lyricsVisualizerCustomColor: '#56a8ff',
-  lyricsVisualizerDensity: 'normal',
 
   desktopFontSize: 34,
   desktopColor: 'lavender',
@@ -223,7 +220,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showTray: true,
   trayLyrics: true,
   menuBarText: 'white',
-  taskbarLyrics: false,
+  taskbarLyrics: true,
   taskbarWidth: 340,
   taskbarPosition: 'auto',
   taskbarFontSize: 14,
@@ -286,7 +283,7 @@ const RULES: Record<keyof Settings, Rule> = {
   miniShowLyrics: bool, miniSpinRecord: bool,
   appShortcuts: bool, seekStep: oneOf(0, 5, 10, 15, 30), rememberSearches: bool,
   trialNotice: bool, showVipBadge: bool, titleShowsTrack: bool, lyricsKeepAwake: bool,
-  lyricsLayout: oneOf('standard', 'centered', 'lyrics'), lyricsVisualizer: oneOf(...VISUALIZER_TEMPLATES), lyricsVinylEffect: oneOf('none', 'lines', 'glow'), lyricsVisualizerColor: oneOf('blue', 'cover', 'white', 'accent', 'aurora', 'custom'), lyricsVisualizerCustomColor: { type: 'hex' }, lyricsVisualizerDensity: oneOf('normal', 'fine'),
+  lyricsLayout: oneOf('standard', 'centered', 'lyrics'), lyricsVisualizer: oneOf(...VISUALIZER_TEMPLATES), lyricsVinylEffect: oneOf('none', 'lines', 'glow'), lyricsVisualizerColor: oneOf('blue', 'cover', 'white', 'accent', 'aurora', 'custom'), lyricsVisualizerCustomColor: { type: 'hex' },
   toastOnTrackChange: bool,
   showTray: bool, trayLyrics: bool, menuBarText: oneOf('white', 'black', 'auto'),
   taskbarLyrics: bool, taskbarWidth: num(180, 560), taskbarPosition: oneOf('auto', 'left', 'right'), taskbarFontSize: num(12, 18), taskbarTranslation: bool,

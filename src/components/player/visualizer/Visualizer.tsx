@@ -119,13 +119,13 @@ export function useVisualizer() {
   const tint = useCoverTint(track.cover, track.coverSeed);
   const template: VisualizerTemplate = prefs.reduceMotion ? 'off' : prefs.lyricsVisualizer;
   const custom = parseHex(prefs.lyricsVisualizerCustomColor);
-  return { template, strip: stripTemplate(template, prefs.lyricsVinylEffect), playing: playing && !prefs.reduceMotion, tint, color: prefs.lyricsVisualizerColor, custom: custom ? rgbTriplet(custom) : undefined, density: prefs.lyricsVisualizerDensity };
+  return { template, strip: stripTemplate(template, prefs.lyricsVinylEffect), playing: playing && !prefs.reduceMotion, tint, color: prefs.lyricsVisualizerColor, custom: custom ? rgbTriplet(custom) : undefined };
 }
 
 /** One live canvas for `template` (positioned by the caller's class). */
 export function VisualizerCanvas({ template, className }: { template: VisualizerTemplate; className?: string }) {
-  const { playing, tint, color, custom, density } = useVisualizer();
-  const ref = useVisualizerCanvas(template, { bands: bandCount(template, density), active: playing, color, tint, custom });
+  const { playing, tint, color, custom } = useVisualizer();
+  const ref = useVisualizerCanvas(template, { bands: bandCount(template, 'fine'), active: playing, color, tint, custom });
   return <canvas ref={ref} className={className} aria-hidden />;
 }
 

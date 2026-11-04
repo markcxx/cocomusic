@@ -373,13 +373,8 @@
   padding: 30vh 0;
   overflow-y: auto;
   overscroll-behavior: auto;
-  scrollbar-width: none;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
-}
-
-.lines::-webkit-scrollbar {
-  display: none;
 }
 
 .line {
@@ -505,19 +500,13 @@
 
 /* List scrolls under the header; edges fade into the backdrop instead of a hard cut. */
 .commentsScroll {
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.4);
   flex: 1;
   margin: 0 -32px;
   padding: 0 32px;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
   mask-image: linear-gradient(180deg, transparent 0, #000 16px, #000 calc(100% - 24px), transparent 100%);
-}
-
-.commentsScroll::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.22);
-}
-
-.commentsScroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 255, 255, 0.4);
 }
 
 .commentsBody {

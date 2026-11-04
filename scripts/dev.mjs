@@ -54,10 +54,12 @@ const env = {
 };
 
 const children = new Set();
+let stopping = false;
 const run = (command, args, options = {}) => {
   const child = spawn(command, args, { cwd: root, env, stdio: 'inherit', ...options });
   children.add(child);
-  child.once('exit', () => children.delete(child));
+  child.once('close', () => children.delete(child));
+  child.once('error', error => { log(`无法启动子进程: ${error.message}`); shutdown(1); });
   return child;
 };
 
@@ -85,9 +87,16 @@ let electron;
 let restarting = false;
 let launches = 0;
 function startElectron() {
+  if (stopping) return;
   const files = launches++ === 0 ? openFiles : [];
   electron = run(electronBinary, ['.', ...files], { env: { ...env, COCO_DEV_RELOAD: '1' }, stdio: ['pipe', 'inherit', 'inherit'] });
+  // The child can close stdin between a writable check and write(). EPIPE is
+  // asynchronous, so guarding the write alone cannot prevent a runner crash.
+  electron.stdin.on('error', error => {
+    if (error.code !== 'EPIPE' && error.code !== 'ERR_STREAM_DESTROYED') log(`Electron reload pipe: ${error.message}`);
+  });
   electron.once('exit', code => {
+    if (stopping) return;
     if (restarting) { restarting = false; startElectron(); return; }
     log('Electron closed, stopping dev server');
     shutdown(code ?? 0);
@@ -100,26 +109,52 @@ function firstBuild() {
   started = true;
   log(`next ${origin} (HMR) · watching electron/main and electron/preload`);
   startElectron();
-  const debounce = (fn, ms = 250) => { let timer; return () => { clearTimeout(timer); timer = setTimeout(fn, ms); }; };
   const out = dir => { const full = path.join(root, 'dist-electron', dir); mkdirSync(full, { recursive: true }); return full; };
-  const restart = debounce(() => {
-    if (!electron || restarting) return;
-    log('main process changed → restarting Electron');
-    restarting = true;
-    electron.kill();
-  });
-  watch(out('main'), { recursive: true }, restart);
-  watch(out('shared'), { recursive: true }, restart);
-  // Preload changes only need the page reloaded; main listens for this signal on stdin.
-  watch(out('preload'), { recursive: true }, debounce(() => {
-    log('preload changed → reloading window');
-    electron?.stdin?.write('reload\n');
-  }));
+  // One compilation can change both main and preload. Coalesce their events:
+  // restarting loads the new preload too, so it takes priority over a reload.
+  let changeTimer;
+  let needsRestart = false;
+  const changed = main => {
+    needsRestart ||= main;
+    clearTimeout(changeTimer);
+    changeTimer = setTimeout(() => {
+      const restart = needsRestart;
+      needsRestart = false;
+      if (stopping || !electron || restarting || electron.killed || electron.exitCode !== null) return;
+      if (restart) {
+        log('main process changed → restarting Electron');
+        restarting = true;
+        electron.kill();
+        return;
+      }
+      const input = electron.stdin;
+      if (!input || input.destroyed || !input.writable || input.writableEnded) return;
+      log('preload changed → reloading window');
+      input.write('reload\n');
+    }, 250);
+  };
+  watch(out('main'), { recursive: true }, () => changed(true));
+  watch(out('shared'), { recursive: true }, () => changed(true));
+  watch(out('preload'), { recursive: true }, () => changed(false));
 }
 
 function shutdown(code) {
-  for (const child of children) child.kill();
-  process.exit(code);
+  if (stopping) return;
+  stopping = true;
+  // Next owns a server subprocess and a dev lock. Let its shutdown handler
+  // finish before exiting the runner; otherwise they can outlive the terminal.
+  const closed = [...children].map(child => new Promise(resolve => {
+    child.once('close', resolve);
+    child.kill();
+  }));
+  const deadline = setTimeout(() => {
+    for (const child of children) child.kill('SIGKILL');
+    process.exit(code);
+  }, 5000);
+  Promise.all(closed).then(() => { clearTimeout(deadline); process.exit(code); });
 }
 process.on('SIGINT', () => shutdown(0));
 process.on('SIGTERM', () => shutdown(0));
+
+process.on('uncaughtException', error => { console.error(error); shutdown(1); });
+process.on('unhandledRejection', error => { console.error(error); shutdown(1); });

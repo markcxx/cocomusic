@@ -31,7 +31,7 @@ export function PlayerBar() {
   };
 
   return (
-    <footer className={styles.player} aria-label="播放控制" inert={player.lyricsOpen}>
+    <footer className={styles.player} data-player-bar aria-label="播放控制" inert={player.lyricsOpen}>
       <div className={styles.nowPlaying}>
         <TrackInfo />
       </div>

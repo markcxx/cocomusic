@@ -148,7 +148,7 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
   const stats = useSongStats(track.songId, track.source);
   const desktopLyrics = useDesktopLyrics();
   return (
-    <footer className={styles.bar} aria-label="播放控制">
+    <footer className={styles.bar} data-player-bar aria-label="播放控制">
       <Progress />
       <div className={styles.row}>
         <div className={styles.song}>

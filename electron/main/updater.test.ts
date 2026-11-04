@@ -10,7 +10,7 @@ import ts from 'typescript';
 import type * as Updater from './updater.ts';
 
 /** Run the real updater with a fake Electron host; tests never launch an installer. */
-function host(options: { packaged?: boolean; platform?: string; persisted?: Record<string, unknown> } = {}) {
+function host(options: { packaged?: boolean; platform?: string; persisted?: Record<string, unknown>; releaseResponse?: () => Response } = {}) {
   const directory = mkdtempSync(path.join(os.tmpdir(), 'coco-updater-'));
   if (options.persisted) writeFileSync(path.join(directory, 'updater.json'), JSON.stringify(options.persisted));
   const installer = Buffer.from('test installer');
@@ -28,7 +28,7 @@ function host(options: { packaged?: boolean; platform?: string; persisted?: Reco
     app, BrowserWindow: { getAllWindows: () => [] },
     net: { fetch: async (url: string) => {
       urls.push(url);
-      if (url.startsWith('https://api.github.com/')) return Response.json([{
+      if (url.startsWith('https://api.github.com/')) return options.releaseResponse?.() ?? Response.json([{
         tag_name: 'v0.0.1', name: '0.0.1', html_url: `${repo}/releases/tag/v0.0.1`, body: 'Release notes',
         assets: ['mac-arm64.zip', 'mac-arm64.dmg', 'win-x64-Setup.exe'].map(suffix => ({
           name: `CoCo-Music-0.0.1-${suffix}`, size: installer.length, state: 'uploaded', digest: `sha256:${digest}`,
@@ -156,5 +156,45 @@ test('a previous manual check does not swallow the automatic update prompt; dism
     await context.updater.checkForUpdates(true);
     assert.equal(context.updater.getUpdateState().notify, '');
     assert.equal(context.urls.filter(url => !url.startsWith('https://api.github.com/')).length, 0);
+  } finally { context.dispose(); }
+});
+
+
+test('checks and changelog share an in-flight request and a short-lived cache', async () => {
+  const context = host();
+  try {
+    await Promise.all([context.updater.checkForUpdates(), context.updater.changelog()]);
+    await context.updater.checkForUpdates();
+    await context.updater.changelog();
+    assert.equal(context.urls.length, 1);
+    assert.equal(context.updater.getUpdateState().status, 'available');
+  } finally { context.dispose(); }
+});
+
+test('rate limits persist their cooldown across restarts without more requests', async () => {
+  const context = host({ releaseResponse: () => new Response('API rate limit exceeded', {
+    status: 403, headers: { 'x-ratelimit-remaining': '0', 'retry-after': '120' },
+  }) });
+  try {
+    await context.updater.checkForUpdates();
+    assert.match(context.updater.getUpdateState().error, /限流.*后重试/);
+    await context.updater.checkForUpdates();
+    await context.updater.changelog();
+    assert.equal(context.urls.length, 1);
+    const restarted = host({ persisted: JSON.parse(readFileSync(path.join(context.directory, 'updater.json'), 'utf8')) });
+    try {
+      await restarted.updater.checkForUpdates();
+      assert.equal(restarted.urls.length, 0);
+      assert.match(restarted.updater.getUpdateState().error, /限流/);
+    } finally { restarted.dispose(); }
+  } finally { context.dispose(); }
+});
+
+test('permission failures are not mislabeled as rate limits', async () => {
+  const context = host({ releaseResponse: () => new Response('Forbidden', { status: 403 }) });
+  try {
+    await context.updater.checkForUpdates();
+    assert.match(context.updater.getUpdateState().error, /拒绝访问/);
+    assert.doesNotMatch(context.updater.getUpdateState().error, /限流/);
   } finally { context.dispose(); }
 });

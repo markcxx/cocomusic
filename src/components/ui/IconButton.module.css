@@ -33,7 +33,7 @@
 }
 
 .button:hover:not(:disabled) {
-  background: var(--hover);
+  background: var(--icon-button-hover-background, var(--hover));
 }
 
 .muted:hover:not(:disabled) {
@@ -68,13 +68,13 @@
 }
 
 :global([data-theme='dark']) .button:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--icon-button-hover-background, rgba(255, 255, 255, 0.12));
   color: #fff;
 }
 
 :global([data-theme='dark']) .active {
   color: #fff;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--icon-button-active-background, rgba(255, 255, 255, 0.14));
 }
 
 :global([data-theme='dark']) .button:disabled {

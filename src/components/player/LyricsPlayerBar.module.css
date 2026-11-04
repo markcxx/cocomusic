@@ -1,4 +1,6 @@
 .bar {
+  --icon-button-hover-background: transparent;
+  --icon-button-active-background: transparent;
   position: relative;
   z-index: 3;
   flex-shrink: 0;

@@ -53,7 +53,6 @@
   -webkit-backdrop-filter: blur(36px) saturate(1.6);
   color: #fff;
   transform-origin: right top;
-  scrollbar-width: none;
 }
 
 .header {

@@ -44,6 +44,10 @@
   height: 54px;
 }
 
+:global([data-player-bar]) .playButton:hover {
+  background: var(--disc);
+}
+
 /* Inline with 34px icon buttons (MV player controls). */
 .playCompact {
   width: 34px;

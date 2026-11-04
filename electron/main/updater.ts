@@ -78,6 +78,10 @@ let lastVersion = '';
 let state: UpdateState;
 let releases: ReleaseInfo[] = [];
 let etag = '';
+let fetchedAt = 0;
+let retryAt = 0;
+let fetching: Promise<ReleaseInfo[]> | null = null;
+const RELEASE_CACHE_MS = 60_000;
 let checking: Promise<void> | null = null;
 let download: AbortController | null = null;
 /** Verified installer on disk, ready for install(). `bundle`: the unpacked macOS app, prepared ahead so quitting can swap it in at once. */
@@ -93,11 +97,12 @@ function load() {
     if (raw.channel === 'stable' || raw.channel === 'beta') settings.channel = raw.channel;
     if (isVersion(raw.skipped)) skipped = raw.skipped;
     if (isVersion(raw.lastVersion)) lastVersion = raw.lastVersion;
+    if (typeof raw.retryAt === 'number' && Number.isFinite(raw.retryAt)) retryAt = raw.retryAt;
   } catch { /* defaults */ }
 }
 
 function save() {
-  try { writeFileSync(storeFile(), JSON.stringify({ ...settings, skipped, lastVersion: app.getVersion() })); } catch { /* best effort */ }
+  try { writeFileSync(storeFile(), JSON.stringify({ ...settings, skipped, lastVersion: app.getVersion(), retryAt })); } catch { /* best effort */ }
 }
 
 function broadcast() {
@@ -153,16 +158,45 @@ function message(error: unknown) {
   return text || '更新失败，请稍后重试';
 }
 
-async function fetchReleases() {
+function rateLimitMessage() {
+  return `GitHub 更新接口暂时限流，请在 ${new Date(retryAt).toLocaleTimeString('zh-CN', { hour12: false })} 后重试，或从 GitHub 发布页下载安装包`;
+}
+
+function fetchReleases(): Promise<ReleaseInfo[]> {
+  if (fetching) return fetching;
+  if (fetchedAt && Date.now() - fetchedAt < RELEASE_CACHE_MS) return Promise.resolve(releases);
+  if (Date.now() < retryAt) return Promise.reject(new Error(rateLimitMessage()));
+  fetching = requestReleases().finally(() => { fetching = null; });
+  return fetching;
+}
+
+async function requestReleases() {
   const response = await net.fetch(API, {
     signal: AbortSignal.timeout(30_000),
     headers: { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28', 'User-Agent': `CoCoMusic/${app.getVersion()}`, ...(etag ? { 'If-None-Match': etag } : {}) },
   });
-  // Unchanged since the last check (also does not count against the rate limit).
-  if (response.status === 304 && releases.length) return releases;
-  if (response.status === 403 || response.status === 429) throw new Error('GitHub 访问过于频繁，请稍后再试');
+  // Anonymous conditional requests still consume GitHub's shared IP quota.
+  if (response.status === 304 && fetchedAt) { fetchedAt = Date.now(); return releases; }
+  if (response.status === 403 || response.status === 429) {
+    const body = await response.text();
+    if (response.status === 429 || response.headers.get('x-ratelimit-remaining') === '0' || /rate limit|secondary rate|abuse detection/i.test(body)) {
+      const now = Date.now();
+      const retry = response.headers.get('retry-after');
+      const delay = retry ? (/^\d+$/.test(retry) ? now + Number(retry) * 1000 : Date.parse(retry)) : 0;
+      const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000;
+      retryAt = Math.max(now + 60_000, Number.isFinite(delay) ? delay : 0, Number.isFinite(reset) ? reset : 0);
+      save();
+      throw new Error(rateLimitMessage());
+    }
+    throw new Error('GitHub 拒绝访问更新接口（403），请检查网络或代理设置');
+  }
   if (!response.ok) throw new Error(`GitHub 返回错误（${response.status}）`);
-  releases = parseReleases(await response.json(), REPO);
+  const raw: unknown = await response.json();
+  if (!Array.isArray(raw)) throw new Error('GitHub 更新信息格式异常，请稍后重试');
+  releases = parseReleases(raw, REPO);
+  fetchedAt = Date.now();
+  retryAt = 0;
+  save();
   etag = response.headers.get('etag') ?? '';
   return releases;
 }
