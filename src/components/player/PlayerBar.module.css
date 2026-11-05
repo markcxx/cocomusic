@@ -13,6 +13,12 @@
   backdrop-filter: var(--glass-blur);
 }
 
+/* 简约: the bar shares the shell's grey, so the white content card stands alone. */
+:global(html[data-ui-style='minimal']) .player {
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
 .nowPlaying {
   display: flex;
   align-items: center;

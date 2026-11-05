@@ -72,6 +72,14 @@
   --shadow-soft: 0 1px 2px rgba(var(--ink-rgb), 0.04), 0 8px 24px rgba(var(--ink-rgb), 0.05);
   --shadow-pop: 0 18px 48px rgba(var(--ink-rgb), 0.2);
 
+  /*
+   * Scrollbars: the track stays wide enough to grab, the visible thumb is a
+   * thin pill inset by a transparent border (inset = (track - thumb) / 2).
+   */
+  --scrollbar-track: 10px;
+  --scrollbar-inset: 3px;
+  --scrollbar-inset-hover: 2px;
+
   /* Drawn backdrop strength (设置 › 外观 › 窗口不透明度). 1 = solid app background. */
   --window-opacity: 1;
 
@@ -220,6 +228,56 @@ html[data-material="transparent"] body {
   background: transparent;
 }
 
+/*
+ * 简约 style (设置 › 外观 › 界面风格): flat neutral surfaces, hairline edges, no
+ * backdrop or glass. Surface and text tones are set inline by ApplyAppearance;
+ * these are the static tokens. The theme colour still drives buttons and highlights.
+ */
+html[data-ui-style='minimal'] {
+  --glass-edge: rgba(0, 0, 0, 0.08);
+  --hover: rgba(0, 0, 0, 0.04);
+  --hover-strong: rgba(0, 0, 0, 0.07);
+  --field: #ffffff;
+  --field-focus: #ffffff;
+  --zebra: transparent;
+  --row-hover: rgba(0, 0, 0, 0.035);
+  --chip: rgba(0, 0, 0, 0.04);
+  --divider: rgba(0, 0, 0, 0.06);
+  --scrim: rgba(0, 0, 0, 0.2);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 14px rgba(0, 0, 0, 0.04);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.18);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+}
+
+html[data-ui-style='minimal'][data-color-scheme='dark'] {
+  --glass-edge: rgba(255, 255, 255, 0.08);
+  --hover: rgba(255, 255, 255, 0.05);
+  --hover-strong: rgba(255, 255, 255, 0.09);
+  --field: rgba(255, 255, 255, 0.05);
+  --field-focus: rgba(255, 255, 255, 0.08);
+  --row-hover: rgba(255, 255, 255, 0.045);
+  --chip: rgba(255, 255, 255, 0.06);
+  --divider: rgba(255, 255, 255, 0.07);
+  --scrim: rgba(0, 0, 0, 0.45);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 4px 14px rgba(0, 0, 0, 0.25);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
+}
+
+html[data-ui-style='minimal'] body {
+  background: var(--shell);
+}
+
+html[data-ui-style='minimal'] .backdrop {
+  display: none;
+}
+
+/* Panels: a hairline edge instead of the frosted highlight and glow. */
+html[data-ui-style='minimal'] .glass {
+  box-shadow: 0 0 0 1px var(--glass-edge);
+  backdrop-filter: none;
+}
+
 /* Reduce motion (设置 › 外观): stop ambient and CSS-driven animation. */
 html[data-reduce-motion='true'] *,
 html[data-reduce-motion='true'] *::before,
@@ -263,23 +321,30 @@ a {
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: var(--scrollbar-track);
+  height: var(--scrollbar-track);
 }
 
+/* Visible width = track − 2 × inset (4px at rest, 6px under the pointer). */
 ::-webkit-scrollbar-thumb {
-  background: transparent;
+  border: var(--scrollbar-inset) solid transparent;
   border-radius: 999px;
+  background: transparent;
+  background-clip: padding-box;
 }
 
 *:hover::-webkit-scrollbar-thumb,
 [data-scrolling]::-webkit-scrollbar-thumb {
   background: var(--scrollbar-thumb, rgba(var(--accent-strong-rgb), 0.3));
+  /* The shorthand resets the clip; keep the thumb inside its border. */
+  background-clip: padding-box;
 }
 
 *::-webkit-scrollbar-thumb:hover,
 *::-webkit-scrollbar-thumb:active {
+  border-width: var(--scrollbar-inset-hover);
   background: var(--scrollbar-thumb-hover, rgba(var(--accent-strong-rgb), 0.5));
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-track,

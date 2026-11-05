@@ -3,12 +3,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { AudioLines, Check, ChevronDown } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import { Cover } from '@/components/common/Cover';
 import { cn } from '@/lib/cn';
-import { isRingTemplate, needsSamples, settings, stripTemplate, useSettings, type LyricsLayout, type VinylEffect, type VisualizerColor, type VisualizerTemplate } from '@/lib/settings';
+import { parseHex, rgbTriplet } from '@/lib/color';
+import { needsSamples, settings, useSettings, type LyricsLayout, type VinylEffect, type VisualizerTemplate } from '@/lib/settings';
 import { usePlayer } from '../player-store';
 import { useCoverTint } from './cover-tint';
-import { TemplatePreview } from './Visualizer';
+import type { Palette } from './renderers';
+import { TemplateArt } from './TemplateArt';
+import { accentRgb } from './Visualizer';
 import styles from './VisualizerPicker.module.css';
 
 /** One flat set of looks (no categories), shown as an even grid. */
@@ -67,56 +69,15 @@ const VINYL_EFFECTS: Array<{ value: VinylEffect; label: string }> = [
   { value: 'glow', label: '柔光波' },
 ];
 
-/** Tiny lyrics page in the card: artwork (or record) + three lyric lines + a fixed template frame. */
-function Thumb({ template, color, tint, seed, src, strip }: { template: VisualizerTemplate; color: VisualizerColor; tint: string; seed: string; src?: string; strip: 'lines' | 'glow' | null }) {
-  const ring = isRingTemplate(template);
-  if (template === 'roaming') return <span className={cn(styles.thumb, styles.thumbRoaming)} style={{ '--tint': tint } as React.CSSProperties} aria-hidden>
-    <Cover seed={seed} src={src} className={styles.roamingCover} radius={0} />
-    <span className={styles.roamingShade} />
-    <span className={styles.roamingLyrics}>
-      <span className={styles.roamingDistant}>沿着旋律</span>
-      <span className={styles.roamingUpcoming}>走向下一句</span>
-      <span className={styles.roamingCurrent}>让音乐靠近</span>
-    </span>
-    <span className={styles.roamingNotes}>
-      <i>♪</i><i>♫</i><i>♩</i><i>♪</i><i>♫</i><i>♬</i>
-    </span>
-  </span>;
-  return (
-    <span className={styles.thumb} style={{ '--tint': tint } as React.CSSProperties}>
-      <span className={cn(styles.thumbArt, template === 'mirror' && styles.thumbArtHigh)}>
-        {template === 'vinyl' ? (
-          // 经典唱片: black disc with the artwork label and a small tonearm.
-          <>
-            <span className={styles.thumbDisc}><Cover seed={seed} src={src} radius={999} className={styles.thumbLabel} /></span>
-            <span className={styles.thumbArm} />
-          </>
-        ) : ring ? (
-          // Effects around a round cover (no record).
-          <>
-            <TemplatePreview template={template} color={color} tint={tint} className={styles.thumbRing} />
-            <Cover seed={seed} src={src} radius={999} className={styles.thumbRound} />
-          </>
-        ) : (
-          <Cover seed={seed} src={src} radius={5} className={styles.thumbCover} />
-        )}
-        {template === 'mirror' && <TemplatePreview template="mirror" color={color} tint={tint} className={styles.thumbMirror} />}
-      </span>
-      <span className={styles.thumbLines} aria-hidden><i /><b /><i /></span>
-      {strip && <TemplatePreview key={strip} template={strip} color={color} tint={tint} className={cn(styles.thumbStrip, strip === 'glow' && styles.thumbStripGlow)} />}
-      {strip && <span className={styles.thumbProgress} />}
-      {template === 'off' && <span className={styles.thumbOff}>关闭</span>}
-    </span>
-  );
-}
-
 /**
- * 歌词页右上角的「播放器模式」按钮与卡片。每个模式都是一张静态的小歌词页预览；
+ * 歌词页右上角的「播放器模式」按钮与卡片。每个模式配一张静态示意图（TemplateArt），
+ * 按 播放器模式配色 着色，不读音频、不加载封面图片（只用已缓存的封面主色）；
  * 选择立即生效并保存到 设置 › 歌词页（配色、密度也在那里）。
  */
 export function VisualizerPicker() {
   const prefs = useSettings();
   const { track, reloadStream } = usePlayer();
+  // Cached per cover: the lyrics page behind this card already sampled it.
   const tint = useCoverTint(track.cover, track.coverSeed);
   const [open, setOpen] = useState(false);
   const button = useRef<HTMLButtonElement>(null);
@@ -144,6 +105,12 @@ export function VisualizerPicker() {
     return () => { document.removeEventListener('pointerdown', onPointer); window.removeEventListener('keydown', onKey, true); };
   }, [open]);
 
+  // The colours the real effect would use. Read only while the card is open (accent comes from CSS).
+  const custom = parseHex(prefs.lyricsVisualizerCustomColor);
+  const palette: Palette | null = open
+    ? { mode: prefs.lyricsVisualizerColor, base: tint, accent: accentRgb(), hue: 265, custom: custom ? rgbTriplet(custom) : undefined }
+    : null;
+
   const tile = (value: VisualizerTemplate, label: string, index: number) => {
     const selected = prefs.lyricsVisualizer === value;
     return (
@@ -158,7 +125,7 @@ export function VisualizerPicker() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.025 * index }}
       >
-        <Thumb template={value} color={prefs.lyricsVisualizerColor} tint={tint} seed={track.coverSeed} src={track.cover} strip={stripTemplate(value, prefs.lyricsVinylEffect)} />
+        <span className={styles.thumb} aria-hidden>{value !== 'off' && palette && <TemplateArt template={value} palette={palette} cover={tint} />}</span>
         <span className={styles.tileLabel}>{label}</span>
         {selected && (
           <motion.span layoutId="visualizer-check" className={styles.check} transition={{ type: 'spring', stiffness: 520, damping: 36 }}>

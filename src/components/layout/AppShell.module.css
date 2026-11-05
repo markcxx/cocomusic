@@ -76,3 +76,13 @@
   top: 4px;
   height: 12px;
 }
+
+/* 简约: the content sheet is a card floating on the grey shell, rounded on every corner. */
+:global(html[data-ui-style='minimal']) .main {
+  padding-bottom: 8px;
+}
+
+:global(html[data-ui-style='minimal']) .sheet {
+  margin-right: 8px;
+  border-radius: 14px;
+}

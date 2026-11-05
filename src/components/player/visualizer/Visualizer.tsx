@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
 import { parseHex, rgbTriplet } from '@/lib/color';
 import { isRingTemplate, stripTemplate, useSettings, type VisualizerColor, type VisualizerTemplate } from '@/lib/settings';
@@ -30,7 +30,7 @@ export function bandCount(template: VisualizerTemplate, density: 'normal' | 'fin
 }
 
 /** Accent colour as "r, g, b" (from the theme's CSS variable). */
-function accentRgb() {
+export function accentRgb() {
   const value = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
   const rgb = parseHex(value);
   return rgb ? rgbTriplet(rgb) : '199, 184, 234';
@@ -148,39 +148,4 @@ export function MirrorVisualizer() {
   const { template } = useVisualizer();
   if (template !== 'mirror') return null;
   return <VisualizerCanvas template="mirror" className={styles.mirror} />;
-}
-
-/** A fixed, representative frame; redraw only when size or appearance changes. */
-export function TemplatePreview({ template, color, tint, className }: { template: VisualizerTemplate; color: VisualizerColor; tint: string; className?: string }) {
-  const { custom } = useVisualizer();
-  const bands = Math.max(8, Math.round(bandCount(template, 'normal') * (isRingTemplate(template) ? 0.8 : 0.45)));
-  const canvas = useRef<HTMLCanvasElement>(null);
-  useEffect(() => {
-    const element = canvas.current;
-    if (!element) return;
-    const ctx = element.getContext('2d');
-    if (!ctx) return;
-    const draw = () => {
-      const { width, height } = element.getBoundingClientRect();
-      const ratio = Math.min(2, window.devicePixelRatio || 1);
-      element.width = Math.max(1, Math.round(width * ratio));
-      element.height = Math.max(1, Math.round(height * ratio));
-      ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-      const paint = makePainter(template);
-      if (!paint || !width || !height) return;
-      const spectrum = new Spectrum(bands);
-      const palette: Palette = { mode: color, base: tint, accent: accentRgb(), hue: 265, custom };
-      // Settle the spectrum and stateful effects at a fixed moment, without a RAF loop.
-      for (let step = 0; step < 45; step += 1) {
-        const time = 2 + step / 60;
-        ctx.clearRect(0, 0, width, height);
-        paint(ctx, width, height, spectrum.synthetic(time, true), palette, { time, delta: 1 / 60 });
-      }
-    };
-    draw();
-    const observer = new ResizeObserver(draw);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [template, bands, color, tint, custom]);
-  return <canvas ref={canvas} className={className} aria-hidden />;
 }

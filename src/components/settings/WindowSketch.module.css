@@ -1,0 +1,187 @@
+/* A tiny sketch of the app window (sidebar, content sheet, player bar) as a given window effect draws it. */
+
+.thumb {
+  /* Per-effect tones; the sketch is fixed light/dark so it reads the same on any surface. */
+  --desk: #dcdcf3;
+  --sheet: rgba(255, 255, 255, 0.55);
+  --bar: rgba(255, 255, 255, 0.5);
+  --line: rgba(60, 50, 110, 0.18);
+  --edge: rgba(255, 255, 255, 0.6);
+  position: absolute;
+  inset: 0;
+  display: block;
+  background: var(--desk);
+}
+
+/* 跟随系统: the dark half, cut diagonally over the light one. */
+.half {
+  clip-path: polygon(62% 0, 100% 0, 100% 100%, 38% 100%);
+}
+
+.window {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 26% 1fr;
+  grid-template-rows: 1fr 18%;
+}
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14% 12% 0;
+}
+
+.sidebar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.sidebar i:first-child {
+  width: 80%;
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 9% 0 0;
+  padding: 12% 10% 0;
+  border-radius: 7px 0 0 0;
+  background: var(--sheet);
+  box-shadow: inset 1px 1px 0 var(--edge);
+}
+
+.sheet i {
+  display: block;
+  height: 5px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.sheet i:first-child {
+  width: 45%;
+}
+
+.bar {
+  grid-column: 1 / -1;
+  background: var(--bar);
+  box-shadow: inset 0 1px 0 var(--edge);
+}
+
+/* ───────── Per effect ───────── */
+
+/* Frosted: a blurred desktop shows through translucent panels. */
+.vibrancy,
+.acrylic {
+  --desk:
+    radial-gradient(60% 70% at 15% 20%, #c9b6f2, transparent 70%),
+    radial-gradient(55% 65% at 85% 25%, #a9cdf7, transparent 70%),
+    radial-gradient(60% 70% at 70% 90%, #f0c3dc, transparent 70%),
+    #dcdcf3;
+  --sheet: rgba(255, 255, 255, 0.45);
+  --bar: rgba(255, 255, 255, 0.4);
+}
+
+/* Acrylic adds the fine grain. */
+.acrylic::before {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.35) 0.6px, transparent 0.7px);
+  background-size: 3px 3px;
+  content: '';
+}
+
+/* Mica: a soft wash of the wallpaper's tone, no see-through. */
+.mica {
+  --desk: linear-gradient(135deg, #e3dcf1, #dde6f3);
+  --sheet: rgba(255, 255, 255, 0.7);
+  --bar: rgba(255, 255, 255, 0.6);
+}
+
+/* Transparent: the desktop itself, sharp. */
+.transparent {
+  --desk:
+    repeating-conic-gradient(#e7e7ee 0% 25%, #f7f7fa 0% 50%) 0 0 / 10px 10px;
+  --sheet: rgba(255, 255, 255, 0.5);
+  --bar: rgba(255, 255, 255, 0.45);
+  --edge: rgba(120, 110, 170, 0.25);
+}
+
+/* Opaque: the app's own tinted backdrop. */
+.none {
+  --desk: #dfe1f5;
+  --sheet: rgba(246, 246, 255, 0.8);
+  --bar: rgba(244, 244, 255, 0.85);
+}
+
+/* 简约: grey frame, white card with a hairline edge, every corner rounded. */
+.minimal {
+  --desk: #f5f5f5;
+  --sheet: #ffffff;
+  --bar: #f5f5f5;
+  --line: rgba(0, 0, 0, 0.12);
+  --edge: transparent;
+}
+
+.minimal .sheet {
+  margin: 9% 5% 4% 0;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.minimal .bar {
+  box-shadow: none;
+}
+
+/* ───────── Dark scheme (the sketch's own, not the page's) ───────── */
+
+.thumb.dark {
+  --sheet: rgba(40, 36, 60, 0.6);
+  --bar: rgba(30, 27, 44, 0.6);
+  --line: rgba(255, 255, 255, 0.16);
+  --edge: rgba(255, 255, 255, 0.08);
+}
+
+.dark.vibrancy,
+.dark.acrylic {
+  --desk:
+    radial-gradient(60% 70% at 15% 20%, #4b3a86, transparent 70%),
+    radial-gradient(55% 65% at 85% 25%, #2b4777, transparent 70%),
+    radial-gradient(60% 70% at 70% 90%, #5b3070, transparent 70%),
+    #16141f;
+}
+
+.dark.acrylic::before {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.08) 0.6px, transparent 0.7px);
+}
+
+.dark.mica {
+  --desk: linear-gradient(135deg, #25213a, #1e2434);
+}
+
+.dark.transparent {
+  --desk: repeating-conic-gradient(#25252c 0% 25%, #1b1b20 0% 50%) 0 0 / 10px 10px;
+}
+
+.dark.none {
+  --desk: #15131f;
+  --sheet: #221f32;
+  --bar: #1a1826;
+}
+
+.dark.minimal {
+  --desk: #141415;
+  --sheet: #1c1c1e;
+  --bar: #141415;
+  --line: rgba(255, 255, 255, 0.14);
+  --edge: transparent;
+}
+
+.dark.minimal .sheet {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}

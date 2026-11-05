@@ -22,6 +22,59 @@ const SURFACES: Array<[name: string, rgbVar: string, alpha: number]> = [
   ['--nav-active', '--raised-rgb', 0.7],
 ];
 
+/**
+ * 简约 style: flat neutral surfaces (no theme tint, no glass). Light: grey sidebar
+ * and player bar around a white content card; dark: the same layering in charcoal.
+ * Static tokens (hover fills, edges, dividers) live in globals.css under
+ * html[data-ui-style='minimal']; these are the ones ApplyAppearance otherwise sets inline.
+ */
+const MINIMAL: Record<'light' | 'dark', Record<string, string>> = {
+  light: {
+    '--shell': '#f5f5f5',
+    '--surface-rgb': '255, 255, 255',
+    '--surface-pinned-rgb': '255, 255, 255',
+    '--raised-rgb': '255, 255, 255',
+    '--player-rgb': '245, 245, 245',
+    '--sheet': '#ffffff',
+    '--sheet-pinned': 'rgba(255, 255, 255, 0.94)',
+    '--card': '#fafafa',
+    '--card-hover': '#f2f2f2',
+    '--player': '#f5f5f5',
+    '--nav-active': 'rgba(0, 0, 0, 0.06)',
+    '--popover': 'rgba(255, 255, 255, 0.98)',
+    '--popover-solid': '#ffffff',
+    '--ink-rgb': '0, 0, 0',
+    '--cover-scrim': 'rgba(0, 0, 0, 0.36)',
+    '--knob': '#ffffff',
+    '--text-strong': '#1f1f1f',
+    '--text': '#2b2b2b',
+    '--text-secondary': '#595959',
+    '--text-muted': '#666666',
+  },
+  dark: {
+    '--shell': '#141415',
+    '--surface-rgb': '28, 28, 30',
+    '--surface-pinned-rgb': '28, 28, 30',
+    '--raised-rgb': '44, 44, 47',
+    '--player-rgb': '20, 20, 21',
+    '--sheet': '#1c1c1e',
+    '--sheet-pinned': 'rgba(28, 28, 30, 0.94)',
+    '--card': '#232326',
+    '--card-hover': '#2a2a2e',
+    '--player': '#141415',
+    '--nav-active': 'rgba(255, 255, 255, 0.08)',
+    '--popover': 'rgba(36, 36, 39, 0.98)',
+    '--popover-solid': '#242427',
+    '--ink-rgb': '0, 0, 0',
+    '--cover-scrim': 'rgba(0, 0, 0, 0.5)',
+    '--knob': '#f2f2f2',
+    '--text-strong': '#f2f2f2',
+    '--text': '#dcdcdc',
+    '--text-secondary': '#a8a8a8',
+    '--text-muted': '#999999',
+  },
+};
+
 /** opacity 0 → ×0.15, 50 → ×1, 100 → fully opaque. Never fully invisible (text must stay readable). */
 function scale(alpha: number, opacity: number) {
   if (opacity <= 50) return alpha * (0.15 + (opacity / 50) * 0.85);
@@ -39,6 +92,7 @@ function useSystemDark() {
 
 /** Effects this platform can render (main falls back the same way). */
 export function supportedEffect(effect: WindowEffect, platform: string | undefined): WindowEffect {
+  if (effect === 'minimal') return 'minimal';
   if (effect === 'none' || !platform) return 'none';
   // The window's own construction decides (main reads the saved setting at launch).
   if (effect === 'transparent' || window.coco?.material === 'transparent') return window.coco?.material === 'transparent' ? 'transparent' : 'none';
@@ -48,10 +102,17 @@ export function supportedEffect(effect: WindowEffect, platform: string | undefin
 }
 
 /** Colour scheme + theme colour only (secondary windows such as the tray panel). */
+/** The colour scheme in use: 外观模式, with 跟随系统 resolved. */
+export function useResolvedScheme(): 'light' | 'dark' {
+  const { themeMode } = useSettings();
+  const systemDark = useSystemDark();
+  return themeMode === 'system' ? (systemDark ? 'dark' : 'light') : themeMode;
+}
+
 export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'light' | 'dark' } = {}) {
   const s = useSettings();
-  const systemDark = useSystemDark();
-  const scheme = options.scheme ?? (s.themeMode === 'system' ? (systemDark ? 'dark' : 'light') : s.themeMode);
+  const resolved = useResolvedScheme();
+  const scheme = options.scheme ?? resolved;
   const notifyMain = options.notifyMain ?? false;
 
   // Scheme first: surface tokens read the per-scheme base RGB values.
@@ -79,19 +140,32 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'li
 
 export function ApplyAppearance({ children }: { children: ReactNode }) {
   const s = useSettings();
-  useSchemeAndAccent({ notifyMain: true });
+  const scheme = useSchemeAndAccent({ notifyMain: true });
+  const minimal = s.windowEffect === 'minimal';
 
 
   // Whole window: OS material (desktop only) + how much the app paints over it.
   // Window opacity scales the drawn backdrop *and* every panel, so lowering it
   // really lets the (OS-blurred) desktop through the whole window, not just the gaps.
+  // Runs after useSchemeAndAccent's effects (and again whenever they do: same deps),
+  // so in 简约 mode its flat tokens win over the theme-tinted ones.
   useEffect(() => {
     // A window launched see-through stays so until restart, whatever the setting says now.
     const launchedTransparent = window.coco?.material === 'transparent';
     const effect = launchedTransparent ? 'transparent' : supportedEffect(s.windowEffect, window.coco?.platform);
-    if (!launchedTransparent) window.coco?.app?.setMaterial(effect);
+    // 简约 paints an opaque window: no OS material behind it.
+    if (!launchedTransparent) window.coco?.app?.setMaterial(effect === 'minimal' ? 'none' : effect);
     const html = document.documentElement;
-    html.dataset.material = effect;
+    html.dataset.material = effect === 'minimal' ? 'none' : effect;
+    html.dataset.uiStyle = minimal ? 'minimal' : 'glass';
+    if (minimal) {
+      html.style.setProperty('--window-opacity', '1');
+      for (const [name, value] of Object.entries(MINIMAL[scheme])) html.style.setProperty(name, value);
+      html.style.setProperty('--glass-blur', 'none');
+      return;
+    }
+    // Back from 简约: restore the theme-tinted tones it overwrote.
+    for (const [name, value] of Object.entries(surfacePalette(s.accent, scheme))) html.style.setProperty(name, value);
     // Without a material there is nothing behind the window to reveal; stay opaque.
     const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
     html.style.setProperty('--window-opacity', String(opacity));
@@ -101,7 +175,7 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
       html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * panelFactor).toFixed(3)})`);
     }
     html.style.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-  }, [s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
+  }, [minimal, scheme, s.accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';

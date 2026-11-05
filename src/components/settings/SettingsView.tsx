@@ -20,6 +20,9 @@ import { ACCENT_PRESETS, desktopLyricColor, LYRIC_COLORS, needsSamples, settings
 import type { AudioQuality } from '@/server/music/types';
 import { formatBytes, updateDialog, updates, useUpdateState } from '@/components/updates/update-store';
 import { ThemeColorControl } from './ColorPicker';
+import { useResolvedScheme } from './ApplyAppearance';
+import { ChoiceTiles } from './ChoiceTiles';
+import { WindowSketch } from './WindowSketch';
 import { Range, Row, Section, Segmented, Select, Switch } from './controls';
 import styles from './Settings.module.css';
 
@@ -43,6 +46,7 @@ const WINDOW_EFFECT_HINTS: Record<string, string> = {
   acrylic: '系统亚克力：背后的桌面被强模糊并带细微噪点，模糊强度由系统决定',
   mica: '云母：取桌面壁纸的柔和色调（Windows 11），不透出其他窗口',
   transparent: '和桌面歌词一样的真透明窗口：背后的桌面和窗口清晰可见，不做模糊',
+  minimal: '简约：浅灰导航栏与播放栏，白色内容卡片，不透明、无毛玻璃',
   none: '不透明窗口',
 };
 
@@ -202,8 +206,9 @@ export function SettingsView() {
 
   // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
   const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
-  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' ? s.windowEffect
+  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || s.windowEffect === 'minimal' ? s.windowEffect
     : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
+  const scheme = useResolvedScheme();
   const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
   const chooseEffect = async (value: Settings['windowEffect']) => {
     settings.set('windowEffect', value);
@@ -250,24 +255,40 @@ export function SettingsView() {
           </Section>
 
           {/* ───────── 外观 ───────── */}
-          <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口透明、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
-            <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步">
-              <Segmented value={s.themeMode} onChange={set('themeMode')} label="外观模式" options={[{ value: 'system', label: '跟随系统' }, { value: 'light', label: '浅色' }, { value: 'dark', label: '深色' }]} />
+          <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口效果、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
+            <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical>
+              {/* Each tile previews the window effect chosen below, in that scheme. */}
+              <ChoiceTiles
+                value={s.themeMode}
+                onChange={set('themeMode')}
+                label="外观模式"
+                options={([['system', '跟随系统', 'split'], ['light', '浅色', 'light'], ['dark', '深色', 'dark']] as const).map(([value, label, sketch]) => ({
+                  value, label, preview: <WindowSketch effect={shownEffect} scheme={sketch} />,
+                }))}
+              />
             </Row>
 
             <div className={styles.groupLabel}>窗口</div>
             <Row
               title="窗口效果"
-              description={!desktop ? '需要在桌面客户端中使用' : WINDOW_EFFECT_HINTS[s.windowEffect] ?? WINDOW_EFFECT_HINTS.none}
-              disabled={!desktop}
+              description={WINDOW_EFFECT_HINTS[shownEffect] ?? WINDOW_EFFECT_HINTS.none}
+              vertical
             >
-              <Segmented
+              {/* Materials need the desktop client; 简约 and 不透明 are drawn by the page itself. */}
+              <ChoiceTiles
                 value={shownEffect}
                 onChange={value => void chooseEffect(value)}
                 label="窗口效果"
-                options={isMac()
-                  ? [{ value: 'vibrancy', label: '毛玻璃' }, { value: 'transparent', label: '透明' }, { value: 'none', label: '不透明' }]
-                  : [{ value: 'acrylic', label: '亚克力' }, { value: 'mica', label: '云母' }, { value: 'transparent', label: '透明' }, { value: 'none', label: '不透明' }]}
+                options={([
+                  ...(isMac() ? [['vibrancy', '毛玻璃']] : [['acrylic', '亚克力'], ['mica', '云母']]),
+                  ['transparent', '透明'],
+                  ['minimal', '简约'],
+                  ['none', '不透明'],
+                ] as Array<[Settings['windowEffect'], string]>).map(([value, label]) => ({
+                  value, label,
+                  disabled: !desktop && value !== 'minimal' && value !== 'none',
+                  preview: <WindowSketch effect={value} scheme={scheme} />,
+                }))}
               />
             </Row>
             {needsRestart && (
@@ -276,6 +297,7 @@ export function SettingsView() {
                 <Button variant="primary" onClick={() => window.coco?.app?.relaunch()}>立即重启</Button>
               </div>
             )}
+            {s.windowEffect !== 'minimal' && <>
             <Row
               title="窗口不透明度"
               description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}
@@ -291,6 +313,7 @@ export function SettingsView() {
             <Row title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
               <Range value={s.glassBlur} max={60} step={2} onChange={set('glassBlur')} label="面板模糊" format={value => `${value}px`} />
             </Row>
+            </>}
 
             <div className={styles.groupLabel}>颜色与显示</div>
             <Row title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>

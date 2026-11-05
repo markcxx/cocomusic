@@ -17,7 +17,7 @@ export const RING_SCALE = 1.5;
 export const VISUALIZER_BLUE = '86, 168, 255';
 
 /** Colour for the band at x (0…1 across the spectrum). */
-function bandColor(palette: Palette, x: number, alpha: number) {
+export function bandColor(palette: Palette, x: number, alpha: number) {
   if (palette.mode === 'aurora') return `hsla(${(palette.hue + x * 220) % 360}, 82%, 70%, ${alpha})`;
   if (palette.mode === 'white') return `rgba(255, 255, 255, ${alpha})`;
   if (palette.mode === 'blue') return `rgba(${VISUALIZER_BLUE}, ${alpha})`;
