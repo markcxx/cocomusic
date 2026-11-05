@@ -61,13 +61,18 @@ const file = process.env.FAKE_GH_STATE;
 const state = JSON.parse(fs.readFileSync(file, 'utf8'));
 if (args[0] === 'api') {
   if (args[1].includes('/releases/tags/') && state.draft) { console.error('gh: Not Found (HTTP 404)'); process.exit(1); }
-  if (args.includes('--slurp')) console.log(JSON.stringify([state.exists ? [state] : []]));
+  if (args.includes('POST')) {
+    const request = JSON.parse(fs.readFileSync(0, 'utf8'));
+    if (request.tag_name !== state.tag_name || request.draft !== true || request.prerelease !== false || request.body !== 'Release notes') process.exit(1);
+    state.exists = true;
+    console.log(JSON.stringify(state));
+  } else if (args[1].includes('/git/ref/tags/')) console.log(JSON.stringify({ ref: 'refs/tags/' + state.tag_name }));
+  // Simulate the release list lagging while the new draft already exists.
+  else if (args.includes('--slurp')) console.log(JSON.stringify([state.exists && !state.draft ? [state] : []]));
   else {
     if (!state.exists) { console.error('gh: Not Found (HTTP 404)'); process.exit(1); }
     console.log(JSON.stringify({...state, html_url:'https://example.com/release'}));
   }
-} else if (args[1] === 'create') {
-  state.exists = true;
 } else if (args[1] === 'upload') {
   state.uploads++;
   state.assets = args.filter(name => name.startsWith('dist/')).map(name => {

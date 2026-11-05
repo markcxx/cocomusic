@@ -24,8 +24,8 @@ export function validateInstallers(names, version) {
   for (const name of names) assert.equal(path.basename(name), name, 'Installer names cannot contain directories');
 }
 
-function gh(args, allowFailure = false) {
-  const result = spawnSync('gh', args, { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
+function gh(args, allowFailure = false, input) {
+  const result = spawnSync('gh', args, { input, encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   if (result.error) throw result.error;
   if (result.status !== 0 && !allowFailure) throw new Error(result.stderr || result.stdout || 'GitHub CLI failed');
   return result;
@@ -88,8 +88,16 @@ async function main() {
   };
   let release = findRelease();
   if (!release) {
-    gh(['release', 'create', info.tag, '--repo', repo, '--verify-tag', '--draft', '--title', `CoCo Music ${version}`, '--notes-file', info.notes, `--prerelease=${info.prerelease}`]);
-    release = findRelease();
+    // Require the existing tag, and use the creation response directly:
+    // GitHub's release list can lag behind a successful draft creation.
+    gh(['api', `repos/${repo}/git/ref/tags/${encodeURIComponent(info.tag)}`]);
+    release = JSON.parse(gh(['api', `repos/${repo}/releases`, '--method', 'POST', '--input', '-'], false, JSON.stringify({
+      tag_name: info.tag,
+      name: `CoCo Music ${version}`,
+      body: await readFile(info.notes, 'utf8'),
+      draft: true,
+      prerelease: info.prerelease,
+    })).stdout);
   }
   assert(release, 'Created release could not be found');
   if (!release.draft) {
