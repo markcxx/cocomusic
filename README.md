@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://github.com/markcxx/cocomusic/releases">下载安装</a> ·
   <a href="#界面预览">界面预览</a> ·
-  <a href="docs/development.md">开发指南</a> ·
+  <a href="#本地开发">本地开发</a> ·
   <a href="https://github.com/markcxx/cocomusic/issues">反馈问题</a>
 </p>
 
@@ -106,7 +106,7 @@ macOS 本地安装版实拍，桌面壁纸可透过窗口显示，文字与控�
 | Windows | x64 | EXE 安装程序 |
 | Linux | x64 | AppImage、deb |
 
-项目仍在早期开发阶段，跨平台兼容性持续完善中。目前安装包没有开发者代码签名，首次打开可能出现系统提示，详见[安装说明](docs/installation.md)。
+项目仍在早期开发阶段，跨平台兼容性持续完善中。目前安装包没有开发者代码签名，首次打开可能出现系统提示。
 
 ## 本地开发
 
@@ -119,16 +119,9 @@ npm ci
 npm run dev
 ```
 
-更多命令、项目结构与贡献说明，请阅读[开发指南](docs/development.md)。
-
 ## 反馈与参与
 
 欢迎通过 [Issues](https://github.com/markcxx/cocomusic/issues) 报告问题、提出建议，也欢迎提交 Pull Request。报告问题时请附上应用版本、操作系统和复现步骤，并移除账号凭据等个人信息。
-
-- [开发与贡献](docs/development.md)
-- [安装说明](docs/installation.md)
-- [数据与隐私](docs/data-and-privacy.md)
-- [版本发布](docs/releasing.md)
 
 ## 致谢
 
