@@ -3,9 +3,6 @@ import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongS
 import { NeteaseError, neteaseEapi } from './client';
 import { image, num, record, rows, text, type Raw } from './mappers';
 
-// Endpoints follow CloudMusicApi / multiPlatformMusicApi netease modules:
-// song_url_v1, lyric_new, song_red_count, comment_new.
-
 /** song_url_v1. Uses the stored login when present so VIP members get full tracks. */
 export async function songSource(id: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
   const data = await neteaseEapi<Raw>('/api/song/enhance/player/url/v1', { ids: `[${id}]`, level: quality, encodeType: 'flac' });

@@ -2,7 +2,6 @@ import { createHash, randomBytes } from 'node:crypto';
 
 /**
  * x-anticheattoken required by some eapi write endpoints (e.g. playlist/create).
- * Port of multiPlatformMusicApi platforms/netease/util/checkToken.js.
  */
 const SALT = 'dAWsBhCqtOaNLLJ25hBzWbqWXwiK99Wd';
 const KEY = Buffer.from([31, 125, 244, 60, 32, 48]);

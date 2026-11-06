@@ -5,8 +5,6 @@ import { QQError, qqRequest } from './client';
 import { qqQrPoll, qqQrStart } from './login';
 import { https, mapPlaylistBasic, num, record, rows, splitSongKey, SOURCE, text, type Raw } from './mappers';
 
-// Endpoints follow multiPlatformMusicApi platforms/qqmusic/module (user_*, playlist_*, like, likelist).
-
 /** "我喜欢" is the system playlist with dirId 201. */
 const LIKED_DIR = 201;
 

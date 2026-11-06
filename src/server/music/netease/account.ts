@@ -4,8 +4,6 @@ import { NeteaseError, neteaseEapi, neteaseRequest } from './client';
 import { image, mapPlaylist, num, record, rows, SOURCE, text, type Raw } from './mappers';
 import { userDetail } from './user-detail';
 
-// Endpoints follow multiPlatformMusicApi platforms/netease/module (eapi, desktop client identity).
-
 function mapProfile(profile: Raw, account: Raw = {}): UserProfile {
   return {
     id: text(profile.userId ?? account.id),
@@ -129,7 +127,6 @@ export const neteaseAccount: AccountProvider = {
 
   async renamePlaylist(id, name) {
     requireUser();
-    // playlist_name_update (CloudMusicApi).
     await neteaseEapi('/api/playlist/update/name', { id, name });
   },
 

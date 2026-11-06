@@ -5,8 +5,7 @@ import { text, type Raw } from './mappers';
 /**
  * Keeping the QQ Music login alive. The musickey lasts only a few days; the
  * official clients renew it with music.login.LoginServer/Login (refresh_key +
- * refresh_token from the original login). Endpoints follow L-1124/QQMusicApi
- * modules/login.py (check_expired, refresh_credential).
+ * refresh_token from the original login).
  *
  * Note: userInfo.BaseUserInfoServer answers for any uin, so it cannot tell
  * whether the key is still valid; GetLoginUserInfo can (code 1000 = expired).

@@ -6,8 +6,6 @@ import { createKugouClient, KugouError, type KugouClient } from './client';
 import { validId } from '../ids';
 import { createKugouMappers, image, num, record, rows, text, type Raw } from './mappers';
 
-// Endpoints follow KugouMusicAPI module/* (rank_*, top_*, playlist_*, album_*, artist_*, search_*).
-
 /* ───────── Charts ───────── */
 
 export function createKugouCatalog(client: KugouClient = createKugouClient()) {

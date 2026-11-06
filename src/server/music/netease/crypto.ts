@@ -1,6 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
 
-// Constants follow NeteaseCloudMusicApi util/crypto.js (MIT).
 const IV = Buffer.from('0102030405060708');
 const PRESET_KEY = '0CoJUm6Qyw8W8jud';
 const EAPI_KEY = Buffer.from('e82ckenh8dichen8');

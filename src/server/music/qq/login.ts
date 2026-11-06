@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { QQError } from './client';
 
 /**
- * QQ 扫码登录: a port of multiPlatformMusicApi platforms/qqmusic/util/qq_qr_login_2step.js.
+ * QQ 扫码登录.
  *
  * 1. ptlogin2 serves a QR (cookie qrsig → ptqrtoken = hash33(qrsig)).
  * 2. Poll ptqrlogin: 66 waiting · 67 scanned · 0 success (gives a check_sig URL) · else expired.

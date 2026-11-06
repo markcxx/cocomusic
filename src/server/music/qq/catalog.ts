@@ -5,8 +5,6 @@ import type {
 import { QQError, qqBatch, qqLegacy, qqRequest } from './client';
 import { albumCover, https, mapAlbum, mapArtist, mapPlaylistBasic, mapTrack, num, record, rows, singerAvatar, SOURCE, text, type Raw } from './mappers';
 
-// Module/method names follow multiPlatformMusicApi platforms/qqmusic/module/*.
-
 /* ───────── Discovery ───────── */
 
 async function chartDetail(topId: number, offset: number, num_: number) {

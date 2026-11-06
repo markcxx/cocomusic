@@ -9,12 +9,10 @@ import { LITE_PUBLIC_KEY } from './config';
 export function createKugouAccount(client: KugouClient = createKugouClient()) {
   const { APPID, CLIENTVER, device, kugouRequest, paramsKey } = client;
   const SOURCE = client.source;
-  // Endpoints follow KugouMusicAPI module/login_qr_*, user_detail, user_playlist,
-  // playlist_add/del, playlist_tracks_add/del, playlist_track_all_new.
 
   const LOGIN_BASE = 'https://login-user.kugou.com';
   const SRCAPPID = 2919;
-  /** Kugou's public key (KugouMusicAPI util/crypto.js publicRasKey). */
+  /** Kugou's public key. */
   const PUBLIC_KEY = '-----BEGIN PUBLIC KEY-----\nMIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDIAG7QOELSYoIJvTFJhMpe1s/gbjDJX51HBNnEl5HXqTW6lQ7LC8jr9fWZTwusknp+sVGzwd40MwP6U5yDE27M/X1+UR4tvOGOqp94TJtQ1EPnWGWXngpeIW5GxoQGao1rmYWAu6oi1z9XkChrsUdC6DJE5E221wf/4WLFxwAtRQIDAQAB\n-----END PUBLIC KEY-----';
 
   /** RSA without padding over a zero-filled 128-byte block (user_detail `p`). */

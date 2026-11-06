@@ -11,7 +11,7 @@ export interface ConceptDevice {
   registeredAt?: number;
 }
 const md5 = (value: string) => createHash('md5').update(value).digest('hex');
-/** Same decimal MID encoding as KuGouMusicApi calculateMid, without precision loss. */
+/** Decimal MID encoding of the md5 GUID, without precision loss. */
 export const conceptMid = (guid: string) => BigInt(`0x${md5(guid)}`).toString(10);
 
 /** Device registration belongs to the installation, and survives account logout. */

@@ -26,7 +26,6 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
   const { APPID, CLIENTVER, device, kugouRequest } = client;
   const SOURCE = client.source;
   const streamKey = client.songKey;
-  // Endpoints follow KugouMusicAPI module/song_url, search_lyric + lyric, comment_music(_classify), favorite_count.
 
   /** Requested quality → Kugou quality names, best first. 128 is the only one free accounts get. */
   const QUALITIES: Array<{ level: AudioQuality; quality: string }> = [
@@ -127,7 +126,7 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
   const songSource = (key: string, quality?: AudioQuality) => resolveSource(key, quality, 'play');
   const downloadSource = (key: string, quality?: AudioQuality) => resolveSource(key, quality, 'download');
 
-  /** KRC: base64 → skip 4-byte "krc1" header → XOR with Kugou's key → zlib (KugouMusicAPI util decodeLyrics). */
+  /** KRC: base64 → skip 4-byte "krc1" header → XOR with Kugou's key → zlib. */
   const KRC_KEY = [64, 71, 97, 119, 94, 50, 116, 71, 81, 54, 49, 45, 206, 210, 110, 105];
   function decodeKrc(content: string) {
     if (!content) return '';

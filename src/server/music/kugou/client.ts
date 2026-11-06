@@ -5,8 +5,6 @@ import { KUGOU_CONFIG, type KugouSource } from './config';
 import { kugouVerificationUrl } from './verification';
 import { conceptDevice, ensureConceptDevice } from './device';
 
-// Request pipeline follows KugouMusicAPI util/request.js + util/helper.js.
-
 export const APPID = 1005;
 export const CLIENTVER = 12569;
 

@@ -2,8 +2,6 @@ import { createCipheriv, createHash, randomBytes } from 'node:crypto';
 import { CatalogError } from '../errors';
 import { session } from '../session';
 
-// Request pipeline follows multiPlatformMusicApi platforms/qqmusic/util (request.js, crypto.js).
-
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 const TIMEOUT_MS = 12_000;
 
@@ -25,7 +23,7 @@ function decrypt(buffer: Buffer) {
   return out.toString('utf8');
 }
 
-/** zzc signature over the plaintext JSON (verbatim port of zzcSign). */
+/** zzc signature over the plaintext JSON. */
 export function zzcSign(payload: string) {
   const hash = createHash('sha1').update(payload).digest('hex').toUpperCase();
   const part1 = [23, 14, 6, 36, 16, 40, 7, 19].filter(i => i < 40).map(i => hash[i]).join('');

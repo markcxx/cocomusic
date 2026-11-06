@@ -3,8 +3,6 @@ import { neteaseRequest } from './client';
 import { image, num, record, text, type Raw } from './mappers';
 import { regionName } from './regions';
 
-// user_detail + user_subcount (CloudMusicApi / multiPlatformMusicApi netease modules).
-
 const ZODIAC: Array<[number, string]> = [
   [120, '摩羯座'], [219, '水瓶座'], [321, '双鱼座'], [420, '白羊座'], [521, '金牛座'], [622, '双子座'],
   [723, '巨蟹座'], [823, '狮子座'], [923, '处女座'], [1024, '天秤座'], [1123, '天蝎座'], [1222, '射手座'], [1232, '摩羯座'],
