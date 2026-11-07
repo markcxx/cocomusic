@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, useTransform } from 'framer-motion';
 import { BookOpen, ListPlus, Play } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ErrorState, SkeletonBlock } from '@/components/common/AsyncState';
 import { Cover } from '@/components/common/Cover';
 import { fadeSwap } from '@/components/common/motion';
@@ -14,7 +14,7 @@ import { SongTable } from '@/components/music/SongTable';
 import { usePlayer } from '@/components/player/player-store';
 import { Page, StickyBar, useScrollArea } from '@/components/scroll';
 import { Button, ListFooter, toast } from '@/components/ui';
-import { catalogApi, useCatalog, type CatalogAlbum, type CatalogTrack } from '@/lib/catalog-client';
+import { catalogApi, useCatalog, type CatalogAlbum, type CatalogSource, type CatalogTrack } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
 import { toTrack } from '@/lib/to-track';
 import styles from './ArtistView.module.css';
@@ -22,23 +22,24 @@ import styles from './ArtistView.module.css';
 const tabs = ['热门歌曲', '专辑', '歌手简介'] as const;
 type Tab = (typeof tabs)[number];
 
-function Songs({ id }: { id: string }) {
-  const load = useCallback((offset: number, signal: AbortSignal) => catalogApi.artistSongs(id, offset, 50, signal), [id]);
-  const list = useInfiniteList<CatalogTrack>(`artist-songs:${id}`, load);
+function Songs({ id, source }: { id: string; source?: CatalogSource }) {
+  const load = useCallback((offset: number, signal: AbortSignal) => catalogApi.artistSongs(id, offset, 50, signal, source), [id, source]);
+  const list = useInfiniteList<CatalogTrack>(`artist-songs:${source ?? ''}:${id}`, load);
+  const tracks = useMemo(() => list.items.map(toTrack), [list.items]);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
   if (list.error && !list.items.length) return <ErrorState message={list.error} onRetry={list.retry} />;
   return (
     <>
-      <SongTable tracks={list.items} loading={list.loading} animateFrom={Math.max(0, list.items.length - 50)} />
+      <SongTable tracks={tracks} loading={list.loading} animateFrom={Math.max(0, list.items.length - 50)} />
       <div ref={sentinel}><ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText={`共 ${list.items.length} 首`} /></div>
     </>
   );
 }
 
-function Albums({ id }: { id: string }) {
+function Albums({ id, source }: { id: string; source?: CatalogSource }) {
   const { navigate } = useNavigation();
-  const load = useCallback((offset: number, signal: AbortSignal) => catalogApi.artistAlbums(id, offset, 30, signal), [id]);
-  const list = useInfiniteList<CatalogAlbum>(`artist-albums:${id}`, load);
+  const load = useCallback((offset: number, signal: AbortSignal) => catalogApi.artistAlbums(id, offset, 30, signal, source), [id, source]);
+  const list = useInfiniteList<CatalogAlbum>(`artist-albums:${source ?? ''}:${id}`, load);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
   if (list.error && !list.items.length) return <ErrorState message={list.error} onRetry={list.retry} />;
   const year = (ms?: number) => (ms ? new Date(ms).getFullYear() : '');
@@ -50,7 +51,7 @@ function Albums({ id }: { id: string }) {
             key={album.id}
             playlist={{ id: album.id, source: album.source, name: album.name, cover: album.cover, trackCount: album.trackCount }}
             subtitle={[year(album.publishTime), album.trackCount ? `${album.trackCount}首` : ''].filter(Boolean).join(' · ')}
-            onOpen={() => navigate({ name: 'album', id: album.id, title: album.name })}
+            onOpen={() => navigate({ name: 'album', id: album.id, source, title: album.name })}
           />
         ))}
       </CardGrid>
@@ -60,8 +61,8 @@ function Albums({ id }: { id: string }) {
   );
 }
 
-function Biography({ id }: { id: string }) {
-  const info = useCatalog(signal => catalogApi.artistBiography(id, signal), `artist-biography:${id}`);
+function Biography({ id, source }: { id: string; source?: CatalogSource }) {
+  const info = useCatalog(signal => catalogApi.artistBiography(id, signal, source), `artist-biography:${source ?? ''}:${id}`);
   if (info.error) return <ErrorState message={info.error} onRetry={info.retry} />;
   if (info.loading) return <div className={styles.biography} aria-busy="true"><SkeletonBlock className={styles.bioSkeleton} /><SkeletonBlock className={styles.bioSkeleton} /></div>;
   const biography = info.data;
@@ -72,11 +73,11 @@ function Biography({ id }: { id: string }) {
   </div>;
 }
 
-/** Artist page: tinted hero with avatar and biography, sticky tabs for songs / albums. */
-export function ArtistView({ id, title }: { id: string; title?: string }) {
+/** Artist page: tinted hero with avatar and biography, sticky tabs for songs / albums. `source` names another platform than the selected one. */
+export function ArtistView({ id, source, title }: { id: string; source?: CatalogSource; title?: string }) {
   const player = usePlayer();
   const { scrollY } = useScrollArea();
-  const info = useCatalog(signal => catalogApi.artist(id, signal), `artist:${id}`);
+  const info = useCatalog(signal => catalogApi.artist(id, signal, source), `artist:${source ?? ''}:${id}`);
   const [tab, setTab] = useState<Tab>('热门歌曲');
   const [busy, setBusy] = useState(false);
   const fade = useTransform(scrollY, [40, 240], [1, 0], { clamp: true });
@@ -88,7 +89,7 @@ export function ArtistView({ id, title }: { id: string; title?: string }) {
     if (busy) return;
     setBusy(true);
     try {
-      const page = await catalogApi.artistSongs(id, 0, 50);
+      const page = await catalogApi.artistSongs(id, 0, 50, undefined, source);
       const queue = page.items.map(toTrack);
       if (!queue[0]) { toast.info('这位歌手暂时没有可播放的歌曲'); return; }
       if (enqueue) { player.enqueue(queue); toast.success(`已将 ${queue.length} 首歌曲加入播放队列`); }
@@ -132,7 +133,7 @@ export function ArtistView({ id, title }: { id: string; title?: string }) {
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} {...fadeSwap}>
-          {tab === '热门歌曲' ? <Songs id={id} /> : tab === '专辑' ? <Albums id={id} /> : <Biography id={id} />}
+          {tab === '热门歌曲' ? <Songs id={id} source={source} /> : tab === '专辑' ? <Albums id={id} source={source} /> : <Biography id={id} source={source} />}
         </motion.div>
       </AnimatePresence>
     </Page>

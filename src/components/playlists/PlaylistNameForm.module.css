@@ -37,7 +37,8 @@
   color: var(--text-muted);
 }
 
-.private {
+/* A checkbox row below the name (e.g. 设为隐私歌单); the text toggles it too. */
+.option {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -46,11 +47,14 @@
   cursor: pointer;
 }
 
+.note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
 .error {
   margin: 0;
   font-size: 12px;
   color: var(--danger);
 }
-
-
-

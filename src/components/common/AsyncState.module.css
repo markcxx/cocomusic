@@ -36,6 +36,16 @@
   display: inline-flex;
 }
 
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 96px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
 .skeleton {
   position: relative;
   display: block;

@@ -1,51 +1,27 @@
 'use client';
 
 import { useState } from 'react';
-import { ConfirmDialog, Dialog, DialogActions } from '@/components/ui';
+import { ConfirmDialog, Dialog } from '@/components/ui';
+import { PlaylistNameForm } from '@/components/playlists/PlaylistNameForm';
 import type { UserPlaylist } from '@/lib/account-client';
 import { useAccount } from './account-store';
-import styles from './CreatePlaylistDialog.module.css';
-
-const MAX = 40;
 
 export function RenamePlaylistDialog({ playlist, onClose }: { playlist: UserPlaylist | null; onClose: () => void }) {
+  const { renamePlaylist } = useAccount();
   return (
     <Dialog open={Boolean(playlist)} onClose={onClose} title="重命名歌单">
-      {playlist && <RenameForm key={playlist.id} playlist={playlist} onClose={onClose} />}
+      {playlist && (
+        <PlaylistNameForm
+          key={playlist.id}
+          initialName={playlist.name}
+          requireChange
+          confirmLabel="保存"
+          busyLabel="保存中…"
+          onCancel={onClose}
+          onSubmit={async name => { await renamePlaylist(playlist.id, name); onClose(); }}
+        />
+      )}
     </Dialog>
-  );
-}
-
-function RenameForm({ playlist, onClose }: { playlist: UserPlaylist; onClose: () => void }) {
-  const { renamePlaylist } = useAccount();
-  const [name, setName] = useState(playlist.name);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const value = name.trim();
-  const unchanged = value === playlist.name;
-
-  const submit = async () => {
-    if (!value || unchanged || busy) return;
-    setBusy(true);
-    setError('');
-    try {
-      await renamePlaylist(playlist.id, value);
-      onClose();
-    } catch (cause) {
-      setError(cause instanceof Error ? cause.message : '重命名失败');
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form className={styles.form} onSubmit={event => { event.preventDefault(); void submit(); }}>
-      <label className={styles.field}>
-        <input value={name} maxLength={MAX} onChange={event => setName(event.target.value)} onFocus={event => event.currentTarget.select()} aria-label="歌单名称" />
-        <span className={styles.counter}>{name.length}/{MAX}</span>
-      </label>
-      {error && <p className={styles.error}>{error}</p>}
-      <DialogActions onCancel={onClose} onConfirm={() => void submit()} confirmLabel={busy ? '保存中…' : '保存'} busy={busy} disabled={!value || unchanged} />
-    </form>
   );
 }
 

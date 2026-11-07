@@ -40,7 +40,7 @@ export function FeaturedTab() {
         <SectionHeader title="推荐歌曲" actionLabel="播放全部" onAction={() => tracks[0] && player.play(tracks[0], tracks)} />
         {loading || !data ? <TrackSkeleton count={9} /> : (
           <motion.div className={styles.trackGrid} variants={staggerList} initial="hidden" animate="show">
-            {tracks.map((track, index) => <TrackTile key={track.id} track={track} queue={tracks} item={data.tracks[index]} />)}
+            {tracks.map(track => <TrackTile key={track.id} track={track} queue={tracks} />)}
           </motion.div>
         )}
       </section>

@@ -2,8 +2,14 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSettings } from '@/lib/settings';
+import type { CatalogSource } from '@/server/music/types';
 
-/** In-app routes. Detail and search routes carry their parameters. */
+/**
+ * In-app routes. Detail and search routes carry their parameters. Catalog
+ * detail routes may name their platform (`source`): pages of songs from other
+ * platforms (a mixed local playlist, an imported link) open on the right one.
+ * Without it they belong to the platform selected in 设置 › 曲库.
+ */
 export type Route =
   | { name: 'home' }
   | { name: 'discover' }
@@ -14,14 +20,16 @@ export type Route =
   | { name: 'local' }
   | { name: 'downloads' }
   | { name: 'settings' }
-  | { name: 'playlist'; id: string; title?: string }
-  | { name: 'album'; id: string; title?: string }
-  | { name: 'artist'; id: string; title?: string }
+  | { name: 'playlist'; id: string; source?: CatalogSource; title?: string }
+  | { name: 'album'; id: string; source?: CatalogSource; title?: string }
+  | { name: 'artist'; id: string; source?: CatalogSource; title?: string }
+  /** A playlist kept on this machine (no login, songs from any platform and local files). */
+  | { name: 'local-playlist'; id: string; title?: string }
   | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' }
   /** Song comments; carries display info so the header renders before data loads. */
-  | { name: 'comments'; songId: string; source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite'; title?: string; artist?: string; cover?: string }
+  | { name: 'comments'; songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string }
   /** The song's official MV; same display info as comments. */
-  | { name: 'mv'; songId: string; source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite'; title?: string; artist?: string; cover?: string };
+  | { name: 'mv'; songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string };
 
 export type RouteName = Route['name'];
 
@@ -38,6 +46,7 @@ export const routeTitles: Record<RouteName, string> = {
   playlist: '歌单',
   album: '专辑',
   artist: '歌手',
+  'local-playlist': '本地歌单',
   search: '搜索',
   comments: '评论',
   mv: 'MV',
@@ -45,7 +54,8 @@ export const routeTitles: Record<RouteName, string> = {
 
 export const routeKey = (route: Route) => {
   switch (route.name) {
-    case 'playlist': case 'album': case 'artist': return `${route.name}:${route.id}`;
+    case 'playlist': case 'album': case 'artist': return `${route.name}:${route.source ?? ''}:${route.id}`;
+    case 'local-playlist': return `${route.name}:${route.id}`;
     case 'search': return `search:${route.keyword}:${route.type ?? 'song'}`;
     case 'comments': case 'mv': return `${route.name}:${route.source ?? 'netease'}:${route.songId}`;
     default: return route.name;
@@ -60,6 +70,13 @@ type History = { stack: Entry[]; index: number; source: string };
 const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked']);
 /** Song pages carry their own source, but the stack still drops them on a platform switch. */
 const SONG_ROUTES = new Set<RouteName>(['comments', 'mv']);
+
+/** Kept across a platform switch: neutral pages, and catalog pages that name their own platform. */
+const survivesPlatformSwitch = (route: Route) => {
+  if (SONG_ROUTES.has(route.name)) return false;
+  if (!PLATFORM_ROUTES.has(route.name)) return true;
+  return 'source' in route && Boolean(route.source);
+};
 
 
 type NavigationState = {
@@ -95,7 +112,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   // current page stays mounted when it is neutral, otherwise we land on home.
   if (history.source !== source) {
     const currentEntry = history.stack[history.index];
-    const keep = history.stack.filter(entry => !PLATFORM_ROUTES.has(entry.route.name) && !SONG_ROUTES.has(entry.route.name));
+    const keep = history.stack.filter(entry => survivesPlatformSwitch(entry.route));
     let stack = keep;
     let index = stack.indexOf(currentEntry);
     if (index < 0) {

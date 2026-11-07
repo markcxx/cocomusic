@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ErrorState } from '@/components/common/AsyncState';
 import { Tabs } from '@/components/common/Tabs';
 import { useNavigation } from '@/components/layout/navigation';
@@ -12,6 +12,7 @@ import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
 import { ListFooter } from '@/components/ui';
 import { catalogApi, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type SearchType } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
+import { toTrack } from '@/lib/to-track';
 import { BestMatch } from './BestMatch';
 import styles from './SearchResultsView.module.css';
 
@@ -33,6 +34,7 @@ export function SearchResultsView({ keyword, type }: { keyword: string; type: Se
   const list = useInfiniteList(`${type}:${keyword}`, loadPage);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore, type]);
   const label = tabs.find(tab => tab.type === type)!.label;
+  const songs = useMemo(() => (type === 'song' ? (list.items as CatalogTrack[]).map(toTrack) : []), [list.items, type]);
 
   return (
     <Page gap="sm">
@@ -49,7 +51,7 @@ export function SearchResultsView({ keyword, type }: { keyword: string; type: Se
       {list.error && !list.items.length ? <ErrorState message={list.error} onRetry={list.retry} /> : (
         <>
           {type === 'song' && (
-            <SongTable tracks={list.items as CatalogTrack[]} loading={list.loading} animateFrom={Math.max(0, list.items.length - PAGE.song)} emptyText={`没有找到与“${keyword}”相关的歌曲`} />
+            <SongTable tracks={songs} loading={list.loading} animateFrom={Math.max(0, list.items.length - PAGE.song)} emptyText={`没有找到与“${keyword}”相关的歌曲`} />
           )}
           {type === 'playlist' && (
             <CardGrid loading={list.loading}>

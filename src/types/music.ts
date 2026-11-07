@@ -6,6 +6,8 @@ export interface Track {
   id: string;
   title: string;
   artist: string;
+  /** Individual artists of a catalog song, for linking. */
+  artists?: Array<{ id: string; name: string }>;
   album?: string;
   albumId?: string;
   /** Seconds. */
@@ -16,6 +18,8 @@ export interface Track {
   source?: 'netease' | 'qq' | 'kugou' | 'kugou-lite';
   /** Library id of a local file; when set, playback streams the file instead of the network. */
   localId?: string;
+  /** Catalog song requires a paid membership upstream (informational only). */
+  vip?: boolean;
   /** Local file is a downloaded preview clip (its own .lrc only; no online lyrics fallback). */
   trialClip?: boolean;
   /** Real artwork URL when known; otherwise the seeded placeholder is drawn. */

@@ -134,7 +134,8 @@
   color: var(--accent-strong);
 }
 
-.vip {
+.vip,
+.tag {
   flex-shrink: 0;
   padding: 0 4px;
   border: 1px solid rgba(224, 140, 60, 0.5);
@@ -142,6 +143,12 @@
   font-size: 9px;
   line-height: 13px;
   color: #d98a3a;
+}
+
+/* Platform of a song in a mixed list (本地歌单). */
+.tag {
+  border-color: rgba(var(--accent-rgb), 0.32);
+  color: var(--accent-strong);
 }
 
 .actions {

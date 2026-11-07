@@ -18,6 +18,7 @@ import { HomeView } from '@/components/home/HomeView';
 import { AppShell } from '@/components/layout/AppShell';
 import { useNavigation, type Route } from '@/components/layout/navigation';
 import { useScrollArea } from '@/components/scroll';
+import { LocalPlaylistView } from '@/components/playlists/LocalPlaylistView';
 import { SearchResultsView } from '@/components/search/SearchResultsView';
 import { SettingsView } from '@/components/settings/SettingsView';
 
@@ -27,9 +28,10 @@ function View({ route }: { route: Route }) {
     case 'discover': return <DiscoverView />;
     case 'artists': return <ArtistsView />;
     case 'charts': return <ChartsView />;
-    case 'playlist': return <CollectionView kind="playlist" id={route.id} title={route.title} />;
-    case 'album': return <CollectionView kind="album" id={route.id} title={route.title} />;
-    case 'artist': return <ArtistView id={route.id} title={route.title} />;
+    case 'playlist': return <CollectionView kind="playlist" id={route.id} source={route.source} title={route.title} />;
+    case 'album': return <CollectionView kind="album" id={route.id} source={route.source} title={route.title} />;
+    case 'artist': return <ArtistView id={route.id} source={route.source} title={route.title} />;
+    case 'local-playlist': return <LocalPlaylistView id={route.id} title={route.title} />;
     case 'liked': return <LikedView />;
     case 'recent': return <RecentView />;
     case 'local': return <LocalView />;

@@ -8,13 +8,12 @@ import { Cover } from '@/components/common/Cover';
 import { riseItem } from '@/components/common/motion';
 import { usePlayer } from '@/components/player/player-store';
 import { cn } from '@/lib/cn';
-import type { CatalogTrack } from '@/lib/catalog-client';
 import type { Track } from '@/types/music';
 import { Equalizer } from './Equalizer';
 import styles from './TrackTile.module.css';
 
 /** Flat song row that only reveals its card surface and actions on hover. */
-export function TrackTile({ track, queue, item }: { track: Track; queue: Track[]; /** Catalog source track: enables like / add-to-playlist. */ item?: CatalogTrack }) {
+export function TrackTile({ track, queue }: { track: Track; queue: Track[] }) {
   const player = usePlayer();
   const current = player.track.id === track.id;
   const playing = current && player.playing;
@@ -43,12 +42,8 @@ export function TrackTile({ track, queue, item }: { track: Track; queue: Track[]
         <span data-tooltip={`${track.artist}${track.album ? ` · ${track.album}` : ''}`} data-tooltip-overflow>{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
       </div>
       <div className={styles.actions}>
-        {item && (
-          <>
-            <LikeButton songId={item.id} source={item.source} />
-            <TrackMenuButton track={item} />
-          </>
-        )}
+        {track.songId && <LikeButton songId={track.songId} source={track.source} />}
+        <TrackMenuButton track={track} />
       </div>
     </motion.div>
   );

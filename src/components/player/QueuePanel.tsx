@@ -1,15 +1,18 @@
 'use client';
 
 import { AnimatePresence, motion, Reorder, useDragControls } from 'framer-motion';
-import { GripVertical, HardDrive, ListMusic, Trash2, X } from 'lucide-react';
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { GripVertical, HardDrive, ListMusic, ListPlus, Trash2, X } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Cover } from '@/components/common/Cover';
 import { Equalizer } from '@/components/music/Equalizer';
+import { CreateLocalPlaylistDialog, type LocalPlaylistDraft } from '@/components/playlists/LocalPlaylistDialogs';
 import { IconButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import type { Track } from '@/types/music';
 import { formatTime, usePlayer } from './player-store';
 import styles from './QueuePanel.module.css';
+
+const dateLabel = new Intl.DateTimeFormat('zh-CN', { month: 'numeric', day: 'numeric' });
 
 function QueueRow({ item, current, playing, onPlay, onRemove }: { item: Track; current: boolean; playing: boolean; onPlay: () => void; onRemove: () => void }) {
   const drag = useDragControls();
@@ -59,6 +62,7 @@ export function QueuePanel() {
   const { queue, track, queueOpen, setQueueOpen } = player;
   const list = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
+  const [saving, setSaving] = useState<LocalPlaylistDraft>(null);
 
   // Bring the playing song into view when the panel opens.
   useLayoutEffect(() => {
@@ -86,63 +90,68 @@ export function QueuePanel() {
   const total = queue.reduce((sum, item) => sum + (item.duration ?? 0), 0);
 
   return (
-    <AnimatePresence>
-      {queueOpen && (
-        <motion.aside
-          ref={panel}
-          className={styles.panel}
-          aria-label="播放列表"
-          initial={{ x: '104%', opacity: 0.6 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: '104%', opacity: 0.6 }}
-          transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-        >
-          <header className={styles.header}>
-            <div>
-              <h2>播放列表</h2>
-              <p>{queue.length} 首{total ? ` · ${Math.round(total / 60)} 分钟` : ''}</p>
-            </div>
-            <div className={styles.headerActions}>
-              <IconButton label="清空列表" tone="muted" size="sm" onClick={player.clearQueue} disabled={!queue.length}><Trash2 size={15} strokeWidth={1.5} /></IconButton>
-              <IconButton label="关闭" tone="muted" size="sm" onClick={() => setQueueOpen(false)} iconHover={{ rotate: 90 }}><X size={16} strokeWidth={1.5} /></IconButton>
-            </div>
-          </header>
+    <>
+      <AnimatePresence>
+        {queueOpen && (
+          <motion.aside
+            ref={panel}
+            className={styles.panel}
+            aria-label="播放列表"
+            initial={{ x: '104%', opacity: 0.6 }}
+            animate={{ x: 0, opacity: 1 }}
+            exit={{ x: '104%', opacity: 0.6 }}
+            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
+          >
+            <header className={styles.header}>
+              <div>
+                <h2>播放列表</h2>
+                <p>{queue.length} 首{total ? ` · ${Math.round(total / 60)} 分钟` : ''}</p>
+              </div>
+              <div className={styles.headerActions}>
+                <IconButton label="保存为歌单" tone="muted" size="sm" onClick={() => setSaving({ tracks: queue, name: `播放队列 ${dateLabel.format(Date.now())}` })} disabled={!queue.length}><ListPlus size={15} strokeWidth={1.5} /></IconButton>
+                <IconButton label="清空列表" tone="muted" size="sm" onClick={player.clearQueue} disabled={!queue.length}><Trash2 size={15} strokeWidth={1.5} /></IconButton>
+                <IconButton label="关闭" tone="muted" size="sm" onClick={() => setQueueOpen(false)} iconHover={{ rotate: 90 }}><X size={16} strokeWidth={1.5} /></IconButton>
+              </div>
+            </header>
 
-          {queue.length ? (
-            <div ref={list} className={styles.list} data-scroll-native>
-              <Reorder.Group
-                axis="y"
-                values={queue}
-                // Reorder hands back the reordered array; apply it as one move of the dragged item.
-                onReorder={next => {
-                  const moved = next.find((item, index) => queue[index]?.id !== item.id && queue.indexOf(item) !== index);
-                  if (moved) player.moveInQueue(moved.id, next.indexOf(moved));
-                }}
-                className={styles.items}
-              >
-                <AnimatePresence initial={false}>
-                  {queue.map(item => (
-                    <QueueRow
-                      key={item.id}
-                      item={item}
-                      current={item.id === track.id}
-                      playing={player.playing}
-                      onPlay={() => player.play(item)}
-                      onRemove={() => player.removeFromQueue(item.id)}
-                    />
-                  ))}
-                </AnimatePresence>
-              </Reorder.Group>
-            </div>
-          ) : (
-            <div className={styles.empty}>
-              <ListMusic size={32} strokeWidth={1.2} />
-              <p>播放列表是空的</p>
-              <span>在歌单、排行榜或本地音乐里播放歌曲，它们会出现在这里</span>
-            </div>
-          )}
-        </motion.aside>
-      )}
-    </AnimatePresence>
+            {queue.length ? (
+              <div ref={list} className={styles.list} data-scroll-native>
+                <Reorder.Group
+                  axis="y"
+                  values={queue}
+                  // Reorder hands back the reordered array; apply it as one move of the dragged item.
+                  onReorder={next => {
+                    const moved = next.find((item, index) => queue[index]?.id !== item.id && queue.indexOf(item) !== index);
+                    if (moved) player.moveInQueue(moved.id, next.indexOf(moved));
+                  }}
+                  className={styles.items}
+                >
+                  <AnimatePresence initial={false}>
+                    {queue.map(item => (
+                      <QueueRow
+                        key={item.id}
+                        item={item}
+                        current={item.id === track.id}
+                        playing={player.playing}
+                        onPlay={() => player.play(item)}
+                        onRemove={() => player.removeFromQueue(item.id)}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </Reorder.Group>
+              </div>
+            ) : (
+              <div className={styles.empty}>
+                <ListMusic size={32} strokeWidth={1.2} />
+                <p>播放列表是空的</p>
+                <span>在歌单、排行榜或本地音乐里播放歌曲，它们会出现在这里</span>
+              </div>
+            )}
+          </motion.aside>
+        )}
+      </AnimatePresence>
+      {/* Mixed queues (any platform, local files) become a 本地歌单. */}
+      <CreateLocalPlaylistDialog draft={saving} onClose={() => setSaving(null)} />
+    </>
   );
 }

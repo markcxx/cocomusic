@@ -21,6 +21,16 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry: () 
   );
 }
 
+/** Centered icon + message for a page with nothing to show (missing item, empty list). */
+export function EmptyState({ icon, message }: { icon: ReactNode; message: ReactNode }) {
+  return (
+    <motion.div className={styles.empty} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
+      {icon}
+      <span>{message}</span>
+    </motion.div>
+  );
+}
+
 /** Cross-fades skeleton → content so data arrival never pops. */
 export function Swap({ loading, skeleton, children }: { loading: boolean; skeleton: ReactNode; children: ReactNode }) {
   return (

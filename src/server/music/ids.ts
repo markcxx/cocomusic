@@ -36,3 +36,5 @@ export const isSource = (value: unknown): value is CatalogSource => value === 'n
 
 /** Display names, used in errors and the settings page. */
 export const SOURCE_NAMES: Record<CatalogSource, string> = { netease: '网易云音乐', qq: 'QQ 音乐', kugou: '酷狗音乐', 'kugou-lite': '酷狗概念版' };
+/** Compact tags for songs in mixed lists (本地歌单). */
+export const SOURCE_TAGS: Record<CatalogSource, string> = { netease: '网易云', qq: 'QQ', kugou: '酷狗', 'kugou-lite': '酷狗' };

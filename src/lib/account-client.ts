@@ -6,7 +6,7 @@ import type { CheckInResult } from '@/server/music/kugou/auto-check-in';
 import { requestKugouVerification } from './kugou-verification';
 import { requestAccountRecheck } from './account-events';
 export { ACCOUNT_RECHECK_EVENT } from './account-events';
-import type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
+import type { CatalogSource, QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
 export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/server/music/types';
 
@@ -34,13 +34,18 @@ async function call<T>(path: string, init: RequestInit & { query?: Record<string
   return data as T;
 }
 
-const post = <T>(path: string, body: unknown) => call<T>(path, { method: 'POST', body: JSON.stringify(body) });
+const post = <T>(path: string, body: unknown, source?: CatalogSource) => call<T>(path, { method: 'POST', body: JSON.stringify(body), query: source ? { source } : undefined });
 
+/**
+ * Calls go to the selected platform's account. `source` reaches another
+ * platform's stored login instead (logins are kept per platform), e.g. to
+ * collect an imported playlist from a platform that is not selected.
+ */
 export const accountApi = {
   autoCheckIn: (retry = false) => call<CheckInResult>('membership', { method: 'POST', body: JSON.stringify({ action: 'auto', retry }), query: { source: 'kugou-lite' } }),
   membership: (signal?: AbortSignal) => call<ConceptMembership>('membership', { signal }),
   claimMembership: () => post<ConceptMembership>('membership', {}),
-  me: () => call<{ profile: UserProfile | null; expired?: boolean }>('me'),
+  me: (source?: CatalogSource) => call<{ profile: UserProfile | null; expired?: boolean }>('me', { query: source ? { source } : undefined }),
   detail: (signal?: AbortSignal) => call<{ detail: UserDetail | null }>('me/detail', { signal }),
   logout: () => call<{ ok: true }>('me', { method: 'DELETE' }),
   qrCreate: () => call<{ key: string; url: string; svg: string }>('login/qr', { method: 'POST' }),
@@ -51,6 +56,6 @@ export const accountApi = {
   createPlaylist: (name: string, privacy: 'public' | 'private') => post<{ playlist: UserPlaylist }>('playlists', { name, privacy }),
   deletePlaylist: (id: string) => call<{ ok: true }>('playlists', { method: 'DELETE', query: { id } }),
   renamePlaylist: (id: string, name: string) => call<{ ok: true }>('playlists', { method: 'PATCH', body: JSON.stringify({ id, name }) }),
-  subscribe: (id: string, subscribe: boolean) => post<{ ok: true }>('playlists/subscription', { id, subscribe }),
+  subscribe: (id: string, subscribe: boolean, source?: CatalogSource) => post<{ ok: true }>('playlists/subscription', { id, subscribe }, source),
   editTracks: (playlistId: string, trackIds: string[], op: 'add' | 'del') => post<{ ok: true }>('playlists/tracks', { playlistId, trackIds, op }),
 };

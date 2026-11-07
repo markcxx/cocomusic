@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Compass, Download, HardDrive, Heart, History, House, Mic2, PanelLeftClose, PanelLeftOpen, TrendingUp, type LucideIcon } from 'lucide-react';
 import { SidebarPlaylists } from '@/components/account/SidebarPlaylists';
 import { BrandMark } from '@/components/common/BrandMark';
+import { SidebarLocalPlaylists } from '@/components/playlists/SidebarLocalPlaylists';
 import { cn } from '@/lib/cn';
 import { useNavigation, type Route } from './navigation';
 import { setSidebarCollapsed, useSidebarCollapsed } from './sidebar-state';
@@ -93,6 +94,7 @@ export function Sidebar() {
         </section>
 
         <SidebarPlaylists collapsed={collapsed} />
+        <SidebarLocalPlaylists collapsed={collapsed} />
       </nav>
     </aside>
   );

@@ -1,25 +1,30 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Download, FolderPlus, ListPlus, Play, X } from 'lucide-react';
+import { Download, FolderPlus, ListMinus, ListPlus, Play, X } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { useEffect, useRef, useState } from 'react';
-import { useAccount } from '@/components/account/account-store';
+import { useAddToPlaylist, type PlaylistRef } from '@/components/playlists/add-to-playlist';
 import { Button, IconButton, Menu } from '@/components/ui';
 import { useIsClient } from '@/lib/client-only';
 import type { Selection } from '@/lib/selection';
+import type { Track } from '@/types/music';
 import styles from './SelectionBar.module.css';
 
 /** Floating batch-action bar shown while songs are selected. Escape exits selection. */
-export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload }: {
+export function SelectionBar({ selection, selectedTracks, playlist, onPlay, onQueue, onDownload, onRemove }: {
   selection: Selection;
+  /** The selected songs in list order (read when an action runs). */
+  selectedTracks: () => Track[];
+  /** The playlist being shown: left out of 收藏到歌单. */
+  playlist?: PlaylistRef;
   onPlay: () => void;
   onQueue: () => void;
-  /** Add the selected songs to one of the user's playlists. */
-  onCollect?: (playlistId: string) => void;
   onDownload?: () => void;
+  /** Remove the selected songs from the playlist being shown (the user's own). */
+  onRemove?: () => void;
 }) {
-  const { profile, playlists, openLogin } = useAccount();
+  const addTo = useAddToPlaylist();
   const collectAnchor = useRef<HTMLSpanElement>(null);
   const [collecting, setCollecting] = useState(false);
   const mounted = useIsClient();
@@ -33,6 +38,7 @@ export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload
 
   if (!mounted) return null;
   const empty = selection.count === 0;
+  const menuOpen = collecting && selection.active;
   const bar = createPortal(
     <AnimatePresence>
       {selection.active && (
@@ -56,12 +62,11 @@ export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload
           </span>
           <Button variant="primary" icon={<Play size={15} strokeWidth={0} fill="currentColor" />} onClick={onPlay} disabled={empty}>播放</Button>
           <Button icon={<ListPlus size={15} strokeWidth={1.5} />} onClick={onQueue} disabled={empty}>加入队列</Button>
-          {onCollect && (
-            <span ref={collectAnchor} style={{ display: 'inline-flex' }}>
-              <Button icon={<FolderPlus size={15} strokeWidth={1.5} />} onClick={() => (profile ? setCollecting(value => !value) : openLogin())} disabled={empty}>收藏到歌单</Button>
-            </span>
-          )}
+          <span ref={collectAnchor} style={{ display: 'inline-flex' }}>
+            <Button icon={<FolderPlus size={15} strokeWidth={1.5} />} onClick={() => setCollecting(value => !value)} disabled={empty}>收藏到歌单</Button>
+          </span>
           {onDownload && <Button icon={<Download size={15} strokeWidth={1.5} />} onClick={onDownload} disabled={empty}>下载</Button>}
+          {onRemove && <Button icon={<ListMinus size={15} strokeWidth={1.5} />} onClick={onRemove} disabled={empty}>移除</Button>}
           <span className={styles.divider} aria-hidden />
           <IconButton label="退出多选" onClick={selection.exit} iconHover={{ rotate: 90 }}>
             <X size={17} strokeWidth={1.5} />
@@ -73,18 +78,11 @@ export function SelectionBar({ selection, onPlay, onQueue, onCollect, onDownload
   );
   const menu = (
     <Menu
-      open={collecting && selection.active}
+      open={menuOpen}
       anchor={collectAnchor}
       onClose={() => setCollecting(false)}
-      items={[
-        { type: 'section', label: `收藏 ${selection.count} 首到` },
-        ...playlists.filter(item => item.own).map(item => ({
-          label: item.liked ? '我喜欢的音乐' : item.name,
-          icon: <ListPlus size={15} strokeWidth={1.5} />,
-          onSelect: () => onCollect?.(item.id),
-        })),
-      ]}
+      items={menuOpen ? [{ type: 'section', label: `收藏 ${selection.count} 首到` }, ...addTo.items(selectedTracks(), { exclude: playlist, onDone: selection.exit })] : []}
     />
   );
-  return <>{bar}{menu}</>;
+  return <>{bar}{menu}{addTo.dialogs}</>;
 }

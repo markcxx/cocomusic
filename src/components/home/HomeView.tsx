@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { fadeSwap } from '@/components/common/motion';
 import { Tabs } from '@/components/common/Tabs';
 import { CollapsingHeader, Page, StickyBar, useScrollArea } from '@/components/scroll';
+import { ImportPlaylistDialog } from '@/components/playlists/ImportPlaylistDialog';
 import { Button } from '@/components/ui';
 import { homeTabs, type HomeTab } from '@/lib/mock-data';
 import { ArtistsTab } from './ArtistsTab';
@@ -21,6 +22,7 @@ const panels: Record<HomeTab, () => React.JSX.Element> = {
 
 export function HomeView() {
   const [tab, setTab] = useState<HomeTab>('精选');
+  const [importing, setImporting] = useState(false);
   const { scrollY, scrollTo } = useScrollArea();
   const Panel = panels[tab];
 
@@ -32,7 +34,7 @@ export function HomeView() {
 
   return (
     <Page>
-      <CollapsingHeader title="发现好音乐" actions={<Button icon={<Import size={15} strokeWidth={1.4} />}>导入歌单</Button>} />
+      <CollapsingHeader title="发现好音乐" actions={<Button icon={<Import size={15} strokeWidth={1.4} />} onClick={() => setImporting(true)}>导入歌单</Button>} />
       <StickyBar compactTitle="发现好音乐" className={styles.tabsBar}>
         <Tabs items={homeTabs} value={tab} onChange={changeTab} label="首页内容" />
       </StickyBar>
@@ -41,6 +43,7 @@ export function HomeView() {
           <Panel />
         </motion.div>
       </AnimatePresence>
+      <ImportPlaylistDialog open={importing} onClose={() => setImporting(false)} />
     </Page>
   );
 }

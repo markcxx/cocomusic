@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { HardDrive, Play } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { LikeButton } from '@/components/account/LikeButton';
+import { TrackMenuButton } from '@/components/account/TrackMenuButton';
 import { Cover } from '@/components/common/Cover';
 import { riseItem, staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
@@ -17,8 +18,9 @@ export type TrackRow = { track: Track; meta?: ReactNode; actions?: ReactNode };
 
 /**
  * List of player tracks (local files, recent plays): index/play, cover, title,
- * a free meta column and per-row actions. Double-click plays with the whole
- * list as the queue.
+ * a free meta column, per-row actions and the shared 更多 menu (queue, add to
+ * a 本地歌单 — local files included). Double-click plays with the whole list as
+ * the queue.
  */
 export function TrackList({ rows, metaLabel, emptyText = '暂无歌曲' }: { rows: TrackRow[]; metaLabel?: string; emptyText?: ReactNode }) {
   const player = usePlayer();
@@ -70,6 +72,7 @@ export function TrackList({ rows, metaLabel, emptyText = '暂无歌曲' }: { row
               <span role="cell" className={styles.actions}>
                 {track.songId && <LikeButton songId={track.songId} source={track.source} />}
                 {actions}
+                <TrackMenuButton track={track} />
               </span>
             </motion.div>
           );
