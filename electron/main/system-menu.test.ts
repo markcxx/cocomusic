@@ -39,6 +39,18 @@ test('menu icons only in Windows/Linux tray menus', () => {
   assert.equal(icon(mac), false);
 });
 
+test('visible lyrics can always be unlocked from the system menu', () => {
+  for (const surface of ['tray', 'app', 'dock'] as const) {
+    for (const locked of [false, true]) {
+      const menu = buildPlayerMenu(EMPTY_STATE, { surface, desktopLyrics: true, desktopLyricsLocked: locked, mini: false, platform: 'linux' });
+      const lock = menu.find(node => node.type === 'item' && node.action === 'lyrics-lock');
+      assert.ok(lock && lock.type === 'item');
+      assert.equal(lock.label, locked ? '解锁桌面歌词' : '锁定桌面歌词');
+      assert.notEqual(lock.enabled, false);
+    }
+  }
+});
+
 test('menu-bar lyric shows only while playing and enabled', () => {
   assert.equal(trayTitle(playing), '刮风这天 我试过握着你手');
   assert.equal(trayTitle({ ...playing, playing: false }), '');

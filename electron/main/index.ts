@@ -10,6 +10,10 @@ import { startNextServer, type NextServer } from './next-server';
 import { attachOpenFilesWindow, audioFilesFromArgv, queueOpenFiles, registerOpenFileHandlers } from './open-files';
 import { setupUpdater } from './updater';
 import { createMainWindow } from './window';
+import { configureLinuxWindowing } from './linux-windowing';
+
+// Select Ozone at process startup, before Electron initializes the display backend.
+configureLinuxWindowing(app);
 
 let server: NextServer | undefined;
 let mainWindow: BrowserWindow | undefined;
