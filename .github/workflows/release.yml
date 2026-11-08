@@ -1,16 +1,21 @@
-# Version tags publish complete releases automatically. Manual runs only diagnose packaging.
+# Version tags publish automatically. A manual rebuild can package an existing tag.
 name: Release
 
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      rebuild_tag:
+        description: Existing version tag to rebuild and publish (empty for diagnostics)
+        required: false
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-${{ inputs.rebuild_tag || github.ref_name }}
   cancel-in-progress: false
 
 jobs:
@@ -19,6 +24,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rebuild_tag && format('refs/tags/{0}', inputs.rebuild_tag) || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22.23.4"
@@ -26,7 +33,7 @@ jobs:
         run: node --test .github/scripts/release.test.mjs
       - name: Validate version and release notes
         env:
-          RELEASE_TAG: ${{ github.ref_type == 'tag' && github.ref_name || '' }}
+          RELEASE_TAG: ${{ inputs.rebuild_tag || (github.ref_type == 'tag' && github.ref_name) || '' }}
         run: node .github/scripts/release.mjs validate
 
   build:
@@ -54,6 +61,8 @@ jobs:
       CSC_IDENTITY_AUTO_DISCOVERY: 'false'
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rebuild_tag && format('refs/tags/{0}', inputs.rebuild_tag) || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22.23.4"
@@ -69,9 +78,16 @@ jobs:
       - name: Build app
         run: npm run build
       - name: Package
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          npx --no-install install-electron
-          npx electron-builder ${{ matrix.args }} --config.electronDist=node_modules/electron/dist --publish never
+          version=$(node -p "require('electron/package.json').version")
+          archive=$(node -p "'electron-v' + require('electron/package.json').version + '-' + process.platform + '-' + process.arch + '.zip'")
+          asset=$(gh api "repos/electron/electron/releases/tags/v$version" | jq -er --arg name "$archive" '.assets[] | select(.name == $name) | .id')
+          curl --fail --location --retry 3 --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/octet-stream' "https://api.github.com/repos/electron/electron/releases/assets/$asset?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$archive"
+          node -e "const fs = require('node:fs'); const name = process.argv[1]; const digest = require('node:crypto').createHash('sha256').update(fs.readFileSync(name)).digest('hex'); require('node:assert/strict').equal(digest, require('electron/checksums.json')[name]);" "$archive"
+          npx electron-builder ${{ matrix.args }} --config.electronDist="$archive" --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ runner.os }}-${{ runner.arch }}
@@ -88,12 +104,14 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: build
-    if: github.ref_type == 'tag'
+    if: github.ref_type == 'tag' || inputs.rebuild_tag != ''
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.rebuild_tag && format('refs/tags/{0}', inputs.rebuild_tag) || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: "22.23.4"
@@ -105,7 +123,7 @@ jobs:
       - name: Verify installers and publish release
         env:
           GH_TOKEN: ${{ github.token }}
-          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_TAG: ${{ inputs.rebuild_tag || github.ref_name }}
         run: node .github/scripts/release.mjs publish
 
   cleanup:
