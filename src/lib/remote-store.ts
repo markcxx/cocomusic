@@ -16,8 +16,9 @@ export function remoteStore<T>(load: () => Promise<T>) {
 
   /** Reload from the server (also used to resync after a failed write). */
   const refresh = () => {
+    // Collections merge with imported data, so they load even if the hand-over has to wait.
     loading = storageReady()
-      .then(load)
+      .then(() => load())
       .then(next => { value = next; emit(); })
       .catch(error => {
         // Try again on the next subscriber instead of caching the failure.

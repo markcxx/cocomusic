@@ -16,6 +16,7 @@ import { UpdateDialog } from '@/components/updates/UpdateDialog';
 import { DownloadDialog } from '@/components/downloads/DownloadDialog';
 import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
+import { LegacyDataNotice } from './LegacyDataNotice';
 import { NavigationProvider, useNavigation } from './navigation';
 import { Sidebar } from './Sidebar';
 import { SystemBridge } from './SystemBridge';
@@ -75,6 +76,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!mini && <QueuePanel />}
             {!mini && <LocalDropOverlay />}
             <SystemBridge />
+            <LegacyDataNotice />
             <LoginDialog />
             <DownloadDialog />
             {!mini && <UpdateDialog />}

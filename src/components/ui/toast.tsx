@@ -24,7 +24,7 @@ function push(tone: Tone, message: string, ms = 2600) {
 /** Fire-and-forget notifications usable from anywhere (stores, handlers). */
 export const toast = {
   success: (message: string) => push('success', message),
-  error: (message: string) => push('error', message, 4000),
+  error: (message: string, durationMs = 4000) => push('error', message, durationMs),
   info: (message: string) => push('info', message),
 };
 

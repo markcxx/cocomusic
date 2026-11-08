@@ -1,5 +1,4 @@
 import type { DatabaseSync } from 'node:sqlite';
-import { importLegacyFiles } from '../user-data/legacy';
 import { transaction } from './sql';
 
 /**
@@ -8,12 +7,13 @@ import { transaction } from './sql';
  * previous version intact and the step simply runs again on the next launch.
  * Append new steps; never edit one that has shipped.
  */
-type Migration = (db: DatabaseSync, legacyDir: string) => void;
+type Migration = (db: DatabaseSync) => void;
 
 const MIGRATIONS: Migration[] = [
   // 1 — collections move out of JSON. Rows keep the whole object as JSON (`track`, `data`)
   // beside the columns queries need, so new fields need no schema change.
-  (db, legacyDir) => {
+  // (Data of earlier versions is imported separately: user-data/legacy.ts.)
+  db => {
     db.exec(`
       CREATE TABLE kv (key TEXT PRIMARY KEY, value TEXT NOT NULL) WITHOUT ROWID;
 
@@ -63,18 +63,17 @@ const MIGRATIONS: Migration[] = [
       );
       CREATE INDEX download_jobs_song ON download_jobs (source, song_id);
     `);
-    importLegacyFiles(db, legacyDir);
   },
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
 
-export function migrate(db: DatabaseSync, legacyDir: string) {
+export function migrate(db: DatabaseSync) {
   const { user_version: version } = db.prepare('PRAGMA user_version').get() as { user_version: number };
   // A newer app wrote this file (the user went back a version): use it as is.
   for (let index = version; index < MIGRATIONS.length; index += 1) {
     transaction(db, () => {
-      MIGRATIONS[index](db, legacyDir);
+      MIGRATIONS[index](db);
       db.exec(`PRAGMA user_version = ${index + 1}`);
     });
   }

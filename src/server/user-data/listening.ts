@@ -1,7 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite';
 import { parseRow, readValue, transaction, writeValue } from '../db/sql';
 import { isPlayable, type Track } from '../../types/music';
-import { POSITION_KEY, QUEUE_KEY } from './legacy';
+import { CatalogError } from '../music/errors';
+import { POSITION_KEY, QUEUE_KEY, rendererImportPending } from './legacy';
 import { sanitizeTracks } from './tracks';
 import { QUEUE_LIMIT, RECENT_PLAYS_LIMIT, type PlayerSnapshot, type RecentPlay } from './types';
 
@@ -43,10 +44,21 @@ export function readPlayer(db: DatabaseSync): PlayerSnapshot {
   };
 }
 
+/**
+ * The queue and position of an earlier version are imported only while none
+ * is saved yet. Until that hand-over happened, saving here would make the
+ * import skip them for good, so it is refused.
+ */
+function requireHandedOver(db: DatabaseSync) {
+  if (rendererImportPending(db)) throw new CatalogError('旧版数据尚未导入，暂不保存播放列表', 409);
+}
+
 export function saveQueue(db: DatabaseSync, queue: Track[], currentId?: string) {
+  requireHandedOver(db);
   writeValue(db, QUEUE_KEY, { queue: queue.slice(0, QUEUE_LIMIT), currentId });
 }
 
 export function savePosition(db: DatabaseSync, position: { id: string; t: number }) {
+  requireHandedOver(db);
   writeValue(db, POSITION_KEY, position);
 }

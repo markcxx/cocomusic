@@ -7,7 +7,7 @@ import { toast } from '@/components/ui/toast';
 import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
 import { catalogApi, CatalogRequestError, type SongSource } from '@/lib/catalog-client';
 import { desktop, localAudioUrl } from '@/lib/local-client';
-import { meApi, QUEUE_LIMIT, storageReady } from '@/lib/me-client';
+import { loadPlayerState, meApi, QUEUE_LIMIT } from '@/lib/me-client';
 import { emptyTrack } from '@/lib/mock-data';
 import { recentPlays } from '@/lib/recent-plays';
 import { needsSamples, settings as appSettings, useSettings } from '@/lib/settings';
@@ -250,28 +250,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       setMode(readMode());
       setRestored(true);
     }, 0);
-    storageReady()
-      .then(meApi.player)
-      .then(stored => {
-        if (cancelled) return;
-        // Something started playing meanwhile (an opened file, a click): that wins.
-        const { queue: live, track: current } = latest.current;
-        if (!live.length && !isPlayable(current)) {
-          const prefsNow = appSettings.get();
-          const start = stored.queue.find(item => item.id === stored.currentId) ?? stored.queue[0];
-          if (stored.queue.length) setQueue(stored.queue);
-          if (prefsNow.resumeOnLaunch && start) {
-            // Restored paused: autoplay on launch would be a surprise.
-            const at = prefsNow.resumePosition && stored.position?.id === start.id ? stored.position.t : 0;
-            if (at > 0) resumeAt.current = at;
-            latest.current.select(start, { autoplay: false, remember: false });
-            if (at > 0) setPosition(at);
-          }
+    // Saving starts only once the saved state is known to be complete (see loadPlayerState).
+    void loadPlayerState().then(stored => {
+      if (cancelled || !stored) return;
+      // Something started playing meanwhile (an opened file, a click): that wins.
+      const { queue: live, track: current } = latest.current;
+      if (!live.length && !isPlayable(current)) {
+        const prefsNow = appSettings.get();
+        const start = stored.queue.find(item => item.id === stored.currentId) ?? stored.queue[0];
+        if (stored.queue.length) setQueue(stored.queue);
+        if (prefsNow.resumeOnLaunch && start) {
+          // Restored paused: autoplay on launch would be a surprise.
+          const at = prefsNow.resumePosition && stored.position?.id === start.id ? stored.position.t : 0;
+          if (at > 0) resumeAt.current = at;
+          latest.current.select(start, { autoplay: false, remember: false });
+          if (at > 0) setPosition(at);
         }
-        setQueueSynced(true);
-      })
-      // Saving stays off: an empty queue must not replace the saved one.
-      .catch(error => console.error('[player] could not restore the queue', error));
+      }
+      setQueueSynced(true);
+    });
     return () => { cancelled = true; clearTimeout(timer); };
   }, [latest]);
 

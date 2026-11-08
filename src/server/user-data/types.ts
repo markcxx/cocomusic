@@ -34,5 +34,8 @@ export interface LocalPlaylist extends LocalPlaylistSummary {
 /** 最近播放: one entry per song; replaying moves it to the top and bumps the count. */
 export type RecentPlay = { track: Track; playedAt: number; count: number };
 
+/** A file of an earlier version that exists but could not be read; kept for the next attempt. */
+export type LegacyFileProblem = { file: string; path: string };
+
 /** Saved play queue (restored paused on launch) and where the current song was. */
 export type PlayerSnapshot = { queue: Track[]; currentId?: string; position?: { id: string; t: number } };

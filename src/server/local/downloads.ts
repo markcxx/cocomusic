@@ -13,7 +13,7 @@ import { addFiles, getTrack, removeTrack, trackId } from './library';
 import { clipLyrics, toLrc } from './lrc-writer';
 import { database } from '../db/database';
 import { transaction } from '../db/sql';
-import { putDownloadJob, readDownloadJobs, readDownloadSettings, writeDownloadSettings } from './rows';
+import { putDownloadJob, readDownloadJob, readDownloadJobs, readDownloadSettings, writeDownloadSettings } from './rows';
 import { embedMetadata } from './metadata';
 import type { DownloadOptions } from '../../lib/download-quality';
 import { assertDownloadAccess, resolveDownload } from './download-quality';
@@ -73,7 +73,7 @@ export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { qua
 /** Saved settings over the defaults (older versions only stored `folder`). */
 const currentSettings = (): DownloadSettings => ({ folder: defaultFolder(), ...DEFAULT_DOWNLOAD_SETTINGS, ...readDownloadSettings(database()) });
 const allJobs = () => readDownloadJobs(database());
-const findJob = (id: string) => allJobs().find(job => job.id === id);
+const findJob = (id: string) => readDownloadJob(database(), id);
 
 const baseName = (job: { title: string; artist: string }, naming: FileNaming) =>
   naming === 'title' ? job.title : naming === 'title-artist' ? `${job.title} - ${job.artist}` : `${job.artist} - ${job.title}`;

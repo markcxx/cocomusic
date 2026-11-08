@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, statSync } from 'node:fs';
 import { readdir, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
+import { CatalogError } from '../music/errors';
 import { buildLyrics } from '../music/lrc';
 import type { CatalogSource, Lyrics } from '../music/types';
 import { extensionOf, isAudioFile } from './formats';
@@ -112,13 +113,26 @@ async function walk(root: string) {
 
 export type ScanResult = { folder: string; added: number; updated: number; removed: number; total: number };
 
+/** Scans under way, by folder. Removing a folder cancels its scan: the user's last action wins. */
+const scans = new Map<string, { controller: AbortController; done: Promise<ScanResult> }>();
+
 /**
  * Index a folder (or refresh it). Unchanged files keep their entry; vanished files are dropped.
  * Files are read first; the index changes in one transaction at the end, so a
  * scan never leaves the folder half-indexed and other writes are not held up.
+ * A second scan of the same folder joins the one under way.
  */
-export async function scanFolder(folder: string): Promise<ScanResult> {
+export function scanFolder(folder: string): Promise<ScanResult> {
   const root = path.resolve(folder);
+  const running = scans.get(root);
+  if (running) return running.done;
+  const controller = new AbortController();
+  const done = runScan(root, controller.signal).finally(() => { if (scans.get(root)?.controller === controller) scans.delete(root); });
+  scans.set(root, { controller, done });
+  return done;
+}
+
+async function runScan(root: string, signal: AbortSignal): Promise<ScanResult> {
   if (!existsSync(root) || !statSync(root).isDirectory()) throw new Error('文件夹不存在或无法访问');
   const files = await walk(root);
   const found = new Map<string, LocalTrack>();
@@ -126,6 +140,7 @@ export async function scanFolder(folder: string): Promise<ScanResult> {
   let updated = 0;
   // Small batches keep many large FLACs from opening hundreds of files at once.
   for (let index = 0; index < files.length; index += 8) {
+    signal.throwIfAborted();
     await Promise.all(files.slice(index, index + 8).map(async file => {
       const id = trackId(file);
       const previous = getTrack(id);
@@ -136,6 +151,8 @@ export async function scanFolder(folder: string): Promise<ScanResult> {
       if (previous) updated += 1; else added += 1;
     }));
   }
+  // Checked right before the synchronous commit: a removal can no longer slip in between.
+  signal.throwIfAborted();
   const db = database();
   return transaction(db, () => {
     for (const track of found.values()) putLibraryTrack(db, track);
@@ -150,6 +167,7 @@ export async function scanFolder(folder: string): Promise<ScanResult> {
 
 export function removeFolder(folder: string) {
   const root = path.resolve(folder);
+  scans.get(root)?.controller.abort(new CatalogError('文件夹已移除，扫描已取消', 409));
   const db = database();
   transaction(db, () => {
     db.prepare('DELETE FROM library_tracks WHERE folder = ?').run(root);

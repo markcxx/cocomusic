@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { readJson, respond } from '@/server/music';
-import { database } from '@/server/db/database';
+import { database, legacyFileProblems } from '@/server/db/database';
 import { importRendererData, rendererImportPending, type RendererLegacyData } from '@/server/user-data/legacy';
 
 export const dynamic = 'force-dynamic';
@@ -10,11 +10,12 @@ const MAX_BODY = 18 * 1024 * 1024;
 
 /**
  * One-time hand-over of data earlier versions kept in the renderer's preferences.
- * GET → { pending }: whether the import still has to run
+ * GET → { pending, unreadable }: whether the hand-over still has to run, and files of
+ *   an earlier version that exist but could not be read (kept; retried next launch)
  * POST { recentPlays, localPlaylists, queue, position } (raw stored strings) → { ok }
  */
 export function GET() {
-  return respond(async () => ({ pending: rendererImportPending(database()) }));
+  return respond(async () => ({ pending: rendererImportPending(database()), unreadable: legacyFileProblems() }));
 }
 
 export function POST(request: NextRequest) {

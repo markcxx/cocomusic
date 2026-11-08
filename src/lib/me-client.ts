@@ -1,10 +1,10 @@
 'use client';
 
 import { persistentStorage } from './persistent-storage';
-import type { LocalPlaylist, LocalPlaylistSummary, PlayerSnapshot, PlaylistOrigin, RecentPlay } from '@/server/user-data/types';
+import type { LegacyFileProblem, LocalPlaylist, LocalPlaylistSummary, PlayerSnapshot, PlaylistOrigin, RecentPlay } from '@/server/user-data/types';
 import type { Track } from '@/types/music';
 
-export type { LocalPlaylist, LocalPlaylistSummary, PlayerSnapshot, PlaylistOrigin, RecentPlay } from '@/server/user-data/types';
+export type { LegacyFileProblem, LocalPlaylist, LocalPlaylistSummary, PlayerSnapshot, PlaylistOrigin, RecentPlay } from '@/server/user-data/types';
 export { PLAYLIST_NAME_MAX, PLAYLIST_TRACK_LIMIT, QUEUE_LIMIT, RECENT_PLAYS_LIMIT } from '@/server/user-data/types';
 
 export class MeRequestError extends Error {
@@ -47,24 +47,51 @@ export const meApi = {
 /** Preference keys where earlier versions kept what now lives in coco.db. */
 const LEGACY_KEYS = { recentPlays: 'coco:recent-plays', localPlaylists: 'coco:local-playlists', queue: 'coco:queue', position: 'coco:position' } as const;
 
-let ready: Promise<void> | null = null;
+/**
+ * `handedOver`: the renderer data of earlier versions is in the database (or
+ * there was none). `unreadable`: earlier files the server could not import.
+ */
+export type StorageStatus = { handedOver: boolean; unreadable: LegacyFileProblem[]; error?: string };
+
+let ready: Promise<StorageStatus> | null = null;
 
 /**
- * Resolves once data from earlier versions has been handed to the server (at
- * most once per install; the server records it). The keys themselves are left
- * alone so an older version still finds them. A failure is not fatal: stores
- * load anyway and the hand-over is tried again on the next launch.
+ * Hands data of earlier versions to the server, at most once per install (the
+ * server records it). The keys themselves are left alone so an older version
+ * still finds them. A failure resolves `handedOver: false` and is not cached:
+ * the next call tries again (and the next launch, at the latest).
  */
-export function storageReady(): Promise<void> {
+export function storageReady(): Promise<StorageStatus> {
   ready ??= (async () => {
     try {
-      const { pending } = await call<{ pending: boolean }>('legacy');
-      if (!pending) return;
-      const data = Object.fromEntries(Object.entries(LEGACY_KEYS).map(([name, key]) => [name, persistentStorage.getItem(key)]));
-      await send('POST', 'legacy', data);
+      const { pending, unreadable } = await call<{ pending: boolean; unreadable: LegacyFileProblem[] }>('legacy');
+      if (pending) {
+        const data = Object.fromEntries(Object.entries(LEGACY_KEYS).map(([name, key]) => [name, persistentStorage.getItem(key)]));
+        await send('POST', 'legacy', data);
+      }
+      return { handedOver: true, unreadable };
     } catch (error) {
-      console.error('[storage] importing earlier data failed', error);
+      console.error('[storage] handing over earlier data failed', error);
+      ready = null;
+      return { handedOver: false, unreadable: [], error: error instanceof MeRequestError && error.status === 422 ? error.message : undefined };
     }
   })();
   return ready;
+}
+
+/**
+ * The saved play state, once it is safe to save over it: the hand-over is
+ * confirmed and the state was read. Null otherwise; the player then neither
+ * restores nor saves its queue, so a failed start can never replace the
+ * queue an earlier version left (the hand-over retries on the next launch).
+ */
+export async function loadPlayerState(): Promise<PlayerSnapshot | null> {
+  const { handedOver } = await storageReady();
+  if (!handedOver) return null;
+  try {
+    return await meApi.player();
+  } catch (error) {
+    console.error('[player] reading the saved queue failed', error);
+    return null;
+  }
 }

@@ -23,7 +23,7 @@ function tempDir(t: TestContext) {
 }
 
 function freshDb(t: TestContext) {
-  const db = openDatabase(path.join(tempDir(t), 'coco.db'));
+  const { db } = openDatabase(path.join(tempDir(t), 'coco.db'));
   t.after(() => db.close());
   return db;
 }
@@ -43,7 +43,7 @@ test('migration 1 imports library.json and downloads.json once and leaves them u
   writeFileSync(path.join(dir, 'library.json'), JSON.stringify(library));
   writeFileSync(path.join(dir, 'downloads.json'), JSON.stringify(downloads));
 
-  const db = openDatabase(path.join(dir, 'coco.db'));
+  const { db } = openDatabase(path.join(dir, 'coco.db'));
   assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, SCHEMA_VERSION);
   assert.deepEqual(readLibraryFolders(db), ['/music']);
   assert.equal(readLibraryTrack(db, 'old')?.source, 'kugou');
@@ -55,7 +55,7 @@ test('migration 1 imports library.json and downloads.json once and leaves them u
   // The old files stay as they were (an older version still reads them), and are never imported twice.
   assert.deepEqual(JSON.parse(readFileSync(path.join(dir, 'library.json'), 'utf8')), library);
   writeFileSync(path.join(dir, 'library.json'), JSON.stringify({ folders: ['/elsewhere'], tracks: {} }));
-  const reopened = openDatabase(path.join(dir, 'coco.db'));
+  const { db: reopened } = openDatabase(path.join(dir, 'coco.db'));
   t.after(() => reopened.close());
   assert.deepEqual(readLibraryFolders(reopened), ['/music']);
 });
@@ -71,7 +71,7 @@ test('a failing migration leaves the database as it was and runs again next time
   assert.equal(check.prepare("SELECT name FROM sqlite_master WHERE name = 'playlists'").get(), undefined);
   check.exec('DROP TABLE kv');
   check.close();
-  const db = openDatabase(file);
+  const { db } = openDatabase(file);
   t.after(() => db.close());
   assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, SCHEMA_VERSION);
 });
@@ -116,6 +116,7 @@ test('recent plays count replays, keep the newest first and stay within the limi
 
 test('the saved queue drops songs that cannot play', t => {
   const db = freshDb(t);
+  importRendererData(db, {});
   saveQueue(db, [netease('1'), track('placeholder')], 'netease:1');
   assert.deepEqual(readPlayer(db).queue.map(item => item.id), ['netease:1']);
   assert.equal(readPlayer(db).currentId, 'netease:1');
@@ -123,7 +124,7 @@ test('the saved queue drops songs that cannot play', t => {
 
 test('renderer data is handed over once; newer rows win and malformed entries are skipped', t => {
   const db = freshDb(t);
-  saveQueue(db, [netease('kept')], 'netease:kept');
+  assert.throws(() => saveQueue(db, [], ''), /尚未导入/);
   recordPlay(db, netease('1'), 9000);
   assert.equal(rendererImportPending(db), true);
   importRendererData(db, {
@@ -142,10 +143,43 @@ test('renderer data is handed over once; newer rows win and malformed entries ar
   assert.deepEqual(imported.tracks.map(item => item.id), ['netease:1', 'local:9']);
   assert.deepEqual(imported.origin, { kind: 'playlist', source: 'qq', id: '7' });
   assert.deepEqual(listPlaylists(db).map(item => item.id), ['p1']);
-  assert.deepEqual(readPlayer(db).queue.map(item => item.id), ['netease:kept']);
+  assert.deepEqual(readPlayer(db).queue.map(item => item.id), ['netease:old']);
   assert.deepEqual(readPlayer(db).position, { id: 'netease:old', t: 42 });
 
   // A second hand-over (another window, a retry) changes nothing.
   importRendererData(db, { localPlaylists: JSON.stringify([{ id: 'p2', name: '又一个', tracks: [] }]) });
   assert.deepEqual(listPlaylists(db).map(item => item.id), ['p1']);
+});
+
+test('invalid legacy file shapes use a valid backup and retry when both copies fail', t => {
+  const dir = tempDir(t);
+  const file = path.join(dir, 'coco.db');
+  writeFileSync(path.join(dir, 'library.json'), '{}');
+  writeFileSync(path.join(dir, 'library.json.bak'), JSON.stringify({ folders: ['/music'], tracks: {} }));
+  writeFileSync(path.join(dir, 'downloads.json'), '{}');
+  const first = openDatabase(file);
+  assert.deepEqual(first.legacyProblems.map(item => item.file), ['downloads.json']);
+  assert.deepEqual(readLibraryFolders(first.db), []);
+  first.db.close();
+  writeFileSync(path.join(dir, 'downloads.json.bak'), JSON.stringify({ settings: { folder: '/saved' }, jobs: [] }));
+  const second = openDatabase(file);
+  t.after(() => second.db.close());
+  assert.deepEqual(second.legacyProblems, []);
+  assert.deepEqual(readLibraryFolders(second.db), ['/music']);
+  assert.equal(readDownloadSettings(second.db)?.folder, '/saved');
+});
+
+test('damaged queue rolls back the hand-over and remains recoverable on retry', t => {
+  const db = freshDb(t);
+  const recentPlays = JSON.stringify([{ track: netease('1'), count: 2 }]);
+  for (const queue of ['{', '{}']) {
+    assert.throws(() => importRendererData(db, { queue, recentPlays }), /播放队列无法读取/);
+    assert.equal(rendererImportPending(db), true);
+    assert.deepEqual(listRecentPlays(db), []);
+    assert.throws(() => saveQueue(db, [], ''), /尚未导入/);
+  }
+  importRendererData(db, { recentPlays, queue: JSON.stringify({ queue: [netease('1')], currentId: 'netease:1' }) });
+  assert.equal(rendererImportPending(db), false);
+  assert.equal(readPlayer(db).currentId, 'netease:1');
+  assert.equal(listRecentPlays(db)[0].count, 2);
 });
