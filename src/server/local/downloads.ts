@@ -11,7 +11,9 @@ import { AUDIO_QUALITIES, type AudioQuality, type CatalogTrack } from '../music/
 import { AUDIO_TYPES, extensionOf, safeFileName } from './formats';
 import { addFiles, getTrack, removeTrack, trackId } from './library';
 import { clipLyrics, toLrc } from './lrc-writer';
-import { jsonStore } from './store';
+import { database } from '../db/database';
+import { transaction } from '../db/sql';
+import { putDownloadJob, readDownloadJobs, readDownloadSettings, writeDownloadSettings } from './rows';
 import { embedMetadata } from './metadata';
 import type { DownloadOptions } from '../../lib/download-quality';
 import { assertDownloadAccess, resolveDownload } from './download-quality';
@@ -20,6 +22,7 @@ import { assertDownloadAccess, resolveDownload } from './download-quality';
  * Download manager. Jobs run in this server process (so they continue while
  * the UI navigates), two at a time, written to `<name>.part` then renamed.
  * Finished files join the local library, with a sidecar .lrc when lyrics exist.
+ * Jobs and settings live in coco.db (download_jobs, kv `downloads:settings`).
  */
 
 export type DownloadStatus = 'queued' | 'downloading' | 'done' | 'failed' | 'canceled';
@@ -64,13 +67,13 @@ export interface DownloadSettings {
   /** Simultaneous downloads. */
   concurrency: number;
 }
-type DownloadsFile = { settings: DownloadSettings; jobs: DownloadJob[] };
 
 const defaultFolder = () => path.join(os.homedir(), 'Music', 'CoCo Music');
 export const DEFAULT_DOWNLOAD_SETTINGS: Omit<DownloadSettings, 'folder'> = { quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: false, concurrency: 2 };
-const store = jsonStore<DownloadsFile>('downloads.json', () => ({ settings: { folder: defaultFolder(), ...DEFAULT_DOWNLOAD_SETTINGS }, jobs: [] }));
-/** Older files only stored `folder`; fill in new fields. */
-const settingsOf = (data: DownloadsFile): DownloadSettings => ({ ...DEFAULT_DOWNLOAD_SETTINGS, ...data.settings });
+/** Saved settings over the defaults (older versions only stored `folder`). */
+const currentSettings = (): DownloadSettings => ({ folder: defaultFolder(), ...DEFAULT_DOWNLOAD_SETTINGS, ...readDownloadSettings(database()) });
+const allJobs = () => readDownloadJobs(database());
+const findJob = (id: string) => allJobs().find(job => job.id === id);
 
 const baseName = (job: { title: string; artist: string }, naming: FileNaming) =>
   naming === 'title' ? job.title : naming === 'title-artist' ? `${job.title} - ${job.artist}` : `${job.artist} - ${job.title}`;
@@ -84,16 +87,16 @@ let resumed = false;
 function resumeOnce() {
   if (resumed) return;
   resumed = true;
-  const data = store.read();
-  if (data.jobs.some(job => job.status === 'downloading')) {
-    store.write({ ...data, jobs: data.jobs.map(job => (job.status === 'downloading' ? { ...job, status: 'queued', received: 0 } : job)) });
-  }
+  const db = database();
+  transaction(db, () => {
+    for (const job of allJobs()) if (job.status === 'downloading') putDownloadJob(db, { ...job, status: 'queued', received: 0 });
+  });
   pump();
 }
 
 function update(id: string, patch: Partial<DownloadJob>) {
-  const data = store.read();
-  store.write({ ...data, jobs: data.jobs.map(job => (job.id === id ? { ...job, ...patch } : job)) });
+  const job = findJob(id);
+  if (job) putDownloadJob(database(), { ...job, ...patch });
 }
 
 // Persist recovery progress at most once every 2s; UI reads live progress from memory.
@@ -121,7 +124,7 @@ async function run(job: DownloadJob) {
   let partFile: string | undefined;
   try {
     const provider = catalog(job.source);
-    const settings = settingsOf(store.read());
+    const settings = currentSettings();
     const options = job.options ?? { quality: settings.quality, lyrics: settings.lyrics, allowTrial: settings.allowTrial, allowFallback: true };
     const source = await resolveDownload(provider, job.songId, options.quality);
     assertDownloadAccess(source, options);
@@ -174,27 +177,24 @@ async function run(job: DownloadJob) {
 }
 
 function pump() {
-  const { jobs } = store.read();
-  const slots = settingsOf(store.read()).concurrency - running.size;
+  const slots = currentSettings().concurrency - running.size;
   if (slots <= 0) return;
-  for (const job of jobs.filter(item => item.status === 'queued' && !running.has(item.id)).slice(0, slots)) void run(job);
+  for (const job of allJobs().filter(item => item.status === 'queued' && !running.has(item.id)).slice(0, slots)) void run(job);
 }
 
 /* ───────── Public API ───────── */
 
 export function listDownloads() {
   resumeOnce();
-  const data = store.read();
-  const { jobs } = data;
-  // Overlay in-memory progress (file writes are throttled).
-  return { settings: settingsOf(data), jobs: jobs.map(job => (live.has(job.id) ? { ...job, ...live.get(job.id) } : job)) };
+  // Overlay in-memory progress (saved progress is throttled).
+  return { settings: currentSettings(), jobs: allJobs().map(job => (live.has(job.id) ? { ...job, ...live.get(job.id) } : job)) };
 }
 
 /** Skip active jobs and existing files of the selected quality; allow a new quality. */
 export function enqueue(tracks: CatalogTrack[], options?: DownloadOptions) {
   resumeOnce();
-  const data = store.read();
-  const active = new Set(data.jobs
+  const jobs = allJobs();
+  const active = new Set(jobs
     .filter(job => {
       if (job.status === 'queued' || job.status === 'downloading') return true;
       const sameQuality = !options || (job.level === options.quality && (!job.trial || options.allowTrial));
@@ -222,35 +222,39 @@ export function enqueue(tracks: CatalogTrack[], options?: DownloadOptions) {
       options: options ? { ...options } : undefined,
     });
   }
-  // Drop the oldest finished entries beyond the history cap.
-  const jobs = [...fresh.reverse(), ...data.jobs.filter(job => !fresh.some(item => item.songId === job.songId && item.source === job.source))];
-  const finished = jobs.filter(job => job.status !== 'queued' && job.status !== 'downloading');
-  const keep = new Set(finished.slice(MAX_HISTORY).map(job => job.id));
-  store.write({ ...data, jobs: jobs.filter(job => !keep.has(job.id)) });
+  const db = database();
+  transaction(db, () => {
+    // A new job replaces the song's earlier record; batch order is kept (the last song ends up on top).
+    const replaced = db.prepare('DELETE FROM download_jobs WHERE source = ? AND song_id = ?');
+    for (const job of fresh) { replaced.run(job.source, job.songId); putDownloadJob(db, job); }
+    // Drop the oldest finished entries beyond the history cap.
+    const finished = allJobs().filter(job => job.status !== 'queued' && job.status !== 'downloading');
+    const drop = db.prepare('DELETE FROM download_jobs WHERE id = ?');
+    for (const job of finished.slice(MAX_HISTORY)) drop.run(job.id);
+  });
   pump();
   return { added: fresh.length, skipped: tracks.length - fresh.length };
 }
 
 export function cancel(id: string) {
   running.get(id)?.abort();
-  const job = store.read().jobs.find(item => item.id === id);
+  const job = findJob(id);
   if (job?.status === 'queued') update(id, { status: 'canceled', finishedAt: Date.now() });
 }
 
 export function retry(id: string) {
-  const job = store.read().jobs.find(item => item.id === id);
+  const job = findJob(id);
   if (job && (job.status === 'failed' || job.status === 'canceled')) { update(id, { status: 'queued', error: undefined, received: 0, total: 0 }); pump(); }
 }
 
 /** Remove a record; with `deleteFile`, the downloaded file (and its .lrc) too. */
 export async function removeJob(id: string, deleteFile = false) {
   cancel(id);
-  const data = store.read();
-  const job = data.jobs.find(item => item.id === id);
-  store.write({ ...data, jobs: data.jobs.filter(item => item.id !== id) });
+  const job = findJob(id);
+  database().prepare('DELETE FROM download_jobs WHERE id = ?').run(id);
   if (deleteFile && job?.path) {
     // Only delete inside the configured download folder: a record could predate a folder change.
-    const inside = path.resolve(job.path).startsWith(path.resolve(settingsOf(data).folder) + path.sep);
+    const inside = path.resolve(job.path).startsWith(path.resolve(currentSettings().folder) + path.sep);
     if (inside) {
       await rm(job.path, { force: true });
       if (job.localId) await removeTrack(job.localId);
@@ -260,27 +264,24 @@ export async function removeJob(id: string, deleteFile = false) {
 }
 
 export function clearFinished() {
-  const data = store.read();
-  store.write({ ...data, jobs: data.jobs.filter(job => job.status === 'queued' || job.status === 'downloading') });
+  database().prepare("DELETE FROM download_jobs WHERE status NOT IN ('queued', 'downloading')").run();
 }
 
 export function setFolder(folder: string) {
   if (!path.isAbsolute(folder)) throw new Error('下载目录必须是绝对路径');
   mkdirSync(folder, { recursive: true });
-  const data = store.read();
-  store.write({ ...data, settings: { ...settingsOf(data), folder: path.resolve(folder) } });
+  writeDownloadSettings(database(), { ...currentSettings(), folder: path.resolve(folder) });
 }
 
 /** Validated partial update of the non-folder settings. */
 export function updateSettings(patch: Record<string, unknown>) {
-  const data = store.read();
-  const next = { ...settingsOf(data) };
+  const next = currentSettings();
   if (typeof patch.quality === 'string' && AUDIO_QUALITIES.includes(patch.quality as AudioQuality)) next.quality = patch.quality as AudioQuality;
   if (patch.naming === 'artist-title' || patch.naming === 'title-artist' || patch.naming === 'title') next.naming = patch.naming;
   if (typeof patch.lyrics === 'boolean') next.lyrics = patch.lyrics;
   if (typeof patch.allowTrial === 'boolean') next.allowTrial = patch.allowTrial;
   if (typeof patch.concurrency === 'number' && Number.isInteger(patch.concurrency)) next.concurrency = Math.min(5, Math.max(1, patch.concurrency));
-  store.write({ ...data, settings: next });
+  writeDownloadSettings(database(), next);
   pump();
   return next;
 }
@@ -290,9 +291,9 @@ export async function downloadLyrics(track: CatalogTrack) {
   const lyrics = await catalog(track.source).lyrics(track.id);
   const text = toLrc(lyrics, track);
   if (!text) throw new Error('这首歌曲暂无可下载的歌词');
-  const settings = settingsOf(store.read());
+  const settings = currentSettings();
   mkdirSync(settings.folder, { recursive: true });
-  const completed = store.read().jobs.find(job => job.source === track.source && job.songId === track.id && job.status === 'done' && !job.trial && job.path && existsSync(job.path));
+  const completed = allJobs().find(job => job.source === track.source && job.songId === track.id && job.status === 'done' && !job.trial && job.path && existsSync(job.path));
   const file = completed?.path
     ? completed.path.slice(0, -extensionOf(completed.path).length) + 'lrc'
     : uniquePath(settings.folder, safeFileName(baseName(track, settings.naming)), 'lrc');

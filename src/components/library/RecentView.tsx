@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { SearchField } from '@/components/common/SearchField';
 import { usePlayer } from '@/components/player/player-store';
 import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
-import { Button, ConfirmDialog, IconButton } from '@/components/ui';
+import { Button, ConfirmDialog, IconButton, Spinner, toast } from '@/components/ui';
 import { recentPlays, useRecentPlays } from '@/lib/recent-plays';
 import { TrackList } from './TrackList';
 import styles from './Library.module.css';
@@ -28,7 +28,8 @@ function when(ms: number) {
 /** Songs that actually started playing on this device, newest first. */
 export function RecentView() {
   const player = usePlayer();
-  const plays = useRecentPlays();
+  const loaded = useRecentPlays();
+  const plays = useMemo(() => loaded ?? [], [loaded]);
   const [filter, setFilter] = useState('');
   const [clearing, setClearing] = useState(false);
   const needle = filter.trim().toLowerCase();
@@ -38,7 +39,7 @@ export function RecentView() {
     <Page gap="sm">
       <CollapsingHeader
         title="最近播放"
-        subtitle={plays.length ? `最近播放过的 ${plays.length} 首歌曲，仅保存在本机` : '播放过的歌曲会出现在这里'}
+        subtitle={!loaded ? '正在读取播放记录' : plays.length ? `最近播放过的 ${plays.length} 首歌曲，仅保存在本机` : '播放过的歌曲会出现在这里'}
         actions={(
           <>
             <Button variant="primary" icon={<Play size={15} strokeWidth={0} fill="currentColor" />} disabled={!visible.length} onClick={() => player.play(visible[0].track, visible.map(item => item.track))}>播放全部</Button>
@@ -56,13 +57,15 @@ export function RecentView() {
       )}
       <TrackList
         metaLabel="播放时间"
-        emptyText={plays.length
-          ? '没有匹配的歌曲'
-          : <><History size={32} strokeWidth={1.2} /><span>还没有播放记录，去发现音乐听听吧</span></>}
+        emptyText={!loaded
+          ? <Spinner size={20} />
+          : plays.length
+            ? '没有匹配的歌曲'
+            : <><History size={32} strokeWidth={1.2} /><span>还没有播放记录，去发现音乐听听吧</span></>}
         rows={visible.map(item => ({
           track: item.track,
           meta: <span data-tooltip={item.count > 1 ? `播放过 ${item.count} 次` : undefined}>{when(item.playedAt)}{item.count > 1 ? ` · ${item.count} 次` : ''}</span>,
-          actions: <IconButton label="删除记录" size="sm" tone="muted" onClick={() => recentPlays.remove(item.track.id)}><X size={15} strokeWidth={1.5} /></IconButton>,
+          actions: <IconButton label="删除记录" size="sm" tone="muted" onClick={() => void recentPlays.remove(item.track.id).catch(() => toast.error('删除失败，请稍后重试'))}><X size={15} strokeWidth={1.5} /></IconButton>,
         }))}
       />
       <ConfirmDialog

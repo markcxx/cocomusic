@@ -5,7 +5,8 @@ import { useState, type ReactNode } from 'react';
 import { useAccount } from '@/components/account/account-store';
 import { CreatePlaylistDialog } from '@/components/account/CreatePlaylistDialog';
 import { toast, type MenuItem } from '@/components/ui';
-import { localPlaylists, useLocalPlaylists, type LocalPlaylist } from '@/lib/local-playlists';
+import { localPlaylists, useLocalPlaylists } from '@/lib/local-playlists';
+import type { LocalPlaylistSummary } from '@/lib/me-client';
 import { useSettings } from '@/lib/settings';
 import { SOURCE_NAMES } from '@/server/music/ids';
 import type { Track } from '@/types/music';
@@ -17,9 +18,9 @@ export type PlaylistRef = { kind: 'platform' | 'local'; id: string };
 const icon = (Icon: typeof ListPlus) => <Icon size={15} strokeWidth={1.5} />;
 
 /** Add songs to a 本地歌单, reporting how many were new. */
-export function addToLocalPlaylist(playlist: LocalPlaylist, tracks: Track[]) {
+export async function addToLocalPlaylist(playlist: LocalPlaylistSummary, tracks: Track[]) {
   try {
-    const added = localPlaylists.addTracks(playlist.id, tracks);
+    const added = await localPlaylists.addTracks(playlist.id, tracks);
     if (added) toast.success(`已添加 ${added} 首到「${playlist.name}」`);
     else toast.info(`歌曲已在「${playlist.name}」中`);
   } catch (error) {
@@ -35,7 +36,7 @@ export function addToLocalPlaylist(playlist: LocalPlaylist, tracks: Track[]) {
  */
 export function useAddToPlaylist(): { items: (tracks: Track[], options?: { exclude?: PlaylistRef; onDone?: () => void }) => MenuItem[]; dialogs: ReactNode } {
   const { profile, playlists, addToPlaylist, openLogin } = useAccount();
-  const local = useLocalPlaylists();
+  const local = useLocalPlaylists() ?? [];
   const platform = useSettings().catalogSource;
   const [localDraft, setLocalDraft] = useState<LocalPlaylistDraft>(null);
   const [platformDraft, setPlatformDraft] = useState<string[] | null>(null);
@@ -65,7 +66,7 @@ export function useAddToPlaylist(): { items: (tracks: Track[], options?: { exclu
       { label: '新建本地歌单…', icon: icon(Plus), onSelect: then(() => setLocalDraft({ tracks })) },
       ...local
         .filter(item => !(exclude?.kind === 'local' && exclude.id === item.id))
-        .map((item): MenuItem => ({ label: item.name, icon: icon(HardDrive), hint: `${item.tracks.length}`, onSelect: then(() => addToLocalPlaylist(item, tracks)) })),
+        .map((item): MenuItem => ({ label: item.name, icon: icon(HardDrive), hint: `${item.trackCount}`, onSelect: then(() => void addToLocalPlaylist(item, tracks)) })),
       ...platformSection,
     ];
   };

@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { Checkbox, DialogActions } from '@/components/ui';
-import { PLAYLIST_NAME_MAX } from '@/lib/local-playlists';
+import { PLAYLIST_NAME_MAX } from '@/lib/me-client';
 import styles from './PlaylistNameForm.module.css';
 
 /**

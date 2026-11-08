@@ -1,7 +1,8 @@
 'use client';
 
 import { catalogApi, type CatalogSource } from './catalog-client';
-import { LOCAL_PLAYLIST_TRACK_LIMIT, localPlaylists, type LocalPlaylist } from './local-playlists';
+import { localPlaylists } from './local-playlists';
+import { PLAYLIST_TRACK_LIMIT, type LocalPlaylistSummary } from './me-client';
 import { toTrack } from './to-track';
 import type { Track } from '@/types/music';
 
@@ -15,7 +16,7 @@ const BATCH = 200;
  * up to `cap`. Albums arrive whole. A page that fails after some songs were
  * gathered ends the walk with what is there; failing before that throws.
  */
-export async function fetchCollectionTracks(ref: CollectionRef, have: Track[] = [], cap = LOCAL_PLAYLIST_TRACK_LIMIT): Promise<Track[]> {
+export async function fetchCollectionTracks(ref: CollectionRef, have: Track[] = [], cap = PLAYLIST_TRACK_LIMIT): Promise<Track[]> {
   if (ref.kind === 'album') return have.length ? have : (await catalogApi.album(ref.id, undefined, ref.source)).tracks.map(toTrack);
   const all = [...have];
   while (all.length < cap) {
@@ -33,7 +34,7 @@ export async function fetchCollectionTracks(ref: CollectionRef, have: Track[] = 
 }
 
 /** Copy a platform playlist or album into a new 本地歌单 (name, description and cover come along). */
-export async function saveCollectionLocally(ref: CollectionRef, info: { name: string; description?: string; cover?: string; source: CatalogSource }, have: Track[] = []): Promise<LocalPlaylist> {
+export async function saveCollectionLocally(ref: CollectionRef, info: { name: string; description?: string; cover?: string; source: CatalogSource }, have: Track[] = []): Promise<LocalPlaylistSummary> {
   const tracks = await fetchCollectionTracks(ref, have);
   return localPlaylists.create({
     name: info.name,

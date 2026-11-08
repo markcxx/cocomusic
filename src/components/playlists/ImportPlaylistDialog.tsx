@@ -136,7 +136,7 @@ function ImportTarget({ parsed, onBack, onClose }: { parsed: Parsed; onBack: () 
     try {
       if (target === 'local') {
         const playlist = await saveCollectionLocally({ kind: 'playlist', id: info.id, source }, info);
-        toast.success(`已导入「${playlist.name}」，共 ${playlist.tracks.length} 首`);
+        toast.success(`已导入「${playlist.name}」，共 ${playlist.trackCount} 首`);
         navigate({ name: 'local-playlist', id: playlist.id, title: playlist.name });
       } else if (target === 'subscribe') {
         if (login.selected) {

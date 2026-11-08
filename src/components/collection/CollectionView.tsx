@@ -74,7 +74,7 @@ export function CollectionView({ kind, id, source, title }: { kind: 'playlist' |
     if (!info) return;
     try {
       const playlist = await saveCollectionLocally(ref, info, complete ? list.items : []);
-      toast.success(`已存为本地歌单「${playlist.name}」，共 ${playlist.tracks.length} 首`);
+      toast.success(`已存为本地歌单「${playlist.name}」，共 ${playlist.trackCount} 首`);
       navigate({ name: 'local-playlist', id: playlist.id, title: playlist.name });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '保存失败');

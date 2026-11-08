@@ -1,7 +1,7 @@
 import os from 'node:os';
 import { preferenceStore } from './preferences-store';
 import path from 'node:path';
-import { readFileSync } from 'node:fs';
+import { DatabaseSync } from 'node:sqlite';
 import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
 import { AUDIO_EXTENSIONS, IPC } from '../shared/ipc';
 import { getAppSettings, setAppSettings } from './app-settings';
@@ -28,7 +28,9 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
     const url = event.senderFrame?.url;
     try { return Boolean(origin && url && new URL(url).origin === origin); } catch { return false; }
   };
-  const preferences = preferenceStore(app.getPath('userData'));
+  // Coalesced: sliders and rapid toggles become one disk write; quitting writes what is pending.
+  const preferences = preferenceStore(app.getPath('userData'), { flushDelayMs: 400 });
+  app.on('will-quit', () => preferences.flush());
   ipcMain.on('preferences:get', (event, key: unknown) => {
     event.returnValue = trusted(event) && typeof key === 'string' ? preferences.get(key) : null;
   });
@@ -149,17 +151,26 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
 }
 
 /**
- * Download folder and library folders persisted by the server (userData/*.json)
- * stay revealable across restarts. Read fresh each time: the user may change them.
+ * Download folder and library folders saved by the app server stay revealable
+ * across restarts. They live in its database (coco.db: `library_folders` and the
+ * kv row `downloads:settings`, see src/server/local/rows.ts), opened read-only
+ * and fresh each time: the user may change them.
  */
 function isInDownloads(file: string) {
   const roots = [path.join(os.homedir(), 'Music', 'CoCo Music')];
-  const read = (name: string) => {
-    try { return JSON.parse(readFileSync(path.join(app.getPath('userData'), name), 'utf8')) as Record<string, unknown>; } catch { return {}; }
-  };
-  const downloads = read('downloads.json').settings as { folder?: unknown } | undefined;
-  if (typeof downloads?.folder === 'string') roots.push(downloads.folder);
-  const library = read('library.json').folders;
-  if (Array.isArray(library)) roots.push(...library.filter((item): item is string => typeof item === 'string'));
+  let db: DatabaseSync | undefined;
+  try {
+    db = new DatabaseSync(path.join(app.getPath('userData'), 'coco.db'), { readOnly: true });
+    const settings = db.prepare("SELECT value FROM kv WHERE key = 'downloads:settings'").get() as { value?: unknown } | undefined;
+    const folder = typeof settings?.value === 'string' ? (JSON.parse(settings.value) as { folder?: unknown }).folder : undefined;
+    if (typeof folder === 'string') roots.push(folder);
+    for (const row of db.prepare('SELECT path FROM library_folders').all() as Array<{ path?: unknown }>) {
+      if (typeof row.path === 'string') roots.push(row.path);
+    }
+  } catch {
+    // No database yet (nothing downloaded or scanned): only the default folder.
+  } finally {
+    db?.close();
+  }
   return roots.some(root => file.startsWith(path.resolve(root) + path.sep));
 }

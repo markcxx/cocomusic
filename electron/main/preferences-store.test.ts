@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, statSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { preferenceStore } from './preferences-store.ts';
@@ -32,5 +32,17 @@ test('failed commits do not change the committed preference snapshot', () => {
     mkdirSync(path.join(dir, 'preferences.json.tmp'));
     assert.throws(() => store.set('coco:volume', '0.9'));
     assert.equal(store.get('coco:volume'), '0.4');
+  } finally { rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('coalesced preferences are readable at once and reach disk in one write on flush', () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), 'coco-prefs-'));
+  try {
+    const store = preferenceStore(dir, { flushDelayMs: 60_000 });
+    for (let step = 0; step <= 10; step += 1) store.set('coco:volume', String(step / 10));
+    assert.equal(store.get('coco:volume'), '1');
+    assert.equal(existsSync(path.join(dir, 'preferences.json')), false);
+    store.flush();
+    assert.equal(preferenceStore(dir).get('coco:volume'), '1');
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });

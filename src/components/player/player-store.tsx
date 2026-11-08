@@ -7,6 +7,7 @@ import { toast } from '@/components/ui/toast';
 import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
 import { catalogApi, CatalogRequestError, type SongSource } from '@/lib/catalog-client';
 import { desktop, localAudioUrl } from '@/lib/local-client';
+import { meApi, QUEUE_LIMIT, storageReady } from '@/lib/me-client';
 import { emptyTrack } from '@/lib/mock-data';
 import { recentPlays } from '@/lib/recent-plays';
 import { needsSamples, settings as appSettings, useSettings } from '@/lib/settings';
@@ -116,9 +117,6 @@ function rampVolume(audio: HTMLAudioElement, from: number, to: number, ms: numbe
 
 const VOLUME_KEY = 'coco:volume';
 const MODE_KEY = 'coco:play-mode';
-const QUEUE_KEY = 'coco:queue';
-const POSITION_KEY = 'coco:position';
-const QUEUE_LIMIT = 2000;
 const readStored = (key: string) => {
   try { return persistentStorage.getItem(key); } catch { return null; }
 };
@@ -131,23 +129,8 @@ const readMode = (): PlayMode => {
   const raw = readStored(MODE_KEY);
   return playModes.includes(raw as PlayMode) ? (raw as PlayMode) : 'loop';
 };
-const readPosition = (id: string) => {
-  try {
-    const saved = JSON.parse(readStored(POSITION_KEY) ?? 'null') as { id?: unknown; t?: unknown } | null;
-    return saved && saved.id === id && typeof saved.t === 'number' && saved.t > 0 ? saved.t : 0;
-  } catch { return 0; }
-};
-/** Saved queue + current track (restored paused). */
-const readQueue = (): { queue: Track[]; current?: Track } => {
-  try {
-    const parsed = JSON.parse(readStored(QUEUE_KEY) ?? 'null') as { queue?: unknown; currentId?: unknown } | null;
-    if (!parsed || !Array.isArray(parsed.queue)) return { queue: [] };
-    const queue = (parsed.queue as Track[]).filter(item => item && typeof item.id === 'string' && typeof item.title === 'string' && isPlayable(item)).slice(0, QUEUE_LIMIT);
-    return { queue, current: queue.find(item => item.id === parsed.currentId) ?? queue[0] };
-  } catch {
-    return { queue: [] };
-  }
-};
+/** Queue saves are coalesced: a burst of edits (drag reorder, 加入队列 clicks) is one write. */
+const QUEUE_SAVE_DELAY_MS = 600;
 
 /**
  * Playback backed by a single <audio> element. Catalog songs fetch a fresh
@@ -175,6 +158,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
   const [restored, setRestored] = useState(false);
+  /** The saved queue was read back; only then may changes overwrite it. */
+  const [queueSynced, setQueueSynced] = useState(false);
   const prefs = useSettings();
 
   const failures = useRef(0);
@@ -254,26 +239,40 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   /** Running volume ramp (fade in/out); cancelled when a new one starts. */
   const fade = useRef<(() => void) | null>(null);
 
-  // Restore saved volume, play mode and queue once mounted (the desktop bridge is browser-only).
+  // Restore saved volume and play mode once mounted (the desktop bridge is browser-only),
+  // then the queue the app server keeps.
   useEffect(() => {
     const saved = readVolume();
     lastVolume.current = saved || 0.62;
+    let cancelled = false;
     const timer = setTimeout(() => {
       setVolumeState(saved);
       setMode(readMode());
-      const stored = readQueue();
-      const prefsNow = appSettings.get();
-      if (stored.queue.length) setQueue(stored.queue);
-      if (prefsNow.resumeOnLaunch && stored.current) {
-        // Restored paused: autoplay on launch would be a surprise.
-        const at = prefsNow.resumePosition ? readPosition(stored.current.id) : 0;
-        if (at > 0) resumeAt.current = at;
-        latest.current.select(stored.current, { autoplay: false, remember: false });
-        if (at > 0) setPosition(at);
-      }
       setRestored(true);
     }, 0);
-    return () => clearTimeout(timer);
+    storageReady()
+      .then(meApi.player)
+      .then(stored => {
+        if (cancelled) return;
+        // Something started playing meanwhile (an opened file, a click): that wins.
+        const { queue: live, track: current } = latest.current;
+        if (!live.length && !isPlayable(current)) {
+          const prefsNow = appSettings.get();
+          const start = stored.queue.find(item => item.id === stored.currentId) ?? stored.queue[0];
+          if (stored.queue.length) setQueue(stored.queue);
+          if (prefsNow.resumeOnLaunch && start) {
+            // Restored paused: autoplay on launch would be a surprise.
+            const at = prefsNow.resumePosition && stored.position?.id === start.id ? stored.position.t : 0;
+            if (at > 0) resumeAt.current = at;
+            latest.current.select(start, { autoplay: false, remember: false });
+            if (at > 0) setPosition(at);
+          }
+        }
+        setQueueSynced(true);
+      })
+      // Saving stays off: an empty queue must not replace the saved one.
+      .catch(error => console.error('[player] could not restore the queue', error));
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [latest]);
 
   useEffect(() => {
@@ -282,19 +281,22 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [mode, restored]);
 
   useEffect(() => {
-    if (!restored) return;
-    try { persistentStorage.setItem(QUEUE_KEY, JSON.stringify({ queue: queue.slice(0, QUEUE_LIMIT), currentId: track.id })); } catch { /* storage full */ }
-  }, [queue, track.id, restored]);
+    if (!queueSynced) return;
+    const timer = setTimeout(() => {
+      meApi.saveQueue(queue, track.id).catch(error => console.error('[player] could not save the queue', error));
+    }, QUEUE_SAVE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [queue, track.id, queueSynced]);
 
   // Remember where we are in the song (for 设置 › 播放 › 恢复播放进度), at most every 2s.
   const positionSaved = useRef(0);
   useEffect(() => {
-    if (!restored || !isPlayable(track)) return;
+    if (!queueSynced || !isPlayable(track)) return;
     const now = Date.now();
     if (now - positionSaved.current < 2000 && position > 0) return;
     positionSaved.current = now;
-    try { persistentStorage.setItem(POSITION_KEY, JSON.stringify({ id: track.id, t: Math.round(position) })); } catch { /* storage full */ }
-  }, [position, track, restored]);
+    meApi.savePosition({ id: track.id, t: Math.round(position) }).catch(() => undefined);
+  }, [position, track, queueSynced]);
 
   useEffect(() => {
     // Moving the slider mid-fade wins: cancel the ramp (a fade-out still pauses via `playing`).

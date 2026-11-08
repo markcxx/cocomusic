@@ -29,7 +29,7 @@ export function TrackMenuButton({ track, playlist, onRemoved }: { track: Track; 
   const remove = async () => {
     if (!playlist) return;
     try {
-      if (playlist.kind === 'local') localPlaylists.removeTracks(playlist.id, [track.id]);
+      if (playlist.kind === 'local') await localPlaylists.removeTracks(playlist.id, [track.id]);
       else await accountApi.editTracks(playlist.id, [catalog?.id ?? ''], 'del');
       onRemoved?.(track.id);
       toast.success('已从歌单移除');
