@@ -1,3 +1,4 @@
+import { closeDatabase } from '../db/database.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { copyFile, mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
@@ -39,6 +40,7 @@ test('concurrent scans and downloads preserve every entry, platform and trial fl
     await library.removeFolder(folder);
     assert.deepEqual(library.listLibrary().tracks.map(item => item.path), [b]);
   } finally {
+    closeDatabase();
     if (previous === undefined) delete process.env.COCO_DATA_DIR; else process.env.COCO_DATA_DIR = previous;
     await rm(dir, { recursive: true, force: true });
   }

@@ -1,3 +1,4 @@
+import { closeDatabase } from '../db/database.ts';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
@@ -96,6 +97,7 @@ test('song downloads default to audio only, embed artwork, preserve platforms, a
     assert.equal(library.getTrack(qqJob.localId!), undefined);
   } finally {
     release();
+    closeDatabase();
     if (previous === undefined) delete process.env.COCO_DATA_DIR; else process.env.COCO_DATA_DIR = previous;
     await rm(dir, { recursive: true, force: true });
   }

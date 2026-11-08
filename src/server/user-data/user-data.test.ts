@@ -16,20 +16,30 @@ import { PLAYLIST_TRACK_LIMIT, RECENT_PLAYS_LIMIT } from './types.ts';
 const track = (id: string, extra: Partial<Track> = {}): Track => ({ id, title: id, artist: 'A', coverSeed: id, ...extra });
 const netease = (id: string, extra: Partial<Track> = {}) => track(`netease:${id}`, { songId: id, source: 'netease', ...extra });
 
-function tempDir(t: TestContext) {
+function tempDatabase(t: TestContext) {
   const dir = mkdtempSync(path.join(os.tmpdir(), 'coco-db-'));
-  t.after(() => rmSync(dir, { recursive: true, force: true }));
-  return dir;
+  const file = path.join(dir, 'coco.db');
+  let current: DatabaseSync | undefined;
+  t.after(() => {
+    current?.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  function open() {
+    current?.close();
+    current = undefined;
+    const result = openDatabase(file);
+    current = result.db;
+    return result;
+  }
+  return { dir, file, open };
 }
 
 function freshDb(t: TestContext) {
-  const { db } = openDatabase(path.join(tempDir(t), 'coco.db'));
-  t.after(() => db.close());
-  return db;
+  return tempDatabase(t).open().db;
 }
 
 test('migration 1 imports library.json and downloads.json once and leaves them untouched', t => {
-  const dir = tempDir(t);
+  const { dir, open } = tempDatabase(t);
   const library = { folders: ['/music'], tracks: { a: { id: 'a', path: '/music/a.mp3', title: 'A', artist: 'X', size: 1, mtime: 1, addedAt: 5, folder: '/music' }, old: { id: 'old', path: '/dl/old.mp3', title: '旧', artist: 'Y', size: 1, mtime: 1, addedAt: 1 } } };
   const downloads = {
     settings: { folder: '/dl', quality: 'lossless' },
@@ -43,25 +53,23 @@ test('migration 1 imports library.json and downloads.json once and leaves them u
   writeFileSync(path.join(dir, 'library.json'), JSON.stringify(library));
   writeFileSync(path.join(dir, 'downloads.json'), JSON.stringify(downloads));
 
-  const { db } = openDatabase(path.join(dir, 'coco.db'));
+  const { db } = open();
   assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, SCHEMA_VERSION);
   assert.deepEqual(readLibraryFolders(db), ['/music']);
   assert.equal(readLibraryTrack(db, 'old')?.source, 'kugou');
   assert.equal(readLibraryTrack(db, 'old')?.trial, true);
   assert.deepEqual(readDownloadJobs(db).map(job => job.id), ['j2', 'j1']);
   assert.equal(readDownloadSettings(db)?.quality, 'lossless');
-  db.close();
 
   // The old files stay as they were (an older version still reads them), and are never imported twice.
   assert.deepEqual(JSON.parse(readFileSync(path.join(dir, 'library.json'), 'utf8')), library);
   writeFileSync(path.join(dir, 'library.json'), JSON.stringify({ folders: ['/elsewhere'], tracks: {} }));
-  const { db: reopened } = openDatabase(path.join(dir, 'coco.db'));
-  t.after(() => reopened.close());
+  const { db: reopened } = open();
   assert.deepEqual(readLibraryFolders(reopened), ['/music']);
 });
 
 test('a failing migration leaves the database as it was and runs again next time', t => {
-  const file = path.join(tempDir(t), 'coco.db');
+  const { file, open } = tempDatabase(t);
   const blocker = new DatabaseSync(file);
   blocker.exec('CREATE TABLE kv (key TEXT)');
   blocker.close();
@@ -71,8 +79,7 @@ test('a failing migration leaves the database as it was and runs again next time
   assert.equal(check.prepare("SELECT name FROM sqlite_master WHERE name = 'playlists'").get(), undefined);
   check.exec('DROP TABLE kv');
   check.close();
-  const { db } = openDatabase(file);
-  t.after(() => db.close());
+  const { db } = open();
   assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, SCHEMA_VERSION);
 });
 
@@ -152,18 +159,15 @@ test('renderer data is handed over once; newer rows win and malformed entries ar
 });
 
 test('invalid legacy file shapes use a valid backup and retry when both copies fail', t => {
-  const dir = tempDir(t);
-  const file = path.join(dir, 'coco.db');
+  const { dir, open } = tempDatabase(t);
   writeFileSync(path.join(dir, 'library.json'), '{}');
   writeFileSync(path.join(dir, 'library.json.bak'), JSON.stringify({ folders: ['/music'], tracks: {} }));
   writeFileSync(path.join(dir, 'downloads.json'), '{}');
-  const first = openDatabase(file);
+  const first = open();
   assert.deepEqual(first.legacyProblems.map(item => item.file), ['downloads.json']);
   assert.deepEqual(readLibraryFolders(first.db), []);
-  first.db.close();
   writeFileSync(path.join(dir, 'downloads.json.bak'), JSON.stringify({ settings: { folder: '/saved' }, jobs: [] }));
-  const second = openDatabase(file);
-  t.after(() => second.db.close());
+  const second = open();
   assert.deepEqual(second.legacyProblems, []);
   assert.deepEqual(readLibraryFolders(second.db), ['/music']);
   assert.equal(readDownloadSettings(second.db)?.folder, '/saved');

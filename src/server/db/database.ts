@@ -30,8 +30,13 @@ export function openDatabase(file: string): Opened {
   if (process.platform !== 'win32') {
     try { chmodSync(file, 0o600); } catch { /* best effort, like the JSON stores */ }
   }
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
-  migrate(db);
+  try {
+    db.exec('PRAGMA journal_mode = WAL; PRAGMA synchronous = NORMAL; PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON;');
+    migrate(db);
+  } catch (error) {
+    db.close();
+    throw error;
+  }
   let legacyProblems: LegacyFileProblem[];
   try {
     legacyProblems = importLegacyFiles(db, path.dirname(file));
@@ -43,11 +48,16 @@ export function openDatabase(file: string): Opened {
   return { db, legacyProblems };
 }
 
+export function closeDatabase() {
+  holder.__cocoDatabase?.db.close();
+  delete holder.__cocoDatabase;
+}
+
 function opened(): Held {
   const file = path.join(dataDir(), DATABASE_FILE);
   const held = holder.__cocoDatabase;
   if (held?.file === file) return held;
-  held?.db.close();
+  closeDatabase();
   holder.__cocoDatabase = { file, ...openDatabase(file) };
   return holder.__cocoDatabase;
 }

@@ -69,7 +69,9 @@ jobs:
       - name: Build app
         run: npm run build
       - name: Package
-        run: npx electron-builder ${{ matrix.args }} --publish never
+        run: |
+          npx --no-install install-electron
+          npx electron-builder ${{ matrix.args }} --config.electronDist=node_modules/electron/dist --publish never
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ runner.os }}-${{ runner.arch }}
