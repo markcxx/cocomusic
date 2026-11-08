@@ -87,6 +87,38 @@ jobs:
           asset=$(gh api "repos/electron/electron/releases/tags/v$version" | jq -er --arg name "$archive" '.assets[] | select(.name == $name) | .id')
           curl --fail --location --retry 3 --silent --show-error -H "Authorization: Bearer $GH_TOKEN" -H 'Accept: application/octet-stream' "https://api.github.com/repos/electron/electron/releases/assets/$asset?run=$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" -o "$archive"
           node -e "const fs = require('node:fs'); const name = process.argv[1]; const digest = require('node:crypto').createHash('sha256').update(fs.readFileSync(name)).digest('hex'); require('node:assert/strict').equal(digest, require('electron/checksums.json')[name]);" "$archive"
+          # Builder fetches platform tools separately. Resolve those assets through
+          # the same official API, keeping the token on the loopback adapter.
+          python -u - <<'PYTHON' &
+          import json, os, re, subprocess
+          from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+          from urllib.parse import unquote, quote, urlsplit
+          class Assets(BaseHTTPRequestHandler):
+              def do_GET(self):
+                  match = re.fullmatch(r'/([\w@.+-]+)/([\w@.+-]+)', unquote(urlsplit(self.path).path))
+                  if not match:
+                      self.send_error(404)
+                      return
+                  tag, name = match.groups()
+                  repo = 'repos/electron-userland/electron-builder-binaries'
+                  try:
+                      release = json.loads(subprocess.check_output(['gh', 'api', f'{repo}/releases/tags/{quote(tag)}']))
+                      asset = next(a for a in release['assets'] if a['name'] == name)
+                      url = f"https://api.github.com/{repo}/releases/assets/{asset['id']}?run={os.environ['GITHUB_RUN_ID']}"
+                      signed = subprocess.check_output(['curl', '--silent', '--show-error', '--fail', '-o', os.devnull, '-w', '%{redirect_url}', '-H', 'Accept: application/octet-stream', '-H', 'Authorization: Bearer ' + os.environ['GH_TOKEN'], url], text=True)
+                      if urlsplit(signed).scheme != 'https':
+                          raise ValueError('Missing asset redirect')
+                  except (ValueError, StopIteration, subprocess.SubprocessError) as error:
+                      self.send_error(502, type(error).__name__)
+                      return
+                  self.send_response(302)
+                  self.send_header('Location', signed)
+                  self.end_headers()
+          ThreadingHTTPServer(('127.0.0.1', 18719), Assets).serve_forever()
+          PYTHON
+          trap 'kill $! 2>/dev/null || true' EXIT
+          export ELECTRON_BUILDER_BINARIES_MIRROR=http://127.0.0.1:18719/
+          export ELECTRON_BUILDER_BINARIES_ALLOW_HTTP=true
           npx electron-builder ${{ matrix.args }} --config.electronDist="$archive" --publish never
       - uses: actions/upload-artifact@v4
         with:
