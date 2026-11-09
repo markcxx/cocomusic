@@ -70,7 +70,8 @@ export function runAction(action: MenuAction) {
 }
 
 function context(surface: Surface): MenuContext {
-  return { surface, desktopLyrics: Boolean(lyrics?.()?.visible()), mini: Boolean(main && !main.isDestroyed() && isMini(main)), platform: process.platform };
+  const desktop = lyrics?.();
+  return { surface, desktopLyrics: Boolean(desktop?.visible()), desktopLyricsLocked: Boolean(desktop?.locked()), mini: Boolean(main && !main.isDestroyed() && isMini(main)), platform: process.platform };
 }
 
 function toElectron(nodes: MenuNode[]): MenuItemConstructorOptions[] {

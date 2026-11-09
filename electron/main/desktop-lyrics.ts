@@ -105,6 +105,7 @@ function create(origin: string, preload: string) {
   // Over full-screen apps too. `skipTransformProcessType` is essential: without it
   // macOS turns the whole app into a UIElement (no Dock icon, no menu bar).
   if (process.platform === 'darwin') window.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+  window.on('show', () => window.setAlwaysOnTop(true, 'screen-saver'));
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   window.webContents.on('will-navigate', event => event.preventDefault());
   const track = () => {
@@ -112,7 +113,8 @@ function create(origin: string, preload: string) {
     state.bounds = window.getBounds();
     save();
   };
-  window.on('moved', track);
+  // `moved` is macOS/Windows only; Linux emits `move`.
+  window.on('move', track);
   window.on('resized', track);
   window.on('closed', () => {
     clearInterval(unlockTimer);

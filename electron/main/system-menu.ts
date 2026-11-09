@@ -60,6 +60,7 @@ export type Surface = 'dock' | 'tray' | 'app';
 export interface MenuContext {
   surface: Surface;
   desktopLyrics: boolean;
+  desktopLyricsLocked?: boolean;
   mini: boolean;
   /** Platform: menu icons only on Windows/Linux; accelerator hints only in the app menu. */
   platform: NodeJS.Platform | string;
@@ -96,6 +97,7 @@ export function buildPlayerMenu(state: PlayerState, context: MenuContext): MenuN
     },
     { type: 'separator' },
     { type: 'item', label: '桌面歌词', kind: 'checkbox', checked: context.desktopLyrics, action: 'lyrics', icon: icon('lyrics') },
+    ...(context.desktopLyrics ? [{ type: 'item' as const, label: context.desktopLyricsLocked ? '解锁桌面歌词' : '锁定桌面歌词', action: 'lyrics-lock' as const }] : []),
     { type: 'item', label: '迷你模式', kind: 'checkbox', checked: context.mini, action: 'mini' },
   );
 

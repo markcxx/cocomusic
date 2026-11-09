@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { devElectronArgs } from './dev-electron-args.mjs';
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const require = createRequire(import.meta.url);
@@ -81,7 +82,7 @@ run(process.execPath, [tscBin, '-p', 'electron/tsconfig.json', '--watch', '--pre
 // 3. Electron, restarted on main-process changes.
 // Files after `--` simulate "open with CoCo Music": `npm run dev -- ~/Music/a.mp3`.
 // They are passed on the first launch only (a restart should not replay them).
-const openFiles = process.argv.slice(2).filter(arg => !arg.startsWith('-')).map(arg => path.resolve(arg));
+const { openFiles, switches } = devElectronArgs(process.argv.slice(2));
 if (openFiles.length) log(`将模拟“打开方式”打开：${openFiles.join(', ')}`);
 let electron;
 let restarting = false;
@@ -89,7 +90,7 @@ let launches = 0;
 function startElectron() {
   if (stopping) return;
   const files = launches++ === 0 ? openFiles : [];
-  electron = run(electronBinary, ['.', ...files], { env: { ...env, COCO_DEV_RELOAD: '1' }, stdio: ['pipe', 'inherit', 'inherit'] });
+  electron = run(electronBinary, [...switches, '.', ...files], { env: { ...env, COCO_DEV_RELOAD: '1' }, stdio: ['pipe', 'inherit', 'inherit'] });
   // The child can close stdin between a writable check and write(). EPIPE is
   // asynchronous, so guarding the write alone cannot prevent a runner crash.
   electron.stdin.on('error', error => {
