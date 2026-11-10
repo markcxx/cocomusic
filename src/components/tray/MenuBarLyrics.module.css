@@ -6,7 +6,7 @@
   grid-template-columns: 120px 22px;
   align-items: center;
   font-family: -apple-system, "PingFang SC", sans-serif;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   line-height: 22px;
   user-select: none;

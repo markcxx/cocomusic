@@ -1,6 +1,6 @@
 .subtitle {
-  margin: 0 0 18px;
-  font-size: 13px;
+  margin: 0 0 var(--space-5);
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
@@ -16,8 +16,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
+  gap: var(--space-2_5);
+  font-size: var(--fs-lg);
   color: var(--text);
 }
 
@@ -35,10 +35,10 @@
 .retry {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
+  gap: var(--space-1_5);
+  padding: var(--space-1_5) var(--space-3_5);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-tint);
   color: var(--accent-strong);
 }
@@ -47,8 +47,8 @@
   position: relative;
   width: 220px;
   height: 220px;
-  padding: 10px;
-  border-radius: 18px;
+  padding: var(--space-2_5);
+  border-radius: var(--radius-4xl);
   background: #fff; /* QR codes must stay dark-on-white to scan */
   box-shadow: 0 10px 30px rgba(var(--ink-rgb), 0.12);
 }
@@ -71,12 +71,12 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   padding: 0;
   border: 0;
   border-radius: inherit;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-strong);
 }
 
@@ -85,7 +85,7 @@ button.overlay {
 }
 
 .overlay strong {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
 }
 
@@ -101,8 +101,8 @@ button.overlay {
 }
 
 .note {
-  margin: 18px 0 0;
-  font-size: 11px;
+  margin: var(--space-5) 0 0;
+  font-size: var(--fs-xs);
   color: var(--text-muted);
   text-align: center;
 }

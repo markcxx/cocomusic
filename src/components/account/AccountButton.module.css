@@ -1,14 +1,14 @@
 .account {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   height: 36px;
-  margin-right: 4px;
-  padding: 0 10px 0 4px;
+  margin-right: var(--space-1);
+  padding: 0 var(--space-2_5) 0 var(--space-1);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-strong);
   transition: background-color 180ms ease;
   -webkit-app-region: no-drag;

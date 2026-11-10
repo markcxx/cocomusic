@@ -16,9 +16,9 @@
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin: 0 -28px;
-  padding: 10px 28px;
+  gap: var(--space-4);
+  margin: 0 calc(-1 * var(--page-pad-x));
+  padding: var(--space-2_5) var(--page-pad-x);
 }
 
 .surface {
@@ -32,9 +32,9 @@
 
 .divider {
   position: absolute;
-  right: 28px;
+  right: var(--page-pad-x);
   bottom: 0;
-  left: 28px;
+  left: var(--page-pad-x);
   height: 1px;
   background: rgba(var(--accent-strong-rgb), 0.1);
   pointer-events: none;
@@ -45,7 +45,7 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 16px;
+  font-size: var(--fs-2xl);
   font-weight: 500;
   color: var(--text-strong);
 }
@@ -55,14 +55,3 @@
   min-width: 0;
 }
 
-@media (max-width: 1300px) {
-  .bar {
-    margin: 0 -22px;
-    padding: 10px 22px;
-  }
-
-  .divider {
-    right: 22px;
-    left: 22px;
-  }
-}

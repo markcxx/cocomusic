@@ -1,0 +1,137 @@
+/* Lyric lines shared by the scrolling panel (LyricsPanel) and the two-line duo (LyricsDuo). */
+
+/* Scroll column. Big top/bottom padding lets the first and last lines reach the centre. */
+.lines {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  margin-top: var(--space-4);
+  /* Half the column's height above/below, so the first and last lines can reach the centre. */
+  padding: 30vh 0;
+  overflow-y: auto;
+  overscroll-behavior: auto;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 18%, #000 82%, transparent 100%);
+}
+
+.line {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: var(--space-2_5) var(--space-3_5);
+  border-radius: var(--radius-xl);
+  font-size: var(--lyric-size, 18px);
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.42);
+  transform-origin: left center;
+  transition: color 320ms ease, transform 420ms cubic-bezier(0.22, 1, 0.36, 1), background-color 160ms ease, filter 320ms ease;
+  user-select: text;
+}
+
+.linePast {
+  color: rgba(255, 255, 255, 0.36);
+}
+
+.lineActive {
+  color: #fff;
+  transform: scale(1.06);
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+}
+
+.lineTranslation {
+  font-size: calc(var(--lyric-size, 18px) * 0.78);
+  opacity: 0.8;
+}
+
+/* Hovering = browsing: lines become seek targets. */
+.browsing .line {
+  cursor: pointer;
+}
+
+.browsing .line:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.unsynced .line {
+  color: rgba(255, 255, 255, 0.78);
+  cursor: default;
+}
+
+.unsynced .line:hover {
+  background: transparent;
+}
+
+.centered .line {
+  align-items: center;
+  text-align: center;
+  transform-origin: center;
+}
+
+/* Depth of field: only the current line is sharp (browsing lifts it). */
+.blurInactive:not(.browsing) .line:not(.lineActive) {
+  filter: blur(1.2px);
+}
+
+.status {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2_5);
+  font-size: var(--fs-3xl);
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.retry {
+  padding: var(--space-1) var(--space-3);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: var(--fs-md);
+}
+
+/* ───────── 居中布局: two-line duo ───────── */
+
+.duo {
+  position: relative;
+  display: grid;
+  min-height: calc(var(--lyric-size, 18px) * 3.6);
+  text-align: center;
+}
+
+.duoPair {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.duoCurrent {
+  margin: 0;
+  font-size: calc(var(--lyric-size, 18px) * 1.18);
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+.duoNext {
+  grid-area: 1 / 1;
+  margin: 0;
+  font-size: var(--lyric-size, 18px);
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.duoPair .duoNext {
+  grid-area: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .line {
+    transition: none;
+  }
+}

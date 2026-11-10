@@ -1,56 +1,25 @@
 'use client';
 
-import { AppWindow, CircleArrowUp, Disc3, Download, FolderCog, FolderOpen, Gauge, HardDrive, Info, Keyboard, Mic2, MonitorSpeaker, Music4, Palette, PictureInPicture2, Play, RefreshCw, ScrollText, Sparkles, Trash2, Type } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useAccount } from '@/components/account/account-store';
-import { ConceptMembership } from '@/components/account/ConceptMembership';
-import { downloads, useDownloads } from '@/components/downloads/download-store';
-import { useNavigation } from '@/components/layout/navigation';
-import { usePlayer } from '@/components/player/player-store';
-import { pickTemplate, TEMPLATES } from '@/components/player/visualizer/VisualizerPicker';
+import { AppWindow, CircleArrowUp, Disc3, Download, HardDrive, Info, Keyboard, Mic2, Palette, PictureInPicture2, Play, Type } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { sectionScrollTop } from '@/components/scroll/wheel-motion';
 import { Page, useScrollArea } from '@/components/scroll';
-import { Button, ConfirmDialog, toast } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { downloadsApi } from '@/lib/local-client';
-import { downloadQualities, QUALITY_HINTS } from '@/lib/download-quality';
-import { recentPlays } from '@/lib/recent-plays';
-import { searchHistory } from '@/lib/search-history';
-import { ACCENT_PRESETS, desktopLyricColor, LYRIC_COLORS, needsSamples, settings, useSettings, type Settings } from '@/lib/settings';
-import type { AudioQuality } from '@/server/music/types';
-import { formatBytes, updateDialog, updates, useUpdateState } from '@/components/updates/update-store';
-import { ThemeColorControl } from './ColorPicker';
-import { useResolvedScheme } from './ApplyAppearance';
-import { ChoiceTiles } from './ChoiceTiles';
-import { WindowSketch } from './WindowSketch';
-import { Range, Row, Section, Segmented, Select, Switch } from './controls';
+import { AboutSection } from './sections/AboutSection';
+import { AppearanceSection } from './sections/AppearanceSection';
+import { CatalogSection } from './sections/CatalogSection';
+import { DesktopLyricsSection } from './sections/DesktopLyricsSection';
+import { DownloadsSection } from './sections/DownloadsSection';
+import { LibrarySection } from './sections/LibrarySection';
+import { LyricsSection } from './sections/LyricsSection';
+import { MiniSection } from './sections/MiniSection';
+import { PlaybackSection } from './sections/PlaybackSection';
+import { ShortcutsSection } from './sections/ShortcutsSection';
+import { SystemSection } from './sections/SystemSection';
+import { TaskbarLyricsSection } from './sections/TaskbarLyricsSection';
+import { UpdatesSection } from './sections/UpdatesSection';
+import { isDesktop, isMac, useAppSettings } from './shared';
 import styles from './Settings.module.css';
-
-const QUALITIES: ReadonlyArray<{ value: AudioQuality; label: string; hint: string }> = [
-  { value: 'standard', label: '标准', hint: '128kbps，省流量' },
-  { value: 'higher', label: '较高', hint: '192kbps' },
-  { value: 'exhigh', label: '极高', hint: '320kbps' },
-  { value: 'lossless', label: '无损', hint: 'FLAC，需要会员' },
-  { value: 'hires', label: 'Hi-Res', hint: '高解析度，需要会员' },
-];
-
-const PLATFORMS = [
-  { value: 'netease', label: '网易云音乐' },
-  { value: 'qq', label: 'QQ 音乐' },
-  { value: 'kugou', label: '酷狗音乐' },
-  { value: 'kugou-lite', label: '酷狗概念版' },
-] as const;
-
-const WINDOW_EFFECT_HINTS: Record<string, string> = {
-  vibrancy: '系统毛玻璃：背后的桌面被实时模糊后透出来，模糊强度由系统决定',
-  acrylic: '系统亚克力：背后的桌面被强模糊并带细微噪点，模糊强度由系统决定',
-  mica: '云母：取桌面壁纸的柔和色调（Windows 11），不透出其他窗口',
-  transparent: '和桌面歌词一样的真透明窗口：背后的桌面和窗口清晰可见，不做模糊',
-  minimal: '简约：浅灰导航栏与播放栏，白色内容卡片，不透明、无毛玻璃',
-  none: '不透明窗口',
-};
-
-const LYRIC_PRESETS = (Object.keys(LYRIC_COLORS) as Array<keyof typeof LYRIC_COLORS>).map(id => ({ label: LYRIC_COLORS[id].label, color: LYRIC_COLORS[id].to }));
 
 const SECTIONS = [
   { id: 'catalog', label: '曲库', icon: Disc3 },
@@ -68,102 +37,12 @@ const SECTIONS = [
   { id: 'about', label: '关于', icon: Info },
 ] as const;
 
-/** Quick picks next to the custom visualizer colour (the full picker is one click away). */
-const VISUALIZER_COLOR_PRESETS = [
-  { label: '湖光蓝', color: '#56a8ff' },
-  { label: '薄荷', color: '#5fe0b8' },
-  { label: '樱粉', color: '#ff8fc4' },
-  { label: '暖橙', color: '#ffb065' },
-  { label: '丁香紫', color: '#b79bff' },
-];
-
-const keysOf = (...keys: Array<keyof Settings>) => keys;
-const isMac = () => typeof window !== 'undefined' && window.coco?.platform === 'darwin';
-const mod = () => (isMac() ? '⌘' : 'Ctrl');
-const accelerator = (value: string) => value
-  .replace('CommandOrControl', isMac() ? '⌘' : 'Ctrl')
-  .replace('Alt', isMac() ? '⌥' : 'Alt')
-  .replace(/Right$/, '→').replace(/Left$/, '←').replace(/Up$/, '↑').replace(/Down$/, '↓')
-  .split('+').join(isMac() ? '' : ' + ');
-
-function Kbd({ children }: { children: string }) {
-  return <span className={styles.kbd}>{children}</span>;
-}
-
-function useOutputDevices() {
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  useEffect(() => {
-    const media = navigator.mediaDevices;
-    if (!media?.enumerateDevices) return;
-    const load = () => media.enumerateDevices().then(list => setDevices(list.filter(device => device.kind === 'audiooutput' && device.deviceId !== 'default' && device.deviceId !== 'communications'))).catch(() => undefined);
-    void load();
-    media.addEventListener?.('devicechange', load);
-    return () => media.removeEventListener?.('devicechange', load);
-  }, []);
-  return devices;
-}
-
-/** Main-process settings (desktop only). */
-function useAppSettings() {
-  const [result, setResult] = useState<CocoAppSettingsResult | null>(null);
-  useEffect(() => { void window.coco?.app?.getSettings().then(setResult).catch(() => undefined); }, []);
-  const update = useCallback(async (patch: Partial<CocoAppSettings>) => {
-    const next = await window.coco?.app?.setSettings(patch).catch(() => null);
-    if (next) setResult(next);
-    return next;
-  }, []);
-  return { result, update };
-}
-
-const timeAgo = (at: number) => {
-  const minutes = Math.round((Date.now() - at) / 60_000);
-  if (minutes < 1) return '刚刚';
-  if (minutes < 60) return `${minutes} 分钟前`;
-  if (minutes < 24 * 60) return `${Math.round(minutes / 60)} 小时前`;
-  return new Date(at).toLocaleDateString('zh-CN');
-};
-
-/** 设置 › 更新: status line + the one action that fits it. */
-function UpdateStatusRow({ state }: { state: CocoUpdateState | null }) {
-  if (!state) return <Row title="检查更新" description="需要在桌面客户端中使用" disabled><Button disabled>检查更新</Button></Row>;
-  const { status, update, progress } = state;
-  const description = status === 'checking' ? '正在连接 GitHub…'
-    : status === 'error' ? state.error
-    : status === 'downloading' && progress ? `正在下载 ${update?.version}：${formatBytes(progress.received)} / ${formatBytes(progress.total)}`
-    : status === 'ready' ? `${update?.version} 已下载并通过校验，${state.install === 'restart' ? '重启后完成更新' : '打开安装包即可安装'}`
-    : update ? `发现新版本 ${update.version}（${formatBytes(update.size)}）${update.version === state.skipped ? '，已跳过此版本' : ''}`
-    : status === 'latest' ? `已是最新版本 · ${state.lastCheck ? `${timeAgo(state.lastCheck)}检查` : ''}`
-    : `当前版本 ${state.current}`;
-  return (
-    <Row title="检查更新" description={description}>
-      <div className={styles.inline}>
-        {update && <Button variant="primary" icon={<CircleArrowUp size={15} strokeWidth={1.5} />} onClick={() => { updateDialog.show('update'); if (status !== 'ready' && status !== 'downloading') updates.download(); }}>{status === 'ready' ? '安装更新' : status === 'downloading' ? '查看下载进度' : status === 'error' ? '重新下载' : '立即下载'}</Button>}
-        <Button icon={<RefreshCw size={15} strokeWidth={1.5} className={status === 'checking' ? styles.spinning : undefined} />} onClick={() => void updates.check()} disabled={status === 'checking' || status === 'downloading'}>
-          {status === 'checking' ? '检查中' : '检查更新'}
-        </Button>
-      </div>
-    </Row>
-  );
-}
-
 /** 设置: every option here is applied live; sections jump from the sticky index on the left. */
 export function SettingsView() {
-  const s = useSettings();
-  const desktopColor = desktopLyricColor(s);
-  const account = useAccount();
-  const player = usePlayer();
-  const { navigate } = useNavigation();
   const { element, scrollTo } = useScrollArea();
-  const devices = useOutputDevices();
   const app = useAppSettings();
-  const update = useUpdateState();
-  const desktop = typeof window !== 'undefined' && Boolean(window.coco);
-  const { settings: dl, folder } = useDownloads();
   const [active, setActive] = useState<string>(SECTIONS[0].id);
-  const [confirm, setConfirm] = useState<null | 'recent' | 'all'>(null);
   const clicking = useRef(0);
-
-  const set = <K extends keyof Settings>(key: K) => (value: Settings[K]) => settings.set(key, value);
 
   // Highlight the section in view (scroll-spy), unless a click just scrolled us there.
   useEffect(() => {
@@ -192,30 +71,6 @@ export function SettingsView() {
     scrollTo(sectionScrollTop(root, target), true);
   };
 
-  const previewDesktopLyrics = () => {
-    if (!window.coco?.lyrics) { toast.info('桌面歌词需要在桌面客户端中使用'); return; }
-    window.coco.lyrics.setDesktop(true);
-  };
-
-  const pickDownloadFolder = async () => {
-    const next = await window.coco?.files?.pickFolder();
-    if (next) { await downloads.run(() => downloadsApi.setFolder(next)); toast.success('下载目录已更改'); }
-  };
-
-  const loginSupported = app.result?.info.loginItemSupported;
-
-  // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
-  const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
-  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || s.windowEffect === 'minimal' ? s.windowEffect
-    : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
-  const scheme = useResolvedScheme();
-  const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
-  const chooseEffect = async (value: Settings['windowEffect']) => {
-    settings.set('windowEffect', value);
-    await app.update({ transparentWindow: value === 'transparent' });
-  };
-  const conflicts = useMemo(() => app.result?.shortcuts.filter(item => item.conflict) ?? [], [app.result]);
-
   return (
     <Page className={styles.page}>
       <header className={styles.hero}>
@@ -233,451 +88,22 @@ export function SettingsView() {
         </nav>
 
         <div className={styles.sections}>
-          {/* ───────── 曲库 ───────── */}
-          <Section id="catalog" icon={<Disc3 size={17} strokeWidth={1.6} />} title="曲库" description="选择浏览、搜索和登录所使用的音乐平台">
-            <Row title="音乐平台" description="首页、发现、排行榜、搜索和账号都会切换到所选平台；播放列表中已有的歌曲仍从原平台播放">
-              <Select value={s.catalogSource} onChange={set('catalogSource')} label="音乐平台" options={[...PLATFORMS]} />
-            </Row>
-            <Row
-              title="账号"
-              description={account.profile
-                ? `已登录${PLATFORMS.find(item => item.value === s.catalogSource)?.label}：${account.profile.nickname}。每个平台的登录状态分别保存`
-                : '每个平台的登录状态分别保存，切换平台后需要登录对应平台的账号'}
-            >
-              {account.profile
-                ? <Button variant="ghost" onClick={() => void account.logout()}>退出登录</Button>
-                : <Button onClick={account.openLogin} disabled={account.profile === undefined}>登录</Button>}
-            </Row>
-            {s.catalogSource === 'kugou-lite' && <Row title="每天打开时自动签到" description="使用已保存的概念版账号，每天首次打开或返回应用时领取今日权益；成功后当天不再重复。失败时会提示，可手动重试">
-              <Switch checked={s.conceptAutoCheckIn} onChange={set('conceptAutoCheckIn')} label="酷狗概念版自动签到" />
-            </Row>}
-            {s.catalogSource === 'kugou-lite' && account.profile?.source === 'kugou-lite' && <ConceptMembership key={account.profile.id} userId={account.profile.id} />}
-          </Section>
-
-          {/* ───────── 外观 ───────── */}
-          <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口效果、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
-            <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical>
-              {/* Each tile previews the window effect chosen below, in that scheme. */}
-              <ChoiceTiles
-                value={s.themeMode}
-                onChange={set('themeMode')}
-                label="外观模式"
-                options={([['system', '跟随系统', 'split'], ['light', '浅色', 'light'], ['dark', '深色', 'dark']] as const).map(([value, label, sketch]) => ({
-                  value, label, preview: <WindowSketch effect={shownEffect} scheme={sketch} />,
-                }))}
-              />
-            </Row>
-
-            <div className={styles.groupLabel}>窗口</div>
-            <Row
-              title="窗口效果"
-              description={WINDOW_EFFECT_HINTS[shownEffect] ?? WINDOW_EFFECT_HINTS.none}
-              vertical
-            >
-              {/* Materials need the desktop client; 简约 and 不透明 are drawn by the page itself. */}
-              <ChoiceTiles
-                value={shownEffect}
-                onChange={value => void chooseEffect(value)}
-                label="窗口效果"
-                options={([
-                  ...(isMac() ? [['vibrancy', '毛玻璃']] : [['acrylic', '亚克力'], ['mica', '云母']]),
-                  ['transparent', '透明'],
-                  ['minimal', '简约'],
-                  ['none', '不透明'],
-                ] as Array<[Settings['windowEffect'], string]>).map(([value, label]) => ({
-                  value, label,
-                  disabled: !desktop && value !== 'minimal' && value !== 'none',
-                  preview: <WindowSketch effect={value} scheme={scheme} />,
-                }))}
-              />
-            </Row>
-            {needsRestart && (
-              <div className={styles.notice}>
-                <span>“透明”需要重新创建窗口，重启应用后生效。</span>
-                <Button variant="primary" onClick={() => window.coco?.app?.relaunch()}>立即重启</Button>
-              </div>
-            )}
-            {s.windowEffect !== 'minimal' && <>
-            <Row
-              title="窗口不透明度"
-              description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}
-              disabled={!desktop || s.windowEffect === 'none'}
-            >
-              <Range value={s.windowOpacity} max={100} step={5} onChange={set('windowOpacity')} label="窗口不透明度" format={value => `${value}%`} />
-            </Row>
-
-            <div className={styles.groupLabel}>面板毛玻璃</div>
-            <Row title="面板不透明度" description="内容区、播放栏和卡片的透明程度">
-              <Range value={s.glassOpacity} max={100} onChange={set('glassOpacity')} label="面板不透明度" format={value => `${value}%`} />
-            </Row>
-            <Row title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
-              <Range value={s.glassBlur} max={60} step={2} onChange={set('glassBlur')} label="面板模糊" format={value => `${value}px`} />
-            </Row>
-            </>}
-
-            <div className={styles.groupLabel}>颜色与显示</div>
-            <Row title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>
-              <ThemeColorControl value={s.accent} presets={ACCENT_PRESETS} onChange={set('accent')} />
-            </Row>
-            <Row title="界面缩放" description="整体放大或缩小界面">
-              <Segmented value={s.zoom} onChange={set('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />
-            </Row>
-            <Row title="减弱动态效果" description="关闭页面过渡、旋转唱片等动画；系统开启“减弱动态效果”时会自动生效">
-              <Switch checked={s.reduceMotion} onChange={set('reduceMotion')} label="减弱动态效果" />
-            </Row>
-          </Section>
-
-          {/* ───────── 播放 ───────── */}
-          <Section id="playback" icon={<Play size={17} strokeWidth={1.6} />} title="播放" description="音质、过渡、输出设备与续播" onReset={() => settings.reset(keysOf('quality', 'fadeMs', 'playbackRate', 'outputDevice', 'resumeOnLaunch', 'resumePosition', 'skipOnError', 'doubleClick', 'trialNotice', 'showVipBadge'))}>
-            <Row title="在线播放音质" description="更高音质需要账号有对应权限，不满足时会自动使用可用的最高音质">
-              <Select value={s.quality} onChange={set('quality')} label="在线播放音质" options={QUALITIES} />
-            </Row>
-            <Row title="淡入淡出" description="播放、暂停时音量平滑过渡">
-              <Range value={s.fadeMs} max={1500} step={100} onChange={set('fadeMs')} label="淡入淡出" format={value => (value ? `${(value / 1000).toFixed(1)} 秒` : '关闭')} />
-            </Row>
-            <Row title="播放速度" description="调整速度时保持原有音调">
-              <Segmented value={s.playbackRate} onChange={set('playbackRate')} label="播放速度" options={[0.75, 1, 1.25, 1.5, 2].map(value => ({ value, label: `${value}×` }))} />
-            </Row>
-            <Row title="输出设备" description={devices.length ? '选择用于播放的扬声器或耳机' : '未检测到其他输出设备，将使用系统默认设备'}>
-              <Select
-                value={s.outputDevice}
-                onChange={set('outputDevice')}
-                label="输出设备"
-                options={[{ value: '', label: '系统默认' }, ...devices.map((device, index) => ({ value: device.deviceId, label: device.label || `输出设备 ${index + 1}` }))]}
-              />
-            </Row>
-            <Row title="双击歌曲" description="在歌单、排行榜等列表中双击一首歌时">
-              <Segmented value={s.doubleClick} onChange={set('doubleClick')} label="双击歌曲" options={[{ value: 'replace', label: '播放整个列表' }, { value: 'insert', label: '仅插入这首' }]} />
-            </Row>
-            <Row title="启动时恢复上次播放" description="打开应用时恢复播放列表和上次的歌曲（不会自动开始播放）">
-              <Switch checked={s.resumeOnLaunch} onChange={set('resumeOnLaunch')} label="启动时恢复上次播放" />
-            </Row>
-            <Row title="恢复播放进度" description="从上次停下的位置继续，而不是从头开始" disabled={!s.resumeOnLaunch}>
-              <Switch checked={s.resumePosition} onChange={set('resumePosition')} label="恢复播放进度" disabled={!s.resumeOnLaunch} />
-            </Row>
-            <Row title="播放失败时自动跳过" description="遇到无版权或无法播放的歌曲时自动播放下一首">
-              <Switch checked={s.skipOnError} onChange={set('skipOnError')} label="播放失败时自动跳过" />
-            </Row>
-            <Row title="试听提示" description="只能播放试听片段时弹出提示">
-              <Switch checked={s.trialNotice} onChange={set('trialNotice')} label="试听提示" />
-            </Row>
-            <Row title="显示 VIP 标签" description="在歌曲列表中标出需要会员的歌曲">
-              <Switch checked={s.showVipBadge} onChange={set('showVipBadge')} label="显示 VIP 标签" />
-            </Row>
-          </Section>
-
-          {/* ───────── 歌词页 ───────── */}
-          <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor'))}>
-            <Row title="歌词字号">
-              <Range value={s.lyricsFontSize} min={14} max={32} onChange={set('lyricsFontSize')} label="歌词字号" format={value => `${value}px`} />
-            </Row>
-            <Row title="显示翻译" description="有翻译的歌曲在原文下方显示译文">
-              <Switch checked={s.lyricsShowTranslation} onChange={set('lyricsShowTranslation')} label="显示翻译" />
-            </Row>
-            <Row title="对齐方式">
-              <Segmented value={s.lyricsAlign} onChange={set('lyricsAlign')} label="对齐方式" options={[{ value: 'left', label: '左对齐' }, { value: 'center', label: '居中' }]} />
-            </Row>
-            <Row title="景深效果" description="模糊非当前行，让视线聚焦在正在演唱的歌词上">
-              <Switch checked={s.lyricsBlurInactive} onChange={set('lyricsBlurInactive')} label="景深效果" />
-            </Row>
-            <Row title="背景">
-              <Segmented value={s.lyricsBackground} onChange={set('lyricsBackground')} label="背景" options={[{ value: 'cover', label: '封面模糊' }, { value: 'plain', label: '纯色' }]} />
-            </Row>
-            <Row title="唱片封面" description="封面显示为旋转的唱片">
-              <Switch checked={s.lyricsSpinCover} onChange={set('lyricsSpinCover')} label="唱片封面" />
-            </Row>
-            <Row title="布局" description="也可在歌词页右上角的「播放器模式」卡片中切换">
-              <Segmented value={s.lyricsLayout} onChange={set('lyricsLayout')} label="布局" options={[{ value: 'standard', label: '标准' }, { value: 'centered', label: '居中' }, { value: 'lyrics', label: '歌词' }]} />
-            </Row>
-            <Row title="播放器模式" description="歌词页的音频可视化与 3D 歌词效果，也可在歌词页右上角预览和切换">
-              <Select
-                value={s.lyricsVisualizer}
-                onChange={value => pickTemplate(s.lyricsVisualizer, value, player.reloadStream)}
-                label="播放器模式"
-                options={[{ value: 'off', label: '关闭' }, ...TEMPLATES]}
-              />
-            </Row>
-            <Row title="经典唱片搭配" description="经典唱片下方同时显示的频谱效果" disabled={s.lyricsVisualizer !== 'vinyl'}>
-              <Segmented value={s.lyricsVinylEffect} onChange={value => pickTemplate(s.lyricsVisualizer, s.lyricsVisualizer, player.reloadStream, value)} label="经典唱片搭配" options={[{ value: 'none', label: '无' }, { value: 'lines', label: '细线频谱' }, { value: 'glow', label: '柔光波' }]} />
-            </Row>
-            <Row title="播放器模式配色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
-              <Segmented value={s.lyricsVisualizerColor} onChange={set('lyricsVisualizerColor')} label="播放器模式配色" options={[{ value: 'blue', label: '湖光蓝' }, { value: 'cover', label: '跟随封面' }, { value: 'white', label: '月光白' }, { value: 'accent', label: '主题色' }, { value: 'aurora', label: '极光' }, { value: 'custom', label: '自定义' }]} />
-            </Row>
-            {s.lyricsVisualizerColor === 'custom' && (
-              <Row title="自定义颜色" description="选一个你喜欢的颜色，也可以用吸管从屏幕取色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
-                <ThemeColorControl value={s.lyricsVisualizerCustomColor} presets={VISUALIZER_COLOR_PRESETS} onChange={set('lyricsVisualizerCustomColor')} label="自定义颜色" />
-              </Row>
-            )}
-            <Row title="歌词偏移" description="歌词总是快或慢时微调，桌面歌词和迷你模式同样生效">
-              <Range value={s.lyricsOffset} min={-3} max={3} step={0.1} onChange={value => settings.set('lyricsOffset', Math.round(value * 10) / 10)} label="歌词偏移" format={value => (value === 0 ? '0 秒' : `${value > 0 ? '提前' : '延后'} ${Math.abs(value).toFixed(1)} 秒`)} />
-            </Row>
-            <Row title="保持屏幕常亮" description="歌词页打开并正在播放时，阻止屏幕自动熄灭">
-              <Switch checked={s.lyricsKeepAwake} onChange={set('lyricsKeepAwake')} label="保持屏幕常亮" />
-            </Row>
-            <Row title="预览">
-              <Button icon={<Sparkles size={15} strokeWidth={1.5} />} onClick={player.openLyrics} disabled={!player.track.songId && !player.track.localId}>打开歌词页</Button>
-            </Row>
-          </Section>
-
-          {/* ───────── 桌面歌词 ───────── */}
-          <Section id="desktop-lyrics" icon={<Mic2 size={17} strokeWidth={1.6} />} title="桌面歌词" description="悬浮在桌面上的歌词样式，修改后立即同步" onReset={() => settings.reset(keysOf('desktopFontSize', 'desktopColor', 'desktopCustomColor', 'desktopShowTranslation', 'desktopSecondLine', 'desktopKaraoke', 'desktopStroke', 'desktopAlign', 'desktopFontWeight'))}>
-            <div className={styles.lyricPreview} style={{ '--from': desktopColor.from, '--to': desktopColor.to, '--weight': s.desktopFontWeight, '--size': `${Math.min(s.desktopFontSize, 40)}px`, textAlign: s.desktopAlign } as React.CSSProperties} aria-hidden>
-              <p className={cn(styles.lyricPreviewMain, !s.desktopStroke && styles.noStroke)}>
-                <span className={styles.lyricPreviewBase}>难以忘记初次见你</span>
-                <span className={styles.lyricPreviewFill} style={{ clipPath: `inset(0 ${s.desktopKaraoke ? 45 : 0}% 0 0)` }}>难以忘记初次见你</span>
-              </p>
-              {s.desktopSecondLine !== 'none' && <p className={cn(styles.lyricPreviewSub, !s.desktopStroke && styles.noStroke)}>{s.desktopSecondLine === 'translation' && s.desktopShowTranslation ? 'Hard to forget the first time I saw you' : '一双迷人的眼睛'}</p>}
-            </div>
-            <Row title="歌词颜色" description="已唱部分的颜色，最后一个色块可用调色板自定义">
-              <ThemeColorControl
-                label="歌词颜色"
-                value={desktopColor.to}
-                presets={LYRIC_PRESETS}
-                onChange={hex => {
-                  const preset = (Object.keys(LYRIC_COLORS) as Array<keyof typeof LYRIC_COLORS>).find(id => LYRIC_COLORS[id].to.toLowerCase() === hex.toLowerCase());
-                  if (preset) settings.set('desktopColor', preset);
-                  else { settings.set('desktopCustomColor', hex.toLowerCase()); settings.set('desktopColor', 'custom'); }
-                }}
-              />
-            </Row>
-            <Row title="字号" description="也可以在桌面歌词上用 − / + 调整">
-              <Range value={s.desktopFontSize} min={20} max={64} step={2} onChange={set('desktopFontSize')} label="桌面歌词字号" format={value => `${value}px`} />
-            </Row>
-            <Row title="字重">
-              <Segmented value={s.desktopFontWeight} onChange={set('desktopFontWeight')} label="字重" options={[{ value: 500, label: '常规' }, { value: 700, label: '粗体' }, { value: 900, label: '特粗' }]} />
-            </Row>
-            <Row title="对齐方式">
-              <Segmented value={s.desktopAlign} onChange={set('desktopAlign')} label="桌面歌词对齐" options={[{ value: 'left', label: '左' }, { value: 'center', label: '居中' }, { value: 'right', label: '右' }]} />
-            </Row>
-            <Row title="第二行" description="当前歌词下方显示的内容">
-              <Segmented value={s.desktopSecondLine} onChange={set('desktopSecondLine')} label="第二行" options={[{ value: 'translation', label: '翻译优先' }, { value: 'next', label: '下一句' }, { value: 'none', label: '不显示' }]} />
-            </Row>
-            <Row title="显示翻译">
-              <Switch checked={s.desktopShowTranslation} onChange={set('desktopShowTranslation')} label="桌面歌词显示翻译" />
-            </Row>
-            <Row title="逐字高亮" description="像卡拉 OK 一样随演唱进度填充颜色">
-              <Switch checked={s.desktopKaraoke} onChange={set('desktopKaraoke')} label="逐字高亮" />
-            </Row>
-            <Row title="文字描边" description="浅色壁纸上更清晰">
-              <Switch checked={s.desktopStroke} onChange={set('desktopStroke')} label="文字描边" />
-            </Row>
-            <Row title="打开桌面歌词">
-              <Button icon={<Mic2 size={15} strokeWidth={1.5} />} onClick={previewDesktopLyrics} disabled={!desktop}>{desktop ? '显示桌面歌词' : '需要桌面客户端'}</Button>
-            </Row>
-          </Section>
-
-          {/* ───────── Windows 任务栏歌词 ───────── */}
-          {desktop && !isMac() && app.result?.info.platform === 'win32' && <Section id="taskbar-lyrics" icon={<Mic2 size={17} strokeWidth={1.6} />} title="任务栏歌词" description="透明歌词融入任务栏，悬停时展开播放控制" onReset={() => settings.reset(keysOf('taskbarLyrics', 'taskbarWidth', 'taskbarPosition', 'taskbarFontSize', 'taskbarTranslation', 'taskbarCustomColors', 'taskbarTextColor', 'taskbarHighlightColor'))}>
-            <Row title="显示任务栏歌词" description="跟随歌曲同步高亮；全屏、任务栏隐藏或空间不足时自动收起">
-              <Switch checked={s.taskbarLyrics} onChange={set('taskbarLyrics')} label="显示任务栏歌词" />
-            </Row>
-            <Row title="显示位置" description="自动从任务栏最左侧的可用位置显示，并避让小组件和应用按钮" disabled={!s.taskbarLyrics}>
-              <Segmented value={s.taskbarPosition} onChange={set('taskbarPosition')} label="任务栏歌词位置" options={[{ value: 'auto', label: '自动' }, { value: 'left', label: '左侧优先' }, { value: 'right', label: '右侧优先' }]} />
-            </Row>
-            <Row title="最大宽度" description="根据任务栏剩余空间自动缩小" disabled={!s.taskbarLyrics}>
-              <Range value={s.taskbarWidth} min={180} max={560} step={10} onChange={set('taskbarWidth')} label="任务栏歌词宽度" format={value => `${value} px`} />
-            </Row>
-            <Row title="歌词字号" disabled={!s.taskbarLyrics}>
-              <Range value={s.taskbarFontSize} min={12} max={18} onChange={set('taskbarFontSize')} label="任务栏歌词字号" format={value => `${value} px`} />
-            </Row>
-            <Row title="自定义歌词配色" description="关闭时随系统明暗使用柔和灰色文字与蓝色高亮" disabled={!s.taskbarLyrics}>
-              <Switch checked={s.taskbarCustomColors} onChange={set('taskbarCustomColors')} label="自定义任务栏歌词配色" disabled={!s.taskbarLyrics} />
-            </Row>
-            {s.taskbarCustomColors && <>
-              <Row title="文字颜色" description="尚未唱到的歌词颜色" disabled={!s.taskbarLyrics}>
-                <ThemeColorControl label="任务栏歌词文字颜色" value={s.taskbarTextColor} presets={[{ label: '柔灰', color: '#626771' }, { label: '浅灰', color: '#bfc4cc' }, { label: '纯白', color: '#ffffff' }, { label: '深灰', color: '#30343b' }]} onChange={set('taskbarTextColor')} />
-              </Row>
-              <Row title="高亮颜色" description="随演唱进度填充的颜色" disabled={!s.taskbarLyrics}>
-                <ThemeColorControl label="任务栏歌词高亮颜色" value={s.taskbarHighlightColor} presets={[{ label: '晴空蓝', color: '#0078d4' }, { label: '薰衣草', color: '#a799d4' }, { label: '薄荷', color: '#4fb797' }, { label: '暖橙', color: '#dd9b53' }]} onChange={set('taskbarHighlightColor')} />
-              </Row>
-            </>}
-            <Row title="显示翻译" description="有翻译时显示在第二行，其他情况显示歌名与歌手" disabled={!s.taskbarLyrics}>
-              <Switch checked={s.taskbarTranslation} onChange={set('taskbarTranslation')} label="任务栏歌词显示翻译" disabled={!s.taskbarLyrics} />
-            </Row>
-          </Section>}
-
-          {/* ───────── 迷你模式 ───────── */}
-          <Section id="mini" icon={<PictureInPicture2 size={17} strokeWidth={1.6} />} title="迷你模式" description="悬浮播放条" onReset={() => settings.reset(keysOf('miniShowLyrics', 'miniSpinRecord'))}>
-            <Row title="显示滚动歌词" description="关闭时显示歌手名">
-              <Switch checked={s.miniShowLyrics} onChange={set('miniShowLyrics')} label="迷你模式显示歌词" />
-            </Row>
-            <Row title="唱片旋转" description="播放时封面唱片缓慢旋转">
-              <Switch checked={s.miniSpinRecord} onChange={set('miniSpinRecord')} label="唱片旋转" />
-            </Row>
-            <Row title="进入迷你模式">
-              <Button icon={<PictureInPicture2 size={15} strokeWidth={1.5} />} onClick={() => window.coco?.window.toggleMini()} disabled={!desktop}>{desktop ? '切换到迷你模式' : '需要桌面客户端'}</Button>
-            </Row>
-          </Section>
-
-          {/* ───────── 下载 ───────── */}
-          <Section id="downloads" icon={<Download size={17} strokeWidth={1.6} />} title="下载" description="保存位置、音质与文件命名" onReset={dl ? () => void downloads.updateSettings({ quality: 'exhigh', naming: 'artist-title', lyrics: false, allowTrial: false, concurrency: 2 }) : undefined}>
-            <Row title="下载目录" description={<span className={styles.path} data-tooltip={folder}>{folder || '—'}</span>}>
-              <div className={styles.inline}>
-                {desktop && <Button icon={<FolderOpen size={15} strokeWidth={1.5} />} onClick={() => folder && window.coco?.files?.reveal(folder + (isMac() ? '/' : '\\'))} disabled={!folder}>打开</Button>}
-                <Button icon={<FolderCog size={15} strokeWidth={1.5} />} onClick={() => void pickDownloadFolder()} disabled={!desktop}>更改</Button>
-              </div>
-            </Row>
-            <Row title="默认下载音质" description="下载前可重新选择，具体可用音质按当前账号和歌曲权限查询">
-              <Select value={dl?.quality ?? 'exhigh'} onChange={value => void downloads.updateSettings({ quality: value })} label="默认下载音质" options={QUALITIES.filter(item => downloadQualities(s.catalogSource).includes(item.value)).map(item => ({ ...item, hint: QUALITY_HINTS[item.value] }))} />
-            </Row>
-            <Row title="文件命名">
-              <Select
-                value={dl?.naming ?? 'artist-title'}
-                onChange={value => void downloads.updateSettings({ naming: value })}
-                label="文件命名"
-                options={[{ value: 'artist-title', label: '歌手 - 歌名' }, { value: 'title-artist', label: '歌名 - 歌手' }, { value: 'title', label: '歌名' }]}
-              />
-            </Row>
-            <Row title="同时下载歌词" description="保存为同名 .lrc 文件，其他播放器也能识别">
-              <Switch checked={dl?.lyrics ?? false} onChange={value => void downloads.updateSettings({ lyrics: value })} label="同时下载歌词" />
-            </Row>
-            <Row title="允许下载试听片段" description="作为下载弹窗的默认选项；仅有试听权限时保存片段，并在文件名标注“试听”">
-              <Switch checked={dl?.allowTrial ?? false} onChange={value => void downloads.updateSettings({ allowTrial: value })} label="允许下载试听片段" />
-            </Row>
-            <Row title="同时下载数量">
-              <Segmented value={dl?.concurrency ?? 2} onChange={value => void downloads.updateSettings({ concurrency: value })} label="同时下载数量" options={[1, 2, 3, 5].map(value => ({ value, label: String(value) }))} />
-            </Row>
-          </Section>
-
-          {/* ───────── 本地与数据 ───────── */}
-          <Section id="library" icon={<HardDrive size={17} strokeWidth={1.6} />} title="本地与数据" description="本地音乐、播放记录与应用数据">
-            <Row title="本地音乐文件夹" description="管理已添加的文件夹和重新扫描">
-              <Button icon={<Music4 size={15} strokeWidth={1.5} />} onClick={() => navigate({ name: 'local' })}>前往本地音乐</Button>
-            </Row>
-            <Row title="记录搜索历史" description="关闭后不再保存新的搜索关键词">
-              <Switch checked={s.rememberSearches} onChange={value => { settings.set('rememberSearches', value); if (!value) searchHistory.clear(); }} label="记录搜索历史" />
-            </Row>
-            <Row title="搜索历史" description="仅保存在本机，最多 12 条">
-              <Button icon={<Trash2 size={15} strokeWidth={1.5} />} onClick={() => { searchHistory.clear(); toast.info('搜索历史已清空'); }}>清空</Button>
-            </Row>
-            <Row title="最近播放记录" description="仅保存在本机，最多 300 首">
-              <Button icon={<Trash2 size={15} strokeWidth={1.5} />} onClick={() => setConfirm('recent')}>清空</Button>
-            </Row>
-            <Row title="应用数据" description={app.result ? <span className={styles.path} data-tooltip={app.result.info.dataDir}>{app.result.info.dataDir}</span> : '登录信息、本地曲库索引与下载记录都保存在这里'}>
-              <Button icon={<FolderOpen size={15} strokeWidth={1.5} />} onClick={() => window.coco?.app?.openDataFolder()} disabled={!desktop}>打开文件夹</Button>
-            </Row>
-            <Row title="恢复全部默认设置" description="外观、播放、歌词等设置回到初始状态，不影响登录、曲库与下载">
-              <Button icon={<Gauge size={15} strokeWidth={1.5} />} onClick={() => setConfirm('all')}>恢复默认</Button>
-            </Row>
-          </Section>
-
-          {/* ───────── 快捷键 ───────── */}
-          <Section id="shortcuts" icon={<Keyboard size={17} strokeWidth={1.6} />} title="快捷键" description="应用内快捷键与系统全局快捷键" onReset={() => settings.reset(keysOf('appShortcuts', 'seekStep'))}>
-            <Row title="应用内快捷键" description="窗口处于前台时生效">
-              <Switch checked={s.appShortcuts} onChange={set('appShortcuts')} label="应用内快捷键" />
-            </Row>
-            <div className={cn(styles.shortcuts, !s.appShortcuts && styles.rowDisabled)}>
-              {[['播放 / 暂停', 'Space'], ['上一首', `${mod()} ←`], ['下一首', `${mod()} →`], ...(s.seekStep ? [[`快退 ${s.seekStep} 秒`, '←'], [`快进 ${s.seekStep} 秒`, '→']] : []), ['音量加', `${mod()} ↑`], ['音量减', `${mod()} ↓`], ['关闭歌词页 / 弹窗', 'Esc']].map(([label, key]) => (
-                <div key={label} className={styles.shortcut}><span>{label}</span><Kbd>{key}</Kbd></div>
-              ))}
-            </div>
-            <Row title="快进快退" description="按 ← / → 在当前歌曲内跳转的秒数" disabled={!s.appShortcuts}>
-              <Segmented value={s.seekStep} onChange={set('seekStep')} label="快进快退" options={[{ value: 0, label: '关闭' }, { value: 5, label: '5 秒' }, { value: 10, label: '10 秒' }, { value: 15, label: '15 秒' }, { value: 30, label: '30 秒' }]} />
-            </Row>
-            <Row
-              title="全局快捷键"
-              description={desktop ? (conflicts.length ? `以下组合已被其他应用占用：${conflicts.map(item => accelerator(item.accelerator)).join('、')}` : '应用在后台时也能控制播放') : '需要在桌面客户端中使用'}
-              disabled={!desktop}
-            >
-              <Switch checked={Boolean(app.result?.settings.globalShortcuts)} onChange={value => void app.update({ globalShortcuts: value })} label="全局快捷键" disabled={!desktop} />
-            </Row>
-            {app.result && (
-              <div className={cn(styles.shortcuts, !app.result.settings.globalShortcuts && styles.rowDisabled)}>
-                {app.result.shortcuts.map(item => (
-                  <div key={item.accelerator} className={cn(styles.shortcut, item.conflict && styles.conflict)}><span>{item.label}</span><Kbd>{accelerator(item.accelerator)}</Kbd></div>
-                ))}
-              </div>
-            )}
-          </Section>
-
-          {/* ───────── 系统 ───────── */}
-          <Section id="system" icon={<AppWindow size={17} strokeWidth={1.6} />} title="系统" description="启动、关闭与通知">
-            <Row title="开机自动启动" description={loginSupported ? '登录系统后自动打开 CoCo Music' : desktop ? '需要安装后的正式版应用（开发模式下不可用）' : '需要在桌面客户端中使用'} disabled={!loginSupported}>
-              <Switch checked={Boolean(app.result?.settings.openAtLogin)} onChange={value => void app.update({ openAtLogin: value })} label="开机自动启动" disabled={!loginSupported} />
-            </Row>
-            <Row title="关闭主窗口时" description={isMac() ? '“后台播放”时窗口隐藏，点击程序坞或菜单栏图标可恢复' : '“后台播放”时窗口收进系统托盘，音乐继续播放；关闭托盘图标时改为最小化'} disabled={!desktop}>
-              <Segmented value={app.result?.settings.closeBehavior ?? 'minimize'} onChange={value => void app.update({ closeBehavior: value })} label="关闭主窗口时" options={[{ value: 'quit', label: '退出应用' }, { value: 'minimize', label: '后台播放' }]} />
-            </Row>
-            <Row
-              title={isMac() ? '菜单栏图标' : '系统托盘图标'}
-              description={isMac() ? '右上角菜单栏显示图标，点按可控制播放；关闭窗口后也能从这里找回' : '任务栏通知区域显示图标，右键可控制播放；关闭窗口后台播放时从这里找回'}
-              disabled={!desktop}
-            >
-              <Switch checked={s.showTray} onChange={set('showTray')} label={isMac() ? '菜单栏图标' : '系统托盘图标'} disabled={!desktop} />
-            </Row>
-            {isMac() && (
-              <Row title="菜单栏歌词" description="播放时在菜单栏图标旁滚动显示当前这句歌词" disabled={!desktop || !s.showTray}>
-                <Switch checked={s.trayLyrics} onChange={set('trayLyrics')} label="菜单栏歌词" disabled={!desktop || !s.showTray} />
-              </Row>
-            )}
-            {isMac() && (
-              <Row title="菜单栏文字颜色" description="菜单栏随壁纸变深时用白色；“跟随系统”在系统深色模式下用白色、浅色模式下用黑色" disabled={!desktop || !s.showTray || !s.trayLyrics}>
-                <Segmented value={s.menuBarText} onChange={set('menuBarText')} label="菜单栏文字颜色" options={[{ value: 'white', label: '白色' }, { value: 'black', label: '黑色' }, { value: 'auto', label: '跟随系统' }]} />
-              </Row>
-            )}
-            <Row title="窗口标题显示歌曲" description="任务栏、程序坞窗口列表和切换窗口时显示正在播放的歌曲">
-              <Switch checked={s.titleShowsTrack} onChange={set('titleShowsTrack')} label="窗口标题显示歌曲" />
-            </Row>
-            <Row title="切歌通知" description="窗口不在前台时，切换歌曲显示一条提示">
-              <Switch checked={s.toastOnTrackChange} onChange={set('toastOnTrackChange')} label="切歌通知" />
-            </Row>
-          </Section>
-
-          {/* ───────── 更新 ───────── */}
-          <Section id="updates" icon={<CircleArrowUp size={17} strokeWidth={1.6} />} title="更新" description="从 GitHub Releases 获取新版本与更新日志">
-            <UpdateStatusRow state={update} />
-            <Row title="自动检查更新" description="启动后和每隔 6 小时检查，发现新版本时弹窗，由你选择下载或跳过" disabled={!update}>
-              <Switch checked={Boolean(update?.settings.autoCheck)} onChange={value => void updates.setSettings({ autoCheck: value })} label="自动检查更新" disabled={!update} />
-            </Row>
-            <Row title="更新渠道" description="预览版包含尚在测试的新功能，可能不够稳定" disabled={!update}>
-              <Segmented value={update?.settings.channel ?? 'stable'} onChange={value => void updates.setSettings({ channel: value })} label="更新渠道" options={[{ value: 'stable', label: '正式版' }, { value: 'beta', label: '预览版' }]} />
-            </Row>
-            <Row title="更新日志" description="每个版本的新功能、改进与修复">
-              <Button icon={<ScrollText size={15} strokeWidth={1.5} />} onClick={() => updateDialog.show('changelog')} disabled={!update}>查看</Button>
-            </Row>
-          </Section>
-
-          {/* ───────── 关于 ───────── */}
-          <Section id="about" icon={<Info size={17} strokeWidth={1.6} />} title="关于">
-            <div className={styles.about}>
-              <img src="/images/logo.svg?v=wisteria-v1" alt="" width={52} height={52} />
-              <div>
-                <strong>CoCo Music</strong>
-                <span>{app.result ? `版本 ${app.result.info.version}${app.result.info.packaged ? '' : '（开发模式）'}` : '网页预览模式'}</span>
-              </div>
-            </div>
-            {app.result && (
-              <dl className={styles.facts}>
-                <div><dt>系统</dt><dd>{({ darwin: 'macOS', win32: 'Windows', linux: 'Linux' } as Record<string, string>)[app.result.info.platform] ?? app.result.info.platform} · {app.result.info.arch}</dd></div>
-                <div><dt>Electron</dt><dd>{app.result.info.electron}</dd></div>
-                <div><dt>Chromium</dt><dd>{app.result.info.chrome}</dd></div>
-                <div><dt>Node.js</dt><dd>{app.result.info.node}</dd></div>
-              </dl>
-            )}
-            <Row title={<span className={styles.speaker}><MonitorSpeaker size={14} strokeWidth={1.6} />开源许可</span>} description="本项目采用 GPL-3.0 许可；音乐内容版权归各平台及权利人所有">
-              <Button onClick={() => window.open('https://github.com/markcxx/cocomusic', '_blank', 'noopener')}>GitHub</Button>
-            </Row>
-          </Section>
+          <CatalogSection />
+          <AppearanceSection app={app} />
+          <PlaybackSection />
+          <LyricsSection />
+          <DesktopLyricsSection />
+          {/* Windows only: transparent lyrics docked in the taskbar. */}
+          {isDesktop() && !isMac() && app.result?.info.platform === 'win32' && <TaskbarLyricsSection />}
+          <MiniSection />
+          <DownloadsSection />
+          <LibrarySection app={app} />
+          <ShortcutsSection app={app} />
+          <SystemSection app={app} />
+          <UpdatesSection />
+          <AboutSection app={app} />
         </div>
       </div>
-
-      <ConfirmDialog
-        open={confirm === 'recent'}
-        onClose={() => setConfirm(null)}
-        title="清空最近播放"
-        tone="danger"
-        confirmLabel="清空"
-        message="将删除本机上的全部播放记录。"
-        onConfirm={() => { recentPlays.clear(); toast.info('播放记录已清空'); }}
-      />
-      <ConfirmDialog
-        open={confirm === 'all'}
-        onClose={() => setConfirm(null)}
-        title="恢复全部默认设置"
-        confirmLabel="恢复"
-        message="外观、播放、歌词、桌面歌词、迷你模式和快捷键设置将回到初始状态。"
-        onConfirm={() => { settings.reset(); toast.success('已恢复默认设置'); }}
-      />
     </Page>
   );
 }

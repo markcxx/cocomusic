@@ -1,15 +1,15 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 22px 24px;
+  gap: var(--space-6) var(--space-6);
 }
 
 .artists {
-  gap: 16px 24px;
+  gap: var(--space-4) var(--space-6);
 }
 
 @media (max-width: 1300px) {
   .grid {
-    gap: 18px 16px;
+    gap: var(--space-5) var(--space-4);
   }
 }

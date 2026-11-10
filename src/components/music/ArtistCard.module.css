@@ -3,9 +3,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
-  padding: 8px 4px 12px;
+  padding: var(--space-2) var(--space-1) var(--space-3);
   border: 0;
   background: transparent;
 }
@@ -14,7 +14,7 @@
   position: relative;
   width: 100%;
   max-width: 150px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   overflow: hidden;
   border-radius: 50%;
   box-shadow: 0 8px 20px rgba(var(--ink-rgb), 0.12);
@@ -58,7 +58,7 @@
 }
 
 .artist strong {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
   transition: color 180ms ease;
@@ -69,6 +69,6 @@
 }
 
 .meta {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }

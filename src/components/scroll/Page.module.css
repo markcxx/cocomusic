@@ -1,17 +1,12 @@
 .page {
-  --page-gap: 24px;
+  --page-gap: var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--page-gap);
-  padding: 22px 28px 32px;
+  padding: var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
 }
 
 .tight {
-  --page-gap: 16px;
+  --page-gap: var(--space-4);
 }
 
-@media (max-width: 1300px) {
-  .page {
-    padding: 18px 22px 28px;
-  }
-}

@@ -1,7 +1,7 @@
 .eq {
   display: inline-flex;
   align-items: flex-end;
-  gap: 2px;
+  gap: var(--space-0_5);
   width: 14px;
   height: 14px;
 }
@@ -9,7 +9,7 @@
 .eq i {
   flex: 1;
   height: 100%;
-  border-radius: 1px;
+  border-radius: var(--radius-2xs);
   background: currentColor;
   transform-origin: bottom;
   animation: bounce 900ms ease-in-out infinite;

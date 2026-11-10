@@ -2,13 +2,13 @@
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   align-items: start;
-  gap: 12px;
-  font-size: 14px;
+  gap: var(--space-3);
+  font-size: var(--fs-lg);
 }
 
 .label {
   padding-top: 5px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
 }
 
@@ -25,11 +25,11 @@
 .choices {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px 6px;
+  gap: var(--space-1) var(--space-1_5);
 }
 
 .area:has(.more) .viewport > .choices {
-  padding-right: 64px;
+  padding-right: var(--space-16);
 }
 
 /* Hidden twin used only to measure natural option widths. */
@@ -54,11 +54,11 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 4px 12px;
+  padding: var(--space-1) var(--space-3);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   line-height: 22px;
   color: var(--text);
   isolation: isolate;
@@ -100,11 +100,11 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 3px 6px;
+  padding: 3px var(--space-1_5);
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
   transition: color 160ms ease, background-color 160ms ease;
 }

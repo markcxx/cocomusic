@@ -24,7 +24,7 @@
   width: 100%;
   height: var(--rail);
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(var(--accent-strong-rgb), 0.16);
   transition: height 180ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease;
 }
@@ -85,11 +85,11 @@
 .tooltip {
   position: absolute;
   bottom: calc(100% + 6px);
-  padding: 3px 8px;
-  border-radius: 8px;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-md);
   background: var(--popover-solid);
   box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--glass-edge);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   color: var(--text-strong);
   white-space: nowrap;

@@ -12,8 +12,8 @@
 .dialog {
   position: relative;
   width: min(420px, calc(100vw - 48px));
-  padding: 24px;
-  border-radius: 22px;
+  padding: var(--space-6);
+  border-radius: var(--radius-4xl);
   background: var(--popover);
   box-shadow: inset 0 0 0 1px var(--glass-edge), 0 30px 80px rgba(var(--ink-rgb), 0.25);
   backdrop-filter: blur(30px) saturate(1.5);
@@ -21,8 +21,8 @@
 }
 
 .title {
-  margin: 0 0 4px;
-  font-size: 18px;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-3xl);
   font-weight: 500;
   color: var(--text-strong);
 }
@@ -38,19 +38,19 @@
 .body {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 16px;
+  gap: var(--space-3_5);
+  margin-top: var(--space-4);
 }
 
 .message {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   line-height: 1.7;
   color: var(--text);
 }
 
 .error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--danger);
 }
 
@@ -58,8 +58,8 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 6px;
+  gap: var(--space-2_5);
+  margin-top: var(--space-1_5);
 }
 
 /* One size for both buttons so the pair lines up exactly. */
@@ -67,13 +67,13 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   min-width: 84px;
   height: 36px;
-  padding: 0 18px;
+  padding: 0 var(--space-5);
   border: 0;
-  border-radius: 999px;
-  font-size: 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-lg);
   line-height: 1;
   white-space: nowrap;
   transition: background-color 180ms ease, color 180ms ease, box-shadow 200ms ease, transform 120ms ease;

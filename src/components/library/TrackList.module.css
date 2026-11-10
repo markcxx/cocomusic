@@ -6,19 +6,19 @@
   display: grid;
   grid-template-columns: 40px minmax(0, 2.4fr) minmax(0, 1.3fr) 56px 100px;
   align-items: center;
-  gap: 14px;
-  padding: 0 12px;
+  gap: var(--space-3_5);
+  padding: 0 var(--space-3);
 }
 
 .head {
   height: 34px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
 .song {
   height: 58px;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   transition: background-color 180ms ease, box-shadow 200ms ease;
 }
 
@@ -39,7 +39,7 @@
 .index {
   display: flex;
   justify-content: center;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
@@ -50,7 +50,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  padding: 0 0 0 2px;
+  padding: 0 0 0 var(--space-0_5);
   border: 0;
   border-radius: 50%;
   background: var(--accent-tint);
@@ -69,7 +69,7 @@
 .identity {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-width: 0;
 }
 
@@ -81,7 +81,7 @@
 
 .names strong {
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -95,9 +95,9 @@
 .names > span {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
@@ -114,7 +114,7 @@
 
 .meta {
   overflow: hidden;
-  font-size: 13px;
+  font-size: var(--fs-md);
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--text-secondary);
@@ -126,7 +126,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   white-space: nowrap;
   text-overflow: ellipsis;
   color: inherit;
@@ -137,7 +137,7 @@
 }
 
 .duration {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-variant-numeric: tabular-nums;
   text-align: right;
   color: var(--text-muted);
@@ -146,7 +146,7 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
+  gap: var(--space-0_5);
   opacity: 0;
   transition: opacity 160ms ease;
 }
@@ -160,9 +160,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   padding: 72px 0;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-muted);
   text-align: center;
 }

@@ -1,12 +1,12 @@
 .error {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 16px 18px;
+  gap: var(--space-2_5);
+  padding: var(--space-4) var(--space-5);
   border-radius: var(--radius-card);
   background: var(--chip);
   box-shadow: inset 0 0 0 1px var(--glass-edge);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text);
 }
 
@@ -17,13 +17,13 @@
 .error button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   margin-left: auto;
-  padding: 6px 12px;
+  padding: var(--space-1_5) var(--space-3);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: var(--accent-tint);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--accent-strong);
   transition: background-color 180ms ease;
 }
@@ -40,9 +40,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 96px 0;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
 }
 
@@ -50,7 +50,7 @@
   position: relative;
   display: block;
   overflow: hidden;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: rgba(var(--accent-rgb), 0.12);
 }
 

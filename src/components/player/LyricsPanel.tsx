@@ -9,7 +9,7 @@ import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { useTrackLyrics } from './use-track-lyrics';
-import styles from './LyricsDrawer.module.css';
+import styles from './LyricsLines.module.css';
 
 /** Lead so a line lights up as it starts, not a frame late (also hides decode latency). */
 const LEAD_SECONDS = 0.25;
@@ -38,7 +38,8 @@ const LineList = memo(function LineList({ lines, active, synced, onSeek, transla
  * While the pointer is over the column, auto-scroll pauses so the user can browse
  * (and click a line to seek); on leave it glides back to the current line.
  */
-export function LyricsPanel() {
+/** `centered` forces centred lines (歌词 layout) regardless of 设置 › 歌词页 › 对齐. */
+export function LyricsPanel({ centered = false }: { centered?: boolean }) {
   const { track, trial, seek } = usePlayer();
   const songId = track.localId ?? track.songId;
   const lyrics = useTrackLyrics(track);
@@ -122,7 +123,7 @@ export function LyricsPanel() {
   return (
     <div
       ref={container}
-      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced, prefs.lyricsBlurInactive && styles.blurInactive, prefs.lyricsAlign === 'center' && styles.centered)}
+      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced, prefs.lyricsBlurInactive && styles.blurInactive, (centered || prefs.lyricsAlign === 'center') && styles.centered)}
       style={{ '--lyric-size': `${prefs.lyricsFontSize}px` } as React.CSSProperties}
       // Own scroller: wheel browses lyrics, and chains to the page (comments) at either end.
       data-scroll-native

@@ -1,7 +1,7 @@
 .hero {
   position: relative;
-  margin: -22px -28px 0;
-  padding: 32px 28px 12px;
+  margin: calc(-1 * var(--page-pad-top)) calc(-1 * var(--page-pad-x)) 0;
+  padding: var(--space-8) var(--page-pad-x) var(--space-3);
   overflow: hidden;
 }
 
@@ -25,7 +25,7 @@
   position: relative;
   display: flex;
   align-items: flex-start;
-  gap: 32px;
+  gap: var(--space-8);
 }
 
 .avatarWrap {
@@ -44,19 +44,19 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   min-width: 0;
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 
 .eyebrow {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
 .meta h1 {
   margin: 0;
-  font-size: 32px;
+  font-size: var(--fs-display);
   font-weight: 500;
   line-height: 42px;
   color: var(--text-strong);
@@ -68,20 +68,20 @@
 }
 
 .alias {
-  margin: -4px 0 0;
-  font-size: 13px;
+  margin: calc(-1 * var(--space-1)) 0 0;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
 .stats {
   display: flex;
-  gap: 18px;
-  font-size: 12px;
+  gap: var(--space-5);
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
 .stats strong {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
 }
@@ -94,20 +94,19 @@
   margin: 0;
   line-height: 22px;
   max-width: 760px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
 .actions {
   display: flex;
-  gap: 10px;
-  margin-top: 6px;
+  gap: var(--space-2_5);
+  margin-top: var(--space-1_5);
 }
 
 @media (max-width: 1300px) {
   .hero {
-    margin: -18px -22px 0;
-    padding: 26px 22px 12px;
+    padding: var(--space-7) var(--page-pad-x) var(--space-3);
   }
 
   .avatar {
@@ -116,15 +115,15 @@
   }
 }
 
-.biography { display: flex; flex-direction: column; gap: 28px; max-width: 900px; padding: 16px 4px 32px; }
-.biography section { padding: 22px 26px; border: 1px solid var(--glass-edge); border-radius: 20px; background: var(--chip); }
-.biography h2 { display: flex; align-items: center; gap: 9px; margin: 0 0 14px; font-size: 17px; font-weight: 500; color: var(--text-strong); }
-.biography p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; font-size: 14px; line-height: 2; color: var(--text-secondary); }
-.bioSkeleton { width: 100%; height: 150px; border-radius: 20px; }
-.empty { padding: 60px 16px; text-align: center; font-size: 13px; color: var(--text-secondary); }
+.biography { display: flex; flex-direction: column; gap: var(--space-7); max-width: 900px; padding: var(--space-4) var(--space-1) var(--space-8); }
+.biography section { padding: var(--space-6) var(--space-7); border: 1px solid var(--glass-edge); border-radius: var(--radius-4xl); background: var(--chip); }
+.biography h2 { display: flex; align-items: center; gap: 9px; margin: 0 0 var(--space-3_5); font-size: var(--fs-3xl); font-weight: 500; color: var(--text-strong); }
+.biography p { margin: 0; white-space: pre-line; overflow-wrap: anywhere; font-size: var(--fs-lg); line-height: 2; color: var(--text-secondary); }
+.bioSkeleton { width: 100%; height: 150px; border-radius: var(--radius-4xl); }
+.empty { padding: 60px var(--space-4); text-align: center; font-size: var(--fs-md); color: var(--text-secondary); }
 @media (max-width: 800px) {
-  .heroContent { gap: 20px; }
+  .heroContent { gap: var(--space-5); }
   .avatar { width: 120px; height: 120px; }
-  .meta h1 { font-size: 26px; line-height: 34px; }
+  .meta h1 { font-size: var(--fs-title); line-height: 34px; }
   .actions { flex-wrap: wrap; }
 }

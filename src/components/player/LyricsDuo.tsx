@@ -6,7 +6,7 @@ import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
 import { usePlaybackPosition, usePlayer } from './player-store';
 import { useTrackLyrics } from './use-track-lyrics';
-import styles from './LyricsDrawer.module.css';
+import styles from './LyricsLines.module.css';
 
 const LEAD_SECONDS = 0.25;
 

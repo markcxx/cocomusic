@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   height: 56px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   -webkit-app-region: drag;
 }
 
@@ -34,7 +34,7 @@
   height: 30px;
   padding: 0;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--text-muted);
   opacity: 0;
@@ -57,14 +57,14 @@
 /* Traffic lights occupy the top-left 14px inset row; drop the brand just below them. */
 :global(html[data-platform='darwin']) .brand {
   height: 50px;
-  margin-top: 22px;
+  margin-top: var(--space-6);
 }
 
 .scroll {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 8px 0;
+  padding: var(--space-2) 0;
   scrollbar-width: none;
 }
 
@@ -73,14 +73,14 @@
 }
 
 .group + .group {
-  margin-top: 16px;
+  margin-top: var(--space-4);
 }
 
 /* Gap keeps adjacent hover/active backgrounds visually separate. */
 .items {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .groupLabel {
@@ -91,9 +91,9 @@
   align-items: center;
   justify-content: space-between;
   height: 28px;
-  margin: 0 0 4px;
-  padding: 0 10px 0 16px;
-  font-size: 12px;
+  margin: 0 0 var(--space-1);
+  padding: 0 var(--space-2_5) 0 var(--space-4);
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--text-muted);
 }
@@ -106,7 +106,7 @@
   height: 22px;
   padding: 0;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   transition: background-color 160ms ease, color 160ms ease;
@@ -123,14 +123,14 @@
   overflow: hidden;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
   height: 40px;
-  padding: 0 14px;
+  padding: 0 var(--space-3_5);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   background: transparent;
-  font-size: 15px;
+  font-size: var(--fs-xl);
   color: var(--text-strong);
   text-align: left;
   isolation: isolate;
@@ -183,8 +183,8 @@
 }
 
 .playlistItem {
-  padding-left: 12px;
-  font-size: 14px;
+  padding-left: var(--space-3);
+  font-size: var(--fs-lg);
   color: var(--text);
 }
 
@@ -213,7 +213,7 @@
 /* Group titles fold away; a hairline marks the section break instead. */
 .collapsed .groupLabel {
   height: 1px;
-  margin: 8px 18px;
+  margin: var(--space-2) var(--space-5);
   padding: 0;
   background: rgba(var(--accent-strong-rgb), 0.12);
   opacity: 1;

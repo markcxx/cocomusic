@@ -5,13 +5,13 @@
   z-index: 300;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   max-width: 280px;
-  padding: 5px 10px;
-  border-radius: 8px;
+  padding: 5px var(--space-2_5);
+  border-radius: var(--radius-md);
   background: var(--bg);
   box-shadow: 0 8px 24px rgba(var(--ink-rgb), 0.22), 0 0 0 0.5px rgba(255, 255, 255, 0.08) inset;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   color: var(--fg);
   pointer-events: none;
@@ -39,10 +39,10 @@
 
 .shortcut {
   padding: 0 5px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--fg) 14%, transparent);
   font-family: inherit;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   line-height: 16px;
   opacity: 0.85;
 }
@@ -53,7 +53,7 @@
   width: 8px;
   height: 8px;
   background: var(--bg);
-  border-radius: 1.5px;
+  border-radius: var(--radius-2xs);
   rotate: 45deg;
 }
 

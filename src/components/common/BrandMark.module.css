@@ -1,13 +1,13 @@
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2_5);
 }
 
 .logo {
   width: 34px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: var(--radius-md);
   transition: transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -16,7 +16,7 @@
 }
 
 .wordmark {
-  font-size: 28px;
+  font-size: var(--fs-title-lg);
   line-height: 1;
   letter-spacing: 0;
   color: var(--accent-strong);

@@ -1,29 +1,29 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .count {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
 }
 
 .count small {
-  margin-left: 4px;
-  font-size: 12px;
+  margin-left: var(--space-1);
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--text-muted);
 }
 
 .count .matches {
-  margin-left: 10px;
+  margin-left: var(--space-2_5);
   color: var(--accent-strong);
 }
 
 .selectHint {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 

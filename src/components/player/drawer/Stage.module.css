@@ -1,0 +1,169 @@
+.stage {
+  display: grid;
+  /* Artwork column a little narrower and the left padding smaller: art sits further left. */
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+  align-items: center;
+  gap: 72px;
+  height: 100%;
+  min-height: 420px;
+  padding: 0 6vw var(--space-3) 4vw;
+  transform-origin: center top;
+}
+
+.art {
+  justify-self: center;
+  width: min(360px, 30vw);
+}
+
+/* ───────── 布局: 居中 / 歌词 ───────── */
+
+/* 居中: one column — artwork (with title) above, two lyric lines below. */
+.stageCentered {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-7);
+  padding: 0 8vw var(--space-7);
+}
+
+.stageCentered .art {
+  align-self: end;
+  width: min(300px, 34vh, 30vw);
+}
+
+/* 歌词: the lyric column alone, centred and a little wider. */
+.stageLyrics {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  padding: 0 10vw var(--space-3);
+}
+
+.stageLyrics .lyrics {
+  width: 100%;
+  max-width: 760px;
+}
+
+.centeredMeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-6);
+  text-align: center;
+}
+
+.centeredMeta strong {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--fs-heading);
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.centeredMeta small {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-md);
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.duoWrap {
+  width: 100%;
+  max-width: 760px;
+}
+
+/* 经典唱片: a bigger disc than the square cover. */
+.record {
+  position: relative;
+  width: 112%;
+  margin: 0 -6%;
+}
+
+/*
+ * Effects around the artwork: a round cover a little smaller than the square
+ * one, so the effect ring (RING_SCALE × the cover) still fits the column.
+ */
+.disc {
+  position: relative;
+  width: 84%;
+  margin: 0 auto;
+}
+
+.discCover {
+  width: 100%;
+  box-shadow: 0 0 0 6px rgba(0, 0, 0, 0.22), 0 26px 56px rgba(0, 0, 0, 0.4);
+}
+
+.artCover {
+  width: 100%;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.35);
+  transition: transform 600ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 600ms ease;
+}
+
+.artPaused {
+  transform: scale(0.94);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.3);
+}
+
+.lyrics {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  max-width: 560px;
+  padding-top: var(--space-2);
+}
+
+/* Title and artist centred over the lyric column (in every layout). */
+.heading {
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.heading p {
+  justify-content: center;
+}
+
+.heading h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-title-lg);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.heading p {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1_5) 0 0;
+  font-size: var(--fs-lg);
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.artSpin {
+  border-radius: 50%;
+  box-shadow: 0 0 0 10px rgba(0, 0, 0, 0.28), 0 30px 60px rgba(0, 0, 0, 0.35);
+  animation: artSpin 24s linear infinite;
+  animation-play-state: paused;
+}
+
+.artSpinning {
+  animation-play-state: running;
+}
+
+@keyframes artSpin {
+  to { rotate: 360deg; }
+}
+
+.roamingStage { height: 100%; min-height: 0; transform-origin: center top; }
+
+@media (prefers-reduced-motion: reduce) {
+  .artCover {
+    transition: none;
+  }
+}

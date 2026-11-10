@@ -1,55 +1,55 @@
 .tabsBar {
-  margin-top: -10px;
+  margin-top: calc(-1 * var(--space-2_5));
 }
 
 .panel {
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: var(--space-7);
 }
 
 .section {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-3_5);
 }
 
 .playlistGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 22px 24px;
+  gap: var(--space-6) var(--space-6);
 }
 
 .trackGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px 16px;
+  gap: var(--space-1) var(--space-4);
 }
 
 .chartGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 24px;
+  gap: var(--space-6);
 }
 
 .artistGrid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 16px 24px;
+  gap: var(--space-4) var(--space-6);
 }
 
 /* Skeletons mirror final layout so content lands without shifting. */
 .skeletonCover {
   aspect-ratio: 1;
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: var(--space-2_5);
   border-radius: var(--radius-cover);
 }
 
 .skeletonLine {
   height: 12px;
   width: 80%;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1_5);
 }
 
 .skeletonLineShort {
@@ -60,9 +60,9 @@
 .skeletonTrack {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   height: 64px;
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .skeletonTrack > div {
@@ -83,7 +83,7 @@
   aspect-ratio: 1;
   width: 100%;
   max-width: 150px;
-  margin: 12px auto 48px;
+  margin: var(--space-3) auto var(--space-12);
   border-radius: 50%;
 }
 
@@ -91,14 +91,14 @@
 @media (max-width: 1300px) {
   .playlistGrid,
   .artistGrid {
-    gap: 18px 16px;
+    gap: var(--space-5) var(--space-4);
   }
 
   .trackGrid {
-    column-gap: 10px;
+    column-gap: var(--space-2_5);
   }
 
   .chartGrid {
-    gap: 16px;
+    gap: var(--space-4);
   }
 }

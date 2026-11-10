@@ -59,7 +59,7 @@
   width: 52px;
   height: 52px;
   margin: -26px 0 0 -26px;
-  padding: 0 0 0 2px;
+  padding: 0 0 0 var(--space-0_5);
   border: 0;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.92);
@@ -78,7 +78,7 @@
   position: absolute;
   inset: auto 0 0;
   z-index: 3;
-  padding: 36px 18px 10px;
+  padding: var(--space-10) var(--space-5) var(--space-2_5);
   background: linear-gradient(to top, rgba(6, 6, 12, 0.78), rgba(6, 6, 12, 0.42) 55%, transparent);
   color: rgba(255, 255, 255, 0.86);
   transition: opacity 280ms ease, transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -93,12 +93,12 @@
 .controlRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   min-height: 40px;
 }
 
 .time {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.92);
   white-space: nowrap;
@@ -111,7 +111,7 @@
 .tools {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   margin-left: auto;
 }
 
@@ -120,10 +120,10 @@
 }
 
 .menuButton.menuButton {
-  gap: 4px;
+  gap: var(--space-1);
   height: 30px;
-  padding: 0 10px;
-  font-size: 12px;
+  padding: 0 var(--space-2_5);
+  font-size: var(--fs-sm);
   color: rgba(255, 255, 255, 0.82);
 }
 
@@ -143,16 +143,16 @@
 }
 
 .player:fullscreen .chrome {
-  padding: 48px 32px 18px;
+  padding: var(--space-12) var(--space-8) var(--space-5);
 }
 
 @media (max-width: 700px) {
   .chrome {
-    padding: 28px 10px 6px;
+    padding: var(--space-7) var(--space-2_5) var(--space-1_5);
   }
 
   .controlRow {
-    gap: 8px;
+    gap: var(--space-2);
   }
 
   .tools {
@@ -160,6 +160,6 @@
   }
 
   .menuButton.menuButton {
-    padding: 0 6px;
+    padding: 0 var(--space-1_5);
   }
 }

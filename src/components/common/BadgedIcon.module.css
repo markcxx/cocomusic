@@ -33,7 +33,7 @@
   position: absolute;
   top: -4px;
   left: 58%;
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   line-height: 1;
   letter-spacing: -0.2px;

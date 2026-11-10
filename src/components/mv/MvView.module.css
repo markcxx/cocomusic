@@ -3,8 +3,8 @@
 .hero {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 2px 2px;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-0_5) var(--space-0_5);
 }
 
 .cover {
@@ -16,21 +16,21 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .titleRow {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-2_5);
   min-width: 0;
 }
 
 .titleRow h1 {
   margin: 0;
   overflow: hidden;
-  font-size: 22px;
+  font-size: var(--fs-title-sm);
   font-weight: 500;
   line-height: 32px;
   white-space: nowrap;
@@ -45,11 +45,11 @@
 
 .badge {
   flex-shrink: 0;
-  padding: 1px 6px;
-  border-radius: 5px;
+  padding: 1px var(--space-1_5);
+  border-radius: var(--radius-xs);
   background: var(--accent-tint);
   box-shadow: inset 0 0 0 1px var(--glass-edge);
-  font-size: 10px;
+  font-size: var(--fs-2xs);
   font-weight: 600;
   line-height: 16px;
   color: var(--accent-strong);
@@ -59,12 +59,12 @@
   display: flex;
   flex-wrap: wrap;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
 .meta span + span::before {
-  margin: 0 8px;
+  margin: 0 var(--space-2);
   color: var(--text-muted);
   content: '·';
 }
@@ -73,7 +73,7 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
 }
 
 /* ───────── Comments ───────── */
@@ -81,21 +81,21 @@
 .commentsBar {
   display: flex;
   align-items: center;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .commentsTitle {
   display: inline-flex;
   align-items: baseline;
-  gap: 6px;
-  font-size: 15px;
+  gap: var(--space-1_5);
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
   white-space: nowrap;
 }
 
 .commentsTitle em {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-style: normal;
   font-weight: 400;
   color: var(--text-muted);
@@ -111,8 +111,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px;
+  gap: var(--space-2_5);
+  padding: var(--space-5);
   background: radial-gradient(circle at 50% 40%, rgba(var(--accent-rgb), 0.18), transparent 60%), #0d0d14;
   text-align: center;
   color: rgba(255, 255, 255, 0.86);
@@ -123,22 +123,22 @@
   place-items: center;
   width: 52px;
   height: 52px;
-  border-radius: 16px;
+  border-radius: var(--radius-3xl);
   background: rgba(255, 255, 255, 0.08);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   color: #fff;
 }
 
 .state strong {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: #fff;
 }
 
 .state p {
   max-width: 360px;
-  margin: 0 0 4px;
-  font-size: 12px;
+  margin: 0 0 var(--space-1);
+  font-size: var(--fs-sm);
   line-height: 1.6;
   color: rgba(255, 255, 255, 0.64);
 }
@@ -149,6 +149,6 @@
   }
 
   .titleRow h1 {
-    font-size: 18px;
+    font-size: var(--fs-3xl);
   }
 }

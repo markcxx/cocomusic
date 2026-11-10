@@ -1,7 +1,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
 }
 
@@ -31,7 +31,7 @@
 }
 
 .label {
-  font-size: 12.5px;
+  font-size: var(--fs-md);
   transition: color 160ms ease;
 }
 
@@ -50,7 +50,7 @@
   width: 100%;
   aspect-ratio: 16 / 10;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
   box-shadow: 0 0 0 1px var(--glass-edge), 0 4px 12px rgba(var(--ink-rgb), 0.08);
   transition: transform 180ms ease, box-shadow 180ms ease;
 }

@@ -35,7 +35,7 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   width: 100%;
 }
 
@@ -43,9 +43,9 @@
   display: flex;
   flex: 1;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-muted);
 }
 
@@ -60,7 +60,7 @@
 .list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -70,10 +70,10 @@
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) 200px 120px;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3_5);
   min-height: 60px;
-  padding: 8px 12px;
-  border-radius: 12px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-xl);
   transition: background-color 160ms ease;
 }
 
@@ -95,21 +95,21 @@
 }
 
 .names strong {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 500;
   color: var(--text-strong);
 }
 
 .names span {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
 .state {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-1_5);
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
@@ -117,7 +117,7 @@
   position: relative;
   height: 4px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: rgba(var(--accent-strong-rgb), 0.14);
 }
 
@@ -151,14 +151,14 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   padding: 72px 0;
   text-align: center;
 }
@@ -170,7 +170,7 @@
   justify-content: center;
   width: 64px;
   height: 64px;
-  margin-bottom: 8px;
+  margin-bottom: var(--space-2);
   border-radius: 50%;
   background: var(--accent-tint);
   box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.08);
@@ -179,23 +179,23 @@
 
 .empty p {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
 }
 
 .empty > span:not(.emptyIcon) {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-muted);
 }
 
 .emptyLink {
-  margin-top: 6px;
-  padding: 4px 10px;
+  margin-top: var(--space-1_5);
+  padding: var(--space-1) var(--space-2_5);
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--accent-strong);
   transition: background-color 160ms ease;
 }
@@ -205,11 +205,11 @@
 }
 
 .trialTag {
-  margin-left: 6px;
-  padding: 0 6px;
-  border-radius: 4px;
+  margin-left: var(--space-1_5);
+  padding: 0 var(--space-1_5);
+  border-radius: var(--radius-xs);
   background: rgba(224, 160, 64, 0.16);
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-style: normal;
   color: #b7791f;
 }

@@ -4,10 +4,10 @@
   align-items: center;
   gap: 7px;
   height: 36px;
-  padding: 0 16px;
+  padding: 0 var(--space-4);
   border: 0;
-  border-radius: 999px;
-  font-size: 14px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-lg);
   white-space: nowrap;
   transition: background-color 200ms ease, color 200ms ease, box-shadow 220ms ease;
 }
@@ -40,9 +40,9 @@
 
 .ghost {
   height: 30px;
-  padding: 0 10px;
+  padding: 0 var(--space-2_5);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 

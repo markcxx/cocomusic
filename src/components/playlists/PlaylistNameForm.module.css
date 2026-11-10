@@ -1,8 +1,8 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 14px;
-  margin-top: 16px;
+  gap: var(--space-3_5);
+  margin-top: var(--space-4);
 }
 
 .field {
@@ -14,13 +14,13 @@
 .field input {
   width: 100%;
   height: 42px;
-  padding: 0 52px 0 14px;
+  padding: 0 var(--space-12) 0 var(--space-3_5);
   border: 0;
-  border-radius: 12px;
+  border-radius: var(--radius-xl);
   outline: 0;
   background: var(--field);
   box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.18);
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-strong);
   transition: box-shadow 180ms ease;
 }
@@ -32,7 +32,7 @@
 .counter {
   position: absolute;
   right: 12px;
-  font-size: 11px;
+  font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
@@ -41,20 +41,20 @@
 .option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: var(--space-2);
+  font-size: var(--fs-md);
   color: var(--text);
   cursor: pointer;
 }
 
 .note {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
 .error {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--danger);
 }

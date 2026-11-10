@@ -1,24 +1,24 @@
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .count {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
 }
 
 .count small {
-  margin-left: 4px;
-  font-size: 12px;
+  margin-left: var(--space-1);
+  font-size: var(--fs-sm);
   font-weight: 400;
   color: var(--text-muted);
 }
 
 .count .matches {
-  margin-left: 10px;
+  margin-left: var(--space-2_5);
   color: var(--accent-strong);
 }
 
@@ -31,20 +31,20 @@
 .folders {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .folder {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1_5);
   max-width: 320px;
   height: 30px;
-  padding: 0 4px 0 10px;
-  border-radius: 999px;
+  padding: 0 var(--space-1) 0 var(--space-2_5);
+  border-radius: var(--radius-pill);
   background: var(--hover);
   box-shadow: inset 0 0 0 1px var(--glass-edge);
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 
@@ -70,18 +70,18 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--space-2_5);
   border: 2px dashed var(--accent);
-  border-radius: 24px;
+  border-radius: var(--radius-sheet);
   background: var(--popover);
-  font-size: 16px;
+  font-size: var(--fs-2xl);
   color: var(--accent-strong);
   pointer-events: none;
   backdrop-filter: blur(8px);
 }
 
 .dropZone span {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
@@ -89,15 +89,15 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 64px 24px;
+  gap: var(--space-2_5);
+  padding: var(--space-16) var(--space-6);
   text-align: center;
   color: var(--text-muted);
 }
 
 .emptyLocal h2 {
-  margin: 6px 0 0;
-  font-size: 17px;
+  margin: var(--space-1_5) 0 0;
+  font-size: var(--fs-3xl);
   font-weight: 500;
   color: var(--text-strong);
 }
@@ -105,20 +105,20 @@
 .emptyLocal p {
   max-width: 420px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-md);
   line-height: 1.7;
 }
 
 .emptyActions {
   display: flex;
-  gap: 10px;
-  margin-top: 8px;
+  gap: var(--space-2_5);
+  margin-top: var(--space-2);
 }
 
 .scanning {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: var(--space-1_5);
+  font-size: var(--fs-sm);
   color: var(--accent-strong);
 }

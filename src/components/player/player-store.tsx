@@ -1,7 +1,5 @@
 'use client';
 
-import { persistentStorage } from '@/lib/persistent-storage';
-
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
 import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
@@ -14,121 +12,20 @@ import { needsSamples, settings as appSettings, useSettings } from '@/lib/settin
 import { useLatest } from '@/lib/use-latest';
 import { requestKugouVerification } from '@/lib/kugou-verification';
 import { isPlayable, type Track } from '@/types/music';
-import { broadcastPlayer } from './player-broadcast';
+import { playModeLabels, playModes, randomOtherIndex, type PlayMode } from './play-mode';
+import { DEFAULT_VOLUME, readMode, readVolume, saveMode, saveVolume } from './player-prefs';
+import type { PlaybackStatus, PlayerState } from './player-types';
+import { usePlayerIntegrations } from './use-player-integrations';
+import { rampVolume } from './volume-ramp';
 import { hasGraph, setGraphOutputDevice } from './visualizer/audio-graph';
 
-/** One cycling control: list loop → shuffle → single loop → in order (stops at the end). */
-export type PlayMode = 'loop' | 'shuffle' | 'one' | 'order';
-export const playModes: readonly PlayMode[] = ['loop', 'shuffle', 'one', 'order'];
-export const playModeLabels: Record<PlayMode, string> = { loop: '列表循环', shuffle: '随机播放', one: '单曲循环', order: '顺序播放' };
-/** idle: nothing playable selected · loading: fetching URL or buffering · ready · error: this track failed. */
-export type PlaybackStatus = 'idle' | 'loading' | 'ready' | 'error';
-
-type PlayerState = {
-  track: Track;
-  queue: Track[];
-  /** Desired state: true while playing or about to (loading). */
-  playing: boolean;
-  status: PlaybackStatus;
-  /** Seconds of the loaded stream (the clip length for previews). */
-  duration: number;
-  /** Set when only a preview clip plays; lyric time = position + trial.start. */
-  trial?: SongSource['trial'];
-  /** Quality level of the loaded online stream (standard / exhigh / lossless…). */
-  level?: string;
-  /** Re-fetch the current song's stream (e.g. after changing quality), keeping the position. */
-  reloadStream: () => void;
-  /** The playback element (read-only use, e.g. the audio visualizer). */
-  audioElement: () => HTMLAudioElement | null;
-  /**
-   * MV and music are exclusive: the video calls `openMv` when it starts (music pauses),
-   * `closeMv` when its page goes away (music resumes if it was playing the same track).
-   */
-  openMv: () => void;
-  closeMv: () => void;
-  setMvMedia: (media: HTMLVideoElement | null) => void;
-  volume: number;
-  mode: PlayMode;
-  lyricsOpen: boolean;
-  queueOpen: boolean;
-  togglePlay: () => void;
-  play: (track: Track, queue?: Track[]) => void;
-  /**
-   * Double-click on a list row, per 设置 › 播放 › 双击歌曲: replace the queue with
-   * the list (default), or only insert this song after the current one.
-   */
-  playFromList: (track: Track, list: Track[]) => void;
-  /** Append to the end of the play queue (skips tracks already queued). */
-  enqueue: (tracks: Track[]) => void;
-  /** Ids of the live queue joined by "|" (read now, not at render), to tell whether it changed. */
-  queueIds: () => string;
-  /** Insert right after the current track (下一首播放); moves it if already queued. */
-  playNext: (tracks: Track[]) => void;
-  /** Remove from the queue; removing the playing track moves on to the next. */
-  removeFromQueue: (id: string) => void;
-  /** Move a queued track to another position (drag reorder). */
-  moveInQueue: (id: string, toIndex: number) => void;
-  /** Empty the queue and stop. */
-  clearQueue: () => void;
-  previous: () => void;
-  next: () => void;
-  /** Seconds within the loaded stream. */
-  seek: (seconds: number) => void;
-  setVolume: (volume: number) => void;
-  toggleMute: () => void;
-  /** Advance to the next play mode. */
-  cycleMode: () => void;
-  /** Pick a play mode directly (Dock / tray menu). */
-  setMode: (mode: PlayMode) => void;
-  openLyrics: () => void;
-  closeLyrics: () => void;
-  setQueueOpen: (open: boolean) => void;
-};
+export { playModeLabels, playModes, type PlayMode } from './play-mode';
+export type { PlaybackStatus } from './player-types';
 
 const PlayerContext = createContext<PlayerState | null>(null);
 // Position changes every frame; isolating it keeps the rest of the UI from re-rendering at 60fps.
 const PositionContext = createContext(0);
 
-/** Uniform pick among the other `length - 1` positions (shuffle never repeats the current song). */
-function randomOtherIndex(current: number, length: number) {
-  const pick = Math.floor(Math.random() * (length - 1));
-  return current >= 0 && pick >= current ? pick + 1 : pick;
-}
-
-/**
- * Ramp the element's volume over `ms` (ease-in-out), cancelling a previous ramp.
- * Returns the cancel function; `done` runs when the ramp completes.
- */
-function rampVolume(audio: HTMLAudioElement, from: number, to: number, ms: number, previous: (() => void) | null, done?: () => void) {
-  previous?.();
-  let frame = 0;
-  const started = performance.now();
-  audio.volume = Math.max(0, Math.min(1, from));
-  const tick = (now: number) => {
-    const t = Math.min(1, (now - started) / ms);
-    const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-    audio.volume = Math.max(0, Math.min(1, from + (to - from) * eased));
-    if (t < 1) frame = requestAnimationFrame(tick);
-    else done?.();
-  };
-  frame = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(frame);
-}
-
-const VOLUME_KEY = 'coco:volume';
-const MODE_KEY = 'coco:play-mode';
-const readStored = (key: string) => {
-  try { return persistentStorage.getItem(key); } catch { return null; }
-};
-const readVolume = () => {
-  const raw = readStored(VOLUME_KEY);
-  const value = Number(raw);
-  return raw !== null && Number.isFinite(value) && value >= 0 && value <= 1 ? value : 0.62;
-};
-const readMode = (): PlayMode => {
-  const raw = readStored(MODE_KEY);
-  return playModes.includes(raw as PlayMode) ? (raw as PlayMode) : 'loop';
-};
 /** Queue saves are coalesced: a burst of edits (drag reorder, 加入队列 clicks) is one write. */
 const QUEUE_SAVE_DELAY_MS = 600;
 
@@ -152,8 +49,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [mediaDuration, setMediaDuration] = useState<number>();
   const [trial, setTrial] = useState<SongSource['trial']>();
   const [level, setLevel] = useState<string>();
-  const [volume, setVolumeState] = useState(0.62);
-  const lastVolume = useRef(0.62);
+  const [volume, setVolumeState] = useState(DEFAULT_VOLUME);
+  const lastVolume = useRef(DEFAULT_VOLUME);
   const [mode, setMode] = useState<PlayMode>('loop');
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const [queueOpen, setQueueOpen] = useState(false);
@@ -243,7 +140,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   // then the queue the app server keeps.
   useEffect(() => {
     const saved = readVolume();
-    lastVolume.current = saved || 0.62;
+    lastVolume.current = saved || DEFAULT_VOLUME;
     let cancelled = false;
     const timer = setTimeout(() => {
       setVolumeState(saved);
@@ -274,7 +171,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!restored) return;
-    try { persistentStorage.setItem(MODE_KEY, mode); } catch { /* storage unavailable */ }
+    saveMode(mode);
   }, [mode, restored]);
 
   useEffect(() => {
@@ -300,7 +197,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (audioRef.current && fade.current && latest.current.playing) { fade.current(); fade.current = null; }
     if (audioRef.current && !fade.current) audioRef.current.volume = volume;
     if (!restored) return;
-    try { persistentStorage.setItem(VOLUME_KEY, String(volume)); } catch { /* storage unavailable */ }
+    saveVolume(volume);
   }, [volume, latest, restored]);
 
   // Load the stream whenever a track is (re)selected: local file, or a fresh catalog URL.
@@ -581,7 +478,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setPosition(element.currentTime);
       },
       setVolume: next => { if (next > 0) lastVolume.current = next; setVolumeState(next); if (mvMedia.current && mvMedia.current.volume !== next) mvMedia.current.volume = next; },
-      toggleMute: () => setVolumeState(current => (current > 0 ? 0 : lastVolume.current || 0.62)),
+      toggleMute: () => setVolumeState(current => (current > 0 ? 0 : lastVolume.current || DEFAULT_VOLUME)),
       cycleMode: () => {
         // Side effect stays outside the updater (updaters may run twice in strict mode).
         const next = playModes[(playModes.indexOf(mode) + 1) % playModes.length];
@@ -597,105 +494,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queue, track, playing, status, trial, level, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
-  // System media controls (keyboard media keys, OS now-playing panels).
-  const controls = useLatest(value);
-  /** Shortcuts and system controls pause/resume whatever is playing: the MV while one is open. */
-  const toggleActive = () => {
-    const video = mvSession.current && mvMedia.current;
-    if (!video) { controls.current.togglePlay(); return; }
-    if (video.paused) void video.play().catch(() => {}); else video.pause();
-  };
-  useEffect(() => {
-    if (!('mediaSession' in navigator) || !isPlayable(track)) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.title,
-      artist: track.artist,
-      album: track.album ?? '',
-      artwork: track.cover ? [{ src: new URL(track.cover, window.location.href).href, sizes: '200x200' }] : [],
-    });
-    const handlers: Array<[MediaSessionAction, () => void]> = [
-      ['play', () => { if (mvSession.current) { void mvMedia.current?.play().catch(() => {}); return; } if (!controls.current.playing) controls.current.togglePlay(); }],
-      ['pause', () => { if (mvSession.current) { mvMedia.current?.pause(); return; } if (controls.current.playing) controls.current.togglePlay(); }],
-      ['previoustrack', () => controls.current.previous()],
-      ['nexttrack', () => controls.current.next()],
-    ];
-    for (const [action, handler] of handlers) {
-      try { navigator.mediaSession.setActionHandler(action, handler); } catch { /* unsupported action */ }
-    }
-  }, [track, controls]);
-
-  // Desktop lyrics window and other views follow playback over a broadcast channel.
-  useEffect(() => { broadcastPlayer.publishTrack(track, trial); }, [track, trial]);
-
-  // 设置 › 系统 › 窗口标题显示歌曲: taskbar / Dock window menu show what is playing.
-  const titleShowsTrack = prefs.titleShowsTrack;
-  useEffect(() => {
-    document.title = titleShowsTrack && isPlayable(track) ? `${track.title} - ${track.artist} · CoCo Music` : 'CoCo Music';
-  }, [titleShowsTrack, track]);
-  useEffect(() => { broadcastPlayer.publishClock(position, playing); }, [position, playing]);
-  useEffect(() => broadcastPlayer.onCommand(command => {
-    if (command === 'toggle') toggleActive();
-    else if (command === 'next') controls.current.next();
-    else if (command === 'previous') controls.current.previous();
-    else if (command === 'sync') broadcastPlayer.publishTrack(controls.current.track, controls.current.trial, true);
-    // toggleActive only reads refs.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [controls]);
-
-  // In-app shortcuts (设置 › 快捷键): Space play/pause; ⌘/Ctrl + ←/→ previous/next; ⌘/Ctrl + ↑/↓ volume.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (!appSettings.get().appShortcuts || event.repeat || event.altKey) return;
-      const target = event.target as HTMLElement | null;
-      const typing = target?.closest('input, textarea, select, [contenteditable="true"]');
-      const combo = (event.metaKey || event.ctrlKey) && !event.shiftKey;
-      if (combo && !typing) {
-        const player = controls.current;
-        const actions: Record<string, () => void> = {
-          ArrowRight: player.next,
-          ArrowLeft: player.previous,
-          ArrowUp: () => player.setVolume(Math.min(1, Math.round((player.volume + 0.05) * 100) / 100)),
-          ArrowDown: () => player.setVolume(Math.max(0, Math.round((player.volume - 0.05) * 100) / 100)),
-        };
-        const action = actions[event.key];
-        if (action) { event.preventDefault(); action(); }
-        return;
-      }
-      // ← / → (no modifier): skip within the song by 设置 › 快捷键 › 快进快退.
-      const step = appSettings.get().seekStep;
-      if (step && !typing && !event.metaKey && !event.ctrlKey && !event.shiftKey && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) {
-        if (target?.closest('[role="slider"], [role="menu"], [role="listbox"], [role="radiogroup"]')) return;
-        const delta = event.key === 'ArrowRight' ? step : -step;
-        const video = mvSession.current && mvMedia.current;
-        if (video) { event.preventDefault(); video.currentTime = Math.max(0, Math.min(video.duration || 0, video.currentTime + delta)); return; }
-        const audio = audioRef.current;
-        if (!audio?.getAttribute('src')) return;
-        event.preventDefault();
-        controls.current.seek(audio.currentTime + delta);
-        return;
-      }
-      if (event.code !== 'Space' || event.metaKey || event.ctrlKey) return;
-      // Modal dialogs own the keyboard, except surfaces of the player itself (lyrics page).
-      if (typing || target?.closest('button, [role="slider"], [role="menu"], [role="dialog"]:not([data-player-surface])')) return;
-      event.preventDefault();
-      toggleActive();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [controls]);
-
-  // System-wide shortcuts registered by the main process (设置 › 快捷键 › 全局快捷键).
-  useEffect(() => window.coco?.app?.onShortcut(action => {
-    const player = controls.current;
-    if (action === 'toggle') toggleActive();
-    else if (action === 'next') player.next();
-    else if (action === 'previous') player.previous();
-    else if (action === 'volume-up') player.setVolume(Math.min(1, Math.round((player.volume + 0.05) * 100) / 100));
-    else if (action === 'volume-down') player.setVolume(Math.max(0, Math.round((player.volume - 0.05) * 100) / 100));
-    else if (action === 'lyrics') window.coco?.lyrics?.setDesktop('toggle');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [controls]);
+  usePlayerIntegrations(value, position, { audioRef, mvMedia, mvSession });
 
   return (
     <PlayerContext.Provider value={value}>

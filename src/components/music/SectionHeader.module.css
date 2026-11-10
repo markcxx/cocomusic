@@ -2,12 +2,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: var(--fs-heading);
   font-weight: 500;
   line-height: 28px;
   color: var(--text-strong);
@@ -16,18 +16,18 @@
 .side {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .action {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 6px 4px 8px;
+  gap: var(--space-0_5);
+  padding: var(--space-1) var(--space-1_5) var(--space-1) var(--space-2);
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: transparent;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-secondary);
   transition: color 160ms ease, background-color 160ms ease;
 }

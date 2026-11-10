@@ -3,25 +3,25 @@
 }
 
 .heading {
-  margin: 4px 0 10px;
-  font-size: 13px;
+  margin: var(--space-1) 0 var(--space-2_5);
+  font-size: var(--fs-md);
   color: var(--text-secondary);
 }
 
 .cards {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: var(--space-3_5);
 }
 
 .card {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--space-3_5);
   min-width: 0;
-  padding: 12px 14px 12px 12px;
+  padding: var(--space-3) var(--space-3_5) var(--space-3) var(--space-3);
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-2xl);
   background: var(--card);
   box-shadow: inset 0 0 0 1px var(--glass-edge);
   text-align: left;
@@ -37,12 +37,12 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--space-0_5);
   min-width: 0;
 }
 
 .text small {
-  font-size: 11px;
+  font-size: var(--fs-xs);
   color: var(--accent-strong);
 }
 
@@ -54,13 +54,13 @@
 }
 
 .text strong {
-  font-size: 15px;
+  font-size: var(--fs-xl);
   font-weight: 500;
   color: var(--text-strong);
 }
 
 .text span {
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--text-secondary);
 }
 

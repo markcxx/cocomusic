@@ -14,7 +14,7 @@
 .badged {
   justify-content: flex-start;
   width: 52px;
-  padding: 0 0 0 8px;
+  padding: 0 0 0 var(--space-2);
 }
 
 .button.button:hover:not(:disabled),

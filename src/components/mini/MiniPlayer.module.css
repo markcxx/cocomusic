@@ -9,8 +9,8 @@
   z-index: 400;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 0 12px 0 14px;
+  gap: var(--space-3);
+  padding: 0 var(--space-3) 0 var(--space-3_5);
   overflow: hidden;
   background: #241e3a;
   color: #fff;
@@ -22,7 +22,7 @@
   inset: 12px auto auto 12px;
   width: 440px;
   height: 96px;
-  border-radius: 20px;
+  border-radius: var(--radius-4xl);
   box-shadow: 0 16px 40px rgba(30, 20, 70, 0.3);
 }
 
@@ -112,7 +112,7 @@
 
 .meta strong {
   overflow: hidden;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -129,7 +129,7 @@
   position: absolute;
   inset: 0;
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   line-height: 18px;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -148,7 +148,7 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 2px;
+  gap: var(--space-0_5);
 }
 
 .secondary {
@@ -172,7 +172,7 @@
   justify-content: center;
   width: 44px;
   height: 44px;
-  margin: 0 2px;
+  margin: 0 var(--space-0_5);
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -237,7 +237,7 @@
 .windowButtons button {
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
 }
 
 .shell:hover .windowButtons,

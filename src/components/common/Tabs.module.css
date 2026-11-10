@@ -1,20 +1,20 @@
 .tabs {
   display: flex;
-  gap: 28px;
+  gap: var(--space-7);
 }
 
 .tab {
   position: relative;
-  padding: 2px 0 9px;
+  padding: var(--space-0_5) 0 9px;
   border: 0;
   background: transparent;
-  font-size: 15px;
+  font-size: var(--fs-xl);
   color: var(--text-secondary);
   transition: color 180ms ease;
 }
 
 .small .tab {
-  font-size: 14px;
+  font-size: var(--fs-lg);
 }
 
 .tab:hover {
@@ -32,6 +32,6 @@
   bottom: 0;
   left: 18%;
   height: 2.5px;
-  border-radius: 2px;
+  border-radius: var(--radius-2xs);
   background: var(--accent);
 }
