@@ -72,6 +72,12 @@ export interface Settings {
   /** 0–60 px backdrop blur behind panels. */
   glassBlur: number;
   accent: AccentColor;
+  /** The theme colour follows the playing song's cover (the accent above is the fallback). */
+  accentFollowsCover: boolean;
+  /** 0–40 px blur of the custom background image (毛玻璃 style). */
+  backdropBlur: number;
+  /** 0–70 %: veil over the custom background image, for legibility. */
+  backdropDim: number;
   /** Turn off non-essential animation regardless of the OS setting. */
   reduceMotion: boolean;
   /** UI zoom, percent. */
@@ -178,6 +184,9 @@ export const DEFAULT_SETTINGS: Settings = {
   glassOpacity: 50,
   glassBlur: 36,
   accent: '#9b87bf',
+  accentFollowsCover: false,
+  backdropBlur: 12,
+  backdropDim: 20,
   reduceMotion: false,
   zoom: 100,
 
@@ -280,7 +289,7 @@ const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
   conceptAutoCheckIn: bool,
   themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'none'), windowOpacity: num(0, 100),
-  glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
+  glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,

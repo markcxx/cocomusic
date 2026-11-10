@@ -139,6 +139,7 @@
 
   /* Drawn backdrop strength (设置 › 外观 › 窗口不透明度). 1 = solid app background. */
   --window-opacity: 1;
+  --backdrop-veil-rgb: 255, 255, 255;
 
   --font-sans: "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC",
     "Noto Sans SC", system-ui, sans-serif;
@@ -156,6 +157,7 @@
 
 html[data-color-scheme='dark'] {
   color-scheme: dark;
+  --backdrop-veil-rgb: 0, 0, 0;
 
   --surface-rgb: 34, 31, 50;
   --surface-pinned-rgb: 30, 27, 44;
@@ -244,6 +246,19 @@ body {
   opacity: var(--window-opacity);
   content: '';
   animation: drift 40s ease-in-out infinite alternate;
+}
+
+/*
+ * 换肤 › 背景图: the chosen picture replaces the colour fields (still blurred by --backdrop-image-blur),
+ * under a veil (--backdrop-image-dim) in the scheme's own tone so panel text stays legible.
+ */
+html[data-backdrop-image='true'] .backdrop::before {
+  inset: -3%;
+  background:
+    linear-gradient(rgba(var(--backdrop-veil-rgb), var(--backdrop-image-dim)), rgba(var(--backdrop-veil-rgb), var(--backdrop-image-dim))),
+    var(--backdrop-image) center / cover no-repeat;
+  filter: blur(var(--backdrop-image-blur));
+  animation: none;
 }
 
 /* Grain keeps large flat areas from looking like plastic. */

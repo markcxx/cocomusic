@@ -1,11 +1,12 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, CircleArrowUp, PictureInPicture2, Palette, Settings } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CircleArrowUp, PictureInPicture2, Settings } from 'lucide-react';
 import { AccountButton } from '@/components/account/AccountButton';
 import { SearchBox } from '@/components/search/SearchBox';
 import { updateDialog, useUpdateState } from '@/components/updates/update-store';
 import { IconButton } from '@/components/ui';
 import { useNavigation } from './navigation';
+import { SkinPopover } from '@/components/skin/SkinPopover';
 import { WindowControls } from './WindowControls';
 import styles from './TopBar.module.css';
 
@@ -31,9 +32,7 @@ export function TopBar() {
       <div className={styles.actions}>
         <AccountButton />
         <span className={styles.divider} aria-hidden />
-        <IconButton label="换肤" iconHover={{ rotate: -14, scale: 1.1 }}>
-          <Palette size={18} strokeWidth={1.4} />
-        </IconButton>
+        <SkinPopover />
         <IconButton label="迷你模式" iconHover={{ scale: 0.9, y: 1 }} onClick={() => window.coco?.window.toggleMini()}>
           <PictureInPicture2 size={18} strokeWidth={1.4} />
         </IconButton>

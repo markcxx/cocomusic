@@ -201,6 +201,7 @@ export function ThemeColorControl({ value, presets, onChange, label = '主题色
           {open && (
             <motion.div
               ref={panel}
+              data-popover-nested
               className={styles.popover}
               role="dialog"
               aria-label={`自定义${label}`}

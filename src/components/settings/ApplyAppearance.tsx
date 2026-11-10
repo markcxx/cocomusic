@@ -2,7 +2,9 @@
 
 import { MotionConfig } from 'framer-motion';
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useBackdropImage } from '@/lib/backdrop-image';
 import { accentPalette, surfacePalette } from '@/lib/color';
+import { useCoverAccent } from '@/lib/cover-accent';
 import { isFlatStyle, useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
@@ -165,8 +167,9 @@ export function useResolvedScheme(): 'light' | 'dark' {
   return themeMode === 'system' ? (systemDark ? 'dark' : 'light') : themeMode;
 }
 
-export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'light' | 'dark' } = {}) {
+export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'light' | 'dark'; accent?: string } = {}) {
   const s = useSettings();
+  const accent = options.accent ?? s.accent;
   const resolved = useResolvedScheme();
   const scheme = options.scheme ?? resolved;
   const notifyMain = options.notifyMain ?? false;
@@ -178,7 +181,7 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'li
   }, [scheme, s.themeMode, notifyMain]);
 
   useEffect(() => {
-    const palette = accentPalette(s.accent, scheme);
+    const palette = accentPalette(accent, scheme);
     const root = document.documentElement.style;
     root.setProperty('--accent', palette.accent);
     root.setProperty('--accent-strong', palette.strong);
@@ -187,16 +190,20 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'li
     root.setProperty('--accent-rgb', palette.accentRgb);
     root.setProperty('--accent-strong-rgb', palette.strongRgb);
     root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
-    for (const [name, value] of Object.entries(surfacePalette(s.accent, scheme))) {
+    for (const [name, value] of Object.entries(surfacePalette(accent, scheme))) {
       root.setProperty(name, value);
     }
-  }, [s.accent, scheme]);
+  }, [accent, scheme]);
   return scheme;
 }
 
 export function ApplyAppearance({ children }: { children: ReactNode }) {
   const s = useSettings();
-  const scheme = useSchemeAndAccent({ notifyMain: true });
+  // 跟随封面: the colour of the playing song's cover stands in for the chosen theme colour.
+  const coverAccent = useCoverAccent();
+  const accent = s.accentFollowsCover && coverAccent ? coverAccent : s.accent;
+  const scheme = useSchemeAndAccent({ notifyMain: true, accent });
+  const image = useBackdropImage();
 
 
   // Whole window: OS material (desktop only) + how much the app paints over it.
@@ -220,7 +227,7 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
       return;
     }
     // Back from a flat style: restore the theme-tinted tones it overwrote.
-    for (const [name, value] of Object.entries(surfacePalette(s.accent, scheme))) html.style.setProperty(name, value);
+    for (const [name, value] of Object.entries(surfacePalette(accent, scheme))) html.style.setProperty(name, value);
     // Without a material there is nothing behind the window to reveal; stay opaque.
     const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
     html.style.setProperty('--window-opacity', String(opacity));
@@ -230,7 +237,18 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
       html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * panelFactor).toFixed(3)})`);
     }
     html.style.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-  }, [scheme, s.accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
+  }, [scheme, accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
+
+  // 换肤 › 背景图: drawn by the 毛玻璃 style's backdrop; the flat styles paint plain surfaces and ignore it.
+  const showImage = Boolean(image) && !isFlatStyle(s.windowEffect);
+  useEffect(() => {
+    const html = document.documentElement;
+    html.dataset.backdropImage = showImage ? 'true' : 'false';
+    if (showImage) html.style.setProperty('--backdrop-image', `url("${image}")`);
+    else html.style.removeProperty('--backdrop-image');
+    html.style.setProperty('--backdrop-image-blur', `${s.backdropBlur}px`);
+    html.style.setProperty('--backdrop-image-dim', String(s.backdropDim / 100));
+  }, [showImage, image, s.backdropBlur, s.backdropDim]);
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';

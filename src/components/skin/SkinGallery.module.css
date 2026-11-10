@@ -1,0 +1,126 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2_5);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1_5);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+}
+
+.tile:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.tile:focus-visible {
+  outline: none;
+}
+
+.tile:focus-visible .preview {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.preview {
+  --sk-panel: rgba(255, 255, 255, 0.55);
+  --sk-line: rgba(60, 50, 110, 0.2);
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(60% 70% at 15% 20%, rgba(var(--sk-a), 0.95), transparent 70%),
+    radial-gradient(55% 65% at 85% 25%, rgba(var(--sk-b), 0.9), transparent 70%),
+    radial-gradient(60% 70% at 70% 90%, rgba(var(--sk-c), 0.85), transparent 70%),
+    radial-gradient(50% 55% at 20% 95%, rgba(var(--sk-d), 0.8), transparent 70%),
+    var(--sk-base);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.dark {
+  --sk-panel: rgba(34, 31, 50, 0.6);
+  --sk-line: rgba(255, 255, 255, 0.2);
+}
+
+.tile:hover:not(:disabled) .preview {
+  transform: translateY(-1px);
+}
+
+.on .preview {
+  box-shadow: 0 0 0 2px var(--accent-strong);
+}
+
+.on {
+  color: var(--text-strong);
+}
+
+/* A miniature app window: nav rail, content sheet with two lines, accent-coloured player bar. */
+.window {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 24% 1fr;
+  grid-template-rows: 1fr 20%;
+}
+
+.rail {
+  display: block;
+  margin: 12% 0 0 18%;
+  height: 4px;
+  width: 50%;
+  border-radius: 2px;
+  background: var(--sk-line);
+}
+
+.sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10% 0 0;
+  padding: 12% 10% 0;
+  border-radius: 6px 0 0;
+  background: var(--sk-panel);
+}
+
+.sheet b {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sk-line);
+}
+
+.sheet b:first-child {
+  width: 50%;
+  background: var(--sk-accent);
+}
+
+.bar {
+  grid-column: 1 / -1;
+  background: var(--sk-panel);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.check {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
+}

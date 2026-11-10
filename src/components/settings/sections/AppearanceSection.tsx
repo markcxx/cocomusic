@@ -1,13 +1,13 @@
 'use client';
 
-import { Palette } from 'lucide-react';
+import { AppWindow, Blend, Droplets, Layers, Palette, SunMoon, Wind, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui';
 import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
 import { useResolvedScheme } from '../ApplyAppearance';
 import { ChoiceTiles } from '../ChoiceTiles';
 import { WindowSketch } from '../WindowSketch';
-import { Range, Row, Section, Segmented, Switch } from '../controls';
+import { ChoiceExpander, Range, Row, Section, Switch } from '../controls';
 import { isDesktop, isMac, keysOf, setter, type AppSettings } from '../shared';
 import styles from '../Settings.module.css';
 
@@ -37,7 +37,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
   };
   return (
     <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口效果、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
-      <Row title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical>
+      <Row icon={<SunMoon size={16} strokeWidth={1.5} />} title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical>
         {/* Each tile previews the window effect chosen below, in that scheme. */}
         <ChoiceTiles
           value={s.themeMode}
@@ -51,6 +51,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
 
       <div className={styles.groupLabel}>窗口</div>
       <Row
+        icon={<AppWindow size={16} strokeWidth={1.5} />}
         title="窗口效果"
         description={WINDOW_EFFECT_HINTS[shownEffect] ?? WINDOW_EFFECT_HINTS.none}
         vertical
@@ -81,6 +82,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
       )}
       {!isFlatStyle(s.windowEffect) && <>
       <Row
+        icon={<Blend size={16} strokeWidth={1.5} />}
         title="窗口不透明度"
         description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}
         disabled={!desktop || s.windowEffect === 'none'}
@@ -89,22 +91,20 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
       </Row>
 
       <div className={styles.groupLabel}>面板毛玻璃</div>
-      <Row title="面板不透明度" description="内容区、播放栏和卡片的透明程度">
+      <Row icon={<Layers size={16} strokeWidth={1.5} />} title="面板不透明度" description="内容区、播放栏和卡片的透明程度">
         <Range value={s.glassOpacity} max={100} onChange={setter('glassOpacity')} label="面板不透明度" format={value => `${value}%`} />
       </Row>
-      <Row title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
+      <Row icon={<Droplets size={16} strokeWidth={1.5} />} title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
         <Range value={s.glassBlur} max={60} step={2} onChange={setter('glassBlur')} label="面板模糊" format={value => `${value}px`} />
       </Row>
       </>}
 
       <div className={styles.groupLabel}>颜色与显示</div>
-      <Row title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>
+      <Row icon={<Palette size={16} strokeWidth={1.5} />} title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>
         <ThemeColorControl value={s.accent} presets={ACCENT_PRESETS} onChange={setter('accent')} />
       </Row>
-      <Row title="界面缩放" description="整体放大或缩小界面">
-        <Segmented value={s.zoom} onChange={setter('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />
-      </Row>
-      <Row title="减弱动态效果" description="关闭页面过渡、旋转唱片等动画；系统开启“减弱动态效果”时会自动生效">
+      <ChoiceExpander icon={<ZoomIn size={16} strokeWidth={1.5} />} title="界面缩放" description="整体放大或缩小界面" value={s.zoom} onChange={setter('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />
+      <Row icon={<Wind size={16} strokeWidth={1.5} />} title="减弱动态效果" description="关闭页面过渡、旋转唱片等动画；系统开启“减弱动态效果”时会自动生效">
         <Switch checked={s.reduceMotion} onChange={setter('reduceMotion')} label="减弱动态效果" />
       </Row>
     </Section>

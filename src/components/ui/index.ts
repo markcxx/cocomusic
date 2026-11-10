@@ -6,5 +6,6 @@ export { ListFooter, Spinner } from './Spinner';
 export { Dialog } from './Dialog';
 export { ConfirmDialog, DialogActions } from './ConfirmDialog';
 export { Menu, type MenuItem } from './Menu';
+export { Popover } from './Popover';
 export { TooltipLayer } from './Tooltip';
 export { toast, Toaster } from './toast';

@@ -13,6 +13,14 @@ export const QUALITIES: ReadonlyArray<{ value: AudioQuality; label: string; hint
 export const keysOf = (...keys: Array<keyof Settings>) => keys;
 export const isMac = () => typeof window !== 'undefined' && window.coco?.platform === 'darwin';
 export const isDesktop = () => typeof window !== 'undefined' && Boolean(window.coco);
+/**
+ * Pick a 窗口效果. A window created see-through (透明) stays so until restart, so the main
+ * process is told whether the next launch should be transparent.
+ */
+export const chooseWindowEffect = (effect: Settings['windowEffect']) => {
+  settings.set('windowEffect', effect);
+  return window.coco?.app?.setSettings({ transparentWindow: effect === 'transparent' });
+};
 export const setter = <K extends keyof Settings>(key: K) => (value: Settings[K]) => settings.set(key, value);
 
 /** Main-process settings (desktop only). */

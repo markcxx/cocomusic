@@ -588,3 +588,331 @@
   font-size: var(--fs-md);
   color: var(--text-strong);
 }
+
+/* ───────── Fluent: Windows 11 Settings layout ───────── */
+/* Every row is its own card (WinUI SettingsCard) with a 2px gap; group titles are a single quiet line. */
+
+.switchWrap {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.switchState {
+  display: none;
+}
+
+:global(html[data-ui-style='fluent']) .switchState {
+  display: inline;
+  min-width: 14px;
+  font-size: var(--fs-lg);
+  color: var(--text);
+}
+
+:global(html[data-ui-style='fluent']) .hero h1 {
+  font-weight: 600;
+}
+
+:global(html[data-ui-style='fluent']) .sections {
+  gap: var(--space-6);
+}
+
+:global(html[data-ui-style='fluent']) .sectionHeader {
+  margin-bottom: var(--space-2);
+}
+
+:global(html[data-ui-style='fluent']) .sectionIcon,
+:global(html[data-ui-style='fluent']) .sectionHeader p {
+  display: none;
+}
+
+:global(html[data-ui-style='fluent']) .sectionHeader h2 {
+  font-size: var(--fs-lg);
+  font-weight: 600;
+}
+
+:global(html[data-ui-style='fluent']) .reset {
+  color: var(--text-secondary);
+}
+
+:global(html[data-ui-style='fluent']) .reset:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
+:global(html[data-ui-style='fluent']) .card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-0_5);
+  overflow: visible;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+:global(html[data-ui-style='fluent']) .row,
+:global(html[data-ui-style='fluent']) .shortcuts,
+:global(html[data-ui-style='fluent']) .facts,
+:global(html[data-ui-style='fluent']) .about,
+:global(html[data-ui-style='fluent']) .lyricPreview {
+  border-top: 0;
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+
+:global(html[data-ui-style='fluent']) .row {
+  min-height: 68px;
+  padding: var(--space-3) var(--space-4);
+}
+
+:global(html[data-ui-style='fluent']) .rowTitle {
+  font-size: var(--fs-lg);
+}
+
+:global(html[data-ui-style='fluent']) .rowDescription {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+/* ToggleSwitch: 40×20, outlined and empty when off, accent-filled when on. */
+:global(html[data-ui-style='fluent']) .switch {
+  width: 40px;
+  height: 20px;
+  padding: 0 var(--space-1_5);
+  border-radius: var(--radius-round);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--control-stroke-strong);
+}
+
+:global(html[data-ui-style='fluent']) .switch:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+:global(html[data-ui-style='fluent']) .switchOn,
+:global(html[data-ui-style='fluent']) .switchOn:hover:not(:disabled) {
+  background: var(--accent-strong);
+  box-shadow: none;
+}
+
+:global(html[data-ui-style='fluent']) .knob {
+  width: 12px;
+  height: 12px;
+  background: var(--text-secondary);
+  box-shadow: none;
+}
+
+:global(html[data-ui-style='fluent']) .switch:hover .knob {
+  width: 14px;
+  height: 14px;
+}
+
+:global(html[data-ui-style='fluent']) .switchOn .knob {
+  background: var(--text-on-accent);
+}
+
+:global(html[data-color-scheme='dark'][data-ui-style='fluent']) .switchOn .knob {
+  background: #000;
+}
+
+/* Category list: NavigationView rows with a 3px accent bar on the selected one. */
+:global(html[data-ui-style='fluent']) .indexItem {
+  position: relative;
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}
+
+:global(html[data-ui-style='fluent']) .indexActive,
+:global(html[data-ui-style='fluent']) .indexActive:hover {
+  background: var(--nav-active);
+  box-shadow: none;
+  color: var(--text-strong);
+}
+
+:global(html[data-ui-style='fluent']) .indexActive::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-2xs);
+  background: var(--accent);
+  translate: 0 -50%;
+  content: '';
+}
+
+.rowIcon {
+  display: none;
+}
+
+/* ───────── Fluent: card metrics from PyQt-Fluent-Widgets / WinUI SettingsCard ───────── */
+/* 6px radius, 50px tall (70px with a description), 16px icon + 16px gap, 14px title, 11–12px description. */
+
+:global(html[data-ui-style='fluent']) .page {
+  --setting-card-radius: 6px;
+}
+
+:global(html[data-ui-style='fluent']) .row,
+:global(html[data-ui-style='fluent']) .shortcuts,
+:global(html[data-ui-style='fluent']) .facts,
+:global(html[data-ui-style='fluent']) .about,
+:global(html[data-ui-style='fluent']) .lyricPreview {
+  border-radius: var(--setting-card-radius);
+}
+
+:global(html[data-ui-style='fluent']) .row {
+  min-height: 50px;
+  padding: var(--space-2) var(--space-4);
+}
+
+:global(html[data-ui-style='fluent']) .row[data-described] {
+  min-height: 70px;
+}
+
+:global(html[data-ui-style='fluent']) .rowVertical {
+  min-height: 0;
+}
+
+:global(html[data-ui-style='fluent']) .rowIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--text);
+}
+
+:global(html[data-ui-style='fluent']) .row:has(> .rowIcon) {
+  gap: var(--space-4);
+}
+
+:global(html[data-ui-style='fluent']) .row:has(> .rowIcon) > .rowText {
+  margin-left: 0;
+}
+
+/* Option expander (WinUI SettingsExpander): header shows the current choice, the body is a radio list. */
+:global(html[data-ui-style='fluent']) .expander {
+  overflow: hidden;
+  border-radius: var(--setting-card-radius);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+}
+
+:global(html[data-ui-style='fluent']) .expanderHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  width: 100%;
+  min-height: 50px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+
+:global(html[data-ui-style='fluent']) .expanderHeader:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+:global(html[data-ui-style='fluent']) .expanderHeader .rowText {
+  display: flex;
+  flex-direction: column;
+}
+
+:global(html[data-ui-style='fluent']) .expanderValue {
+  flex-shrink: 0;
+  font-size: var(--fs-lg);
+  color: var(--text-secondary);
+}
+
+:global(html[data-ui-style='fluent']) .expanderChevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--text);
+}
+
+:global(html[data-ui-style='fluent']) .expanderChevron svg {
+  transition: rotate 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:global(html[data-ui-style='fluent']) .expander[data-open] .expanderChevron svg {
+  rotate: 180deg;
+}
+
+/* Fold with a grid-row transition (0fr ⇄ 1fr) so the height animates without measuring. */
+:global(html[data-ui-style='fluent']) .expanderBody {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+:global(html[data-ui-style='fluent']) .expander[data-open] .expanderBody {
+  grid-template-rows: 1fr;
+}
+
+:global(html[data-ui-style='fluent']) .expanderItems {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+:global(html[data-ui-style='fluent']) .expander[data-open] .expanderItems {
+  border-top: 1px solid var(--divider);
+}
+
+/* WinUI RadioButton: 20px ring (accent dot when chosen), label to its right, indented under the icon. */
+:global(html[data-ui-style='fluent']) .radio {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2_5) var(--space-12);
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: var(--fs-lg);
+  text-align: left;
+}
+
+:global(html[data-ui-style='fluent']) .radio + .radio {
+  border-top: 1px solid var(--divider);
+}
+
+:global(html[data-ui-style='fluent']) .radio:hover {
+  background: var(--hover);
+}
+
+:global(html[data-ui-style='fluent']) .radioDot {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--control-stroke-strong);
+  transition: background 120ms ease, box-shadow 120ms ease;
+}
+
+:global(html[data-ui-style='fluent']) .radio:hover .radioDot {
+  background: var(--hover);
+}
+
+:global(html[data-ui-style='fluent']) .radio[aria-checked='true'] .radioDot {
+  background: radial-gradient(circle closest-side, var(--text-on-accent) 0 4px, var(--accent-strong) 4.5px);
+  box-shadow: none;
+}
+
+:global(html[data-color-scheme='dark'][data-ui-style='fluent']) .radio[aria-checked='true'] .radioDot {
+  background: radial-gradient(circle closest-side, #000 0 4px, var(--accent-strong) 4.5px);
+}
+
+:global(html[data-ui-style='fluent']) .radioText {
+  display: flex;
+  flex-direction: column;
+}
+
+:global(html[data-ui-style='fluent']) .radioText small {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}

@@ -1,0 +1,11 @@
+.popover {
+  position: fixed;
+  z-index: 160;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  padding: var(--space-4);
+  border-radius: var(--radius-4xl);
+  background: var(--popover);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), var(--shadow-pop);
+  backdrop-filter: blur(28px) saturate(1.5);
+}

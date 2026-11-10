@@ -5,6 +5,7 @@ import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
 import { ConceptAutoCheckIn } from '@/components/account/ConceptAutoCheckIn';
 import { ApplyAppearance } from '@/components/settings/ApplyAppearance';
+import { CoverAccent } from '@/components/settings/CoverAccent';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
@@ -54,6 +55,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AccountProvider>
           <ConceptAutoCheckIn />
           <PlayerProvider>
+            <CoverAccent />
             <div className="backdrop" aria-hidden />
             {/* The full UI stays mounted under the mini bar: playback and state carry over. */}
             <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`} inert={mini} aria-hidden={mini || undefined} style={mini ? { visibility: 'hidden' } : undefined}>

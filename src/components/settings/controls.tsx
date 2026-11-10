@@ -5,22 +5,27 @@ import { ChevronDown, RotateCcw } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { Menu, Slider, type MenuItem } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
 import styles from './Settings.module.css';
 
 /** iOS-style switch with a springy knob. */
 export function Switch({ checked, onChange, label, disabled }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      aria-label={label}
-      disabled={disabled}
-      className={cn(styles.switch, checked && styles.switchOn)}
-      onClick={() => onChange(!checked)}
-    >
-      <motion.span className={styles.knob} layout transition={{ type: 'spring', stiffness: 700, damping: 34 }} />
-    </button>
+    <span className={styles.switchWrap}>
+      {/* Fluent shows the state next to the switch (WinUI ToggleSwitch "On" / "Off"); hidden in the other styles. */}
+      <span className={styles.switchState} aria-hidden>{checked ? '开' : '关'}</span>
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        disabled={disabled}
+        className={cn(styles.switch, checked && styles.switchOn)}
+        onClick={() => onChange(!checked)}
+      >
+        <motion.span className={styles.knob} layout transition={{ type: 'spring', stiffness: 700, damping: 34 }} />
+      </button>
+    </span>
   );
 }
 
@@ -112,15 +117,73 @@ export function Range({ value, min = 0, max, step = 1, onChange, label, format }
   );
 }
 
-/** One labelled setting: title + description on the left, control on the right. */
-export function Row({ title, description, children, disabled, vertical }: { title: ReactNode; description?: ReactNode; children: ReactNode; disabled?: boolean; vertical?: boolean }) {
+/**
+ * One labelled setting: title + description on the left, control on the right.
+ * `icon` is the 16px glyph Fluent shows in front of the title (hidden in the other styles).
+ */
+export function Row({ icon, title, description, children, disabled, vertical }: { icon?: ReactNode; title: ReactNode; description?: ReactNode; children: ReactNode; disabled?: boolean; vertical?: boolean }) {
   return (
-    <div className={cn(styles.row, disabled && styles.rowDisabled, vertical && styles.rowVertical)}>
+    <div className={cn(styles.row, disabled && styles.rowDisabled, vertical && styles.rowVertical)} data-described={description ? '' : undefined}>
+      {icon && <span className={styles.rowIcon} aria-hidden>{icon}</span>}
       <div className={styles.rowText}>
         <div className={styles.rowTitle}>{title}</div>
         {description && <div className={styles.rowDescription}>{description}</div>}
       </div>
       <div className={styles.rowControl}>{children}</div>
+    </div>
+  );
+}
+
+/**
+ * A one-of-many setting. Fluent draws it as a WinUI SettingsExpander: the header shows
+ * the current choice, and opening it lists every option as a radio. The other styles
+ * keep the compact control in the row (`variant`: segmented buttons or a dropdown).
+ */
+export function ChoiceExpander<T extends string | number>({ icon, title, description, disabled, variant = 'segmented', value, options, onChange, label }: {
+  icon?: ReactNode;
+  title: ReactNode;
+  description?: ReactNode;
+  disabled?: boolean;
+  variant?: 'segmented' | 'select';
+  value: T;
+  options: ReadonlyArray<{ value: T; label: string; hint?: string }>;
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
+  const fluent = useSettings().windowEffect === 'fluent';
+  if (!fluent) {
+    return (
+      <Row icon={icon} title={title} description={description} disabled={disabled}>
+        {variant === 'select'
+          ? <Select value={String(value)} options={options.map(option => ({ ...option, value: String(option.value) }))} onChange={next => onChange(options.find(option => String(option.value) === next)!.value)} label={label} />
+          : <Segmented value={value} options={options} onChange={onChange} label={label} />}
+      </Row>
+    );
+  }
+  const current = options.find(option => option.value === value);
+  return (
+    <div className={cn(styles.expander, disabled && styles.rowDisabled)} data-open={open || undefined}>
+      <button type="button" className={styles.expanderHeader} onClick={() => setOpen(next => !next)} aria-expanded={open} aria-controls={bodyId} disabled={disabled}>
+        {icon && <span className={styles.rowIcon} aria-hidden>{icon}</span>}
+        <span className={styles.rowText}>
+          <span className={styles.rowTitle}>{title}</span>
+          {description && <span className={styles.rowDescription}>{description}</span>}
+        </span>
+        <span className={styles.expanderValue}>{current?.label}</span>
+        <span className={styles.expanderChevron} aria-hidden><ChevronDown size={14} strokeWidth={1.8} /></span>
+      </button>
+      <div id={bodyId} className={styles.expanderBody} inert={!open}>
+        <div className={styles.expanderItems} role="radiogroup" aria-label={label}>
+          {options.map(option => (
+            <button key={String(option.value)} type="button" role="radio" aria-checked={option.value === value} className={styles.radio} onClick={() => onChange(option.value)}>
+              <span className={styles.radioDot} aria-hidden />
+              <span className={styles.radioText}>{option.label}{option.hint && <small>{option.hint}</small>}</span>
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
