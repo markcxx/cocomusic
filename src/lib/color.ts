@@ -158,3 +158,11 @@ function pack(accent: Hsl, strong: Hsl, tint: Hsl, tintStrong: Hsl): AccentPalet
   const [a, st, t, ts] = [accent, strong, tint, tintStrong].map(hslToRgb);
   return { accent: toHex(a), strong: toHex(st), tint: toHex(t), tintStrong: toHex(ts), accentRgb: rgbTriplet(a), strongRgb: rgbTriplet(st) };
 }
+
+/** A deeper take on a "r, g, b" tint: darkened until white text reaches 4.5:1 on it (Fluent player bar). */
+export function deepenTint(tint: string) {
+  const [r, g, b] = tint.split(',').map(Number);
+  const { h, s } = rgbToHsl({ r, g, b });
+  const deep = reachContrast({ h, s: clamp(s, 0.3, 0.62), l: 0.42 }, { r: 255, g: 255, b: 255 }, 4.5, -1);
+  return rgbTriplet(hslToRgb(deep));
+}

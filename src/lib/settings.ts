@@ -21,7 +21,12 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 /** OS material behind a see-through window. mica: Windows 11 only. */
 /** 'transparent': see-through window like the desktop lyrics (applies after a restart). */
 /** 'minimal' (简约): opaque window with flat neutral surfaces instead of tinted glass. */
-export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'minimal' | 'none';
+/** 'fluent': Windows 11 look (Mica-like layers, small radii, tinted player bar); opaque, no OS material. */
+export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'minimal' | 'fluent' | 'none';
+/** Window effects the page paints itself (opaque, no OS material behind). */
+export const FLAT_STYLES = ['minimal', 'fluent'] as const;
+export type FlatStyle = (typeof FLAT_STYLES)[number];
+export const isFlatStyle = (effect: WindowEffect): effect is FlatStyle => (FLAT_STYLES as readonly string[]).includes(effect);
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 /** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
 export type DesktopColor = LyricColorId | 'custom';
@@ -274,7 +279,7 @@ const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values }
 const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
   conceptAutoCheckIn: bool,
-  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'none'), windowOpacity: num(0, 100),
+  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),

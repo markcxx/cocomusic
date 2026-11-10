@@ -19,6 +19,60 @@
   backdrop-filter: none;
 }
 
+/*
+ * Fluent: the cover fills the bar's full height at the left edge and the bar
+ * takes a deep shade of it (--player-tint, set by PlayerBar). The colour
+ * transition is the cross-fade between songs; controls turn white on top.
+ */
+:global(html[data-ui-style='fluent']) .player {
+  padding-left: 0;
+  background: rgb(var(--player-tint, var(--player-rgb)));
+  box-shadow: inset 0 1px 0 var(--glass-edge);
+  backdrop-filter: none;
+  transition: background-color 700ms ease;
+}
+
+:global(html[data-ui-style='fluent']) .trackButton {
+  padding: 0;
+  border-radius: 0;
+}
+
+:global(html[data-ui-style='fluent']) .trackInfo {
+  gap: var(--space-4);
+}
+
+:global(html[data-ui-style='fluent']) .thumb,
+:global(html[data-ui-style='fluent']) .trackButton:hover .thumb,
+:global(html[data-ui-style='fluent']) .trackButton:focus-visible .thumb {
+  border-radius: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+:global(html[data-ui-style='fluent']) .player[data-tinted] {
+  --text-strong: #fff;
+  --text: rgba(255, 255, 255, 0.92);
+  --text-secondary: rgba(255, 255, 255, 0.74);
+  --text-muted: rgba(255, 255, 255, 0.62);
+  --accent: #fff;
+  --accent-strong: #fff;
+  --accent-rgb: 255, 255, 255;
+  --accent-strong-rgb: 255, 255, 255;
+  --accent-soft: rgba(255, 255, 255, 0.18);
+  --accent-tint: transparent;
+  --accent-tint-strong: rgba(255, 255, 255, 0.14);
+  --hover: rgba(255, 255, 255, 0.12);
+  --hover-strong: rgba(255, 255, 255, 0.2);
+  --glass-edge: rgba(255, 255, 255, 0.28);
+  --knob: rgb(var(--player-tint, 60, 60, 60));
+  --thumb-ring: #fff;
+  /* Popovers opened from the bar (slider tooltip, volume) carry the white text and accent above, so they are dark. */
+  --popover: rgba(43, 43, 43, 0.96);
+  --popover-solid: #2b2b2b;
+  --icon-button-hover-background: rgba(255, 255, 255, 0.12);
+  --icon-button-active-background: rgba(255, 255, 255, 0.12);
+}
+
 .nowPlaying {
   display: flex;
   align-items: center;

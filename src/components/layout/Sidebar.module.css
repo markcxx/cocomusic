@@ -151,9 +151,37 @@
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.06), 0 4px 12px rgba(var(--ink-rgb), 0.05);
 }
 
-/* 简约: a flat grey pill, no lift. */
-:global(html[data-ui-style='minimal']) .activePill {
+/* 简约 and Fluent: a flat pill, no lift. */
+:global(html[data-ui-style='minimal']) .activePill,
+:global(html[data-ui-style='fluent']) .activePill {
   box-shadow: none;
+}
+
+/* Fluent: Windows 11 NavigationView: compact rows, quiet fill, 3px accent bar on the selected item. */
+:global(html[data-ui-style='fluent']) .navItem,
+:global(html[data-ui-style='fluent']) .playlistItem {
+  height: 36px;
+  font-size: var(--fs-lg);
+}
+
+:global(html[data-ui-style='fluent']) .items {
+  gap: var(--space-0_5);
+}
+
+:global(html[data-ui-style='fluent']) .activePill::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-2xs);
+  background: var(--accent);
+  translate: 0 -50%;
+  content: '';
+}
+
+:global(html[data-ui-style='fluent']) .navItem:hover .icon {
+  transform: none;
 }
 
 .icon {
@@ -232,4 +260,19 @@
   width: 40px;
   margin: 0 auto;
   padding: 0 11px;
+}
+
+/* Fluent: selected rows keep primary text and icon (WinUI NavigationViewItemForegroundSelected); the accent is only the bar. */
+:global(html[data-ui-style='fluent']) .active,
+:global(html[data-ui-style='fluent']) .active .icon {
+  color: var(--text-strong);
+}
+
+:global(html[data-ui-style='fluent']) .icon {
+  color: var(--text);
+}
+
+/* Compact pane is 48px wide: 40px items centred in it. */
+:global(html[data-ui-style='fluent']) .collapsed .navItem {
+  padding: 0 var(--space-3);
 }

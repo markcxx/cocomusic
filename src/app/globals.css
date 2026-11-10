@@ -96,6 +96,8 @@
   --radius-4xl: 20px;
   --radius-sheet: 24px;
   --radius-pill: 999px;
+  /* Always a full capsule/circle, even where a style squares the pill (Fluent). */
+  --radius-round: 999px;
   --radius-card: var(--radius-xl);
   --radius-cover: var(--radius-lg);
 
@@ -327,16 +329,85 @@ html[data-ui-style='minimal'][data-color-scheme='dark'] {
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 }
 
-html[data-ui-style='minimal'] body {
+/*
+ * Fluent style (设置 › 外观 › 窗口效果 › Fluent): Windows 11 look. Same flat,
+ * opaque layering as 简约 (see ApplyAppearance for the surface tones), with the
+ * Win11 type, 4/8px corner language and quieter control fills.
+ */
+html[data-ui-style='fluent'] {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC",
+    "HarmonyOS Sans SC", "Noto Sans CJK SC", system-ui, sans-serif;
+
+  /* WinUI: ControlCornerRadius 4, OverlayCornerRadius 8 (flyouts, dialogs, cards). */
+  --radius-2xs: 2px;
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 4px;
+  --radius-lg: 4px;
+  --radius-xl: 4px;
+  --radius-2xl: 8px;
+  --radius-3xl: 8px;
+  --radius-4xl: 8px;
+  --radius-sheet: 8px;
+  --radius-card: 8px;
+  --radius-cover: 4px;
+  /* Capsules (chips, tabs, buttons) become 4px controls; toggles and scrollbars keep --radius-round. */
+  --radius-pill: 4px;
+
+  /* WinUI fills and strokes (Light): Subtle* for hover, Control* for fields, Card/Divider strokes. */
+  --glass-edge: rgba(0, 0, 0, 0.0578); /* CardStrokeColorDefault */
+  --hover: rgba(0, 0, 0, 0.0373); /* SubtleFillColorSecondary */
+  --hover-strong: rgba(0, 0, 0, 0.0241); /* SubtleFillColorTertiary, used on top of a hover */
+  --field: rgba(255, 255, 255, 0.7); /* ControlFillColorDefault */
+  --field-focus: #ffffff; /* ControlFillColorInputActive */
+  --zebra: rgba(0, 0, 0, 0.0241);
+  --row-hover: rgba(0, 0, 0, 0.0373);
+  --chip: rgba(255, 255, 255, 0.7);
+  --divider: rgba(0, 0, 0, 0.0578); /* DividerStrokeColorDefault */
+  --control-stroke: rgba(0, 0, 0, 0.0578); /* ControlStrokeColorDefault */
+  --control-stroke-strong: rgba(0, 0, 0, 0.447); /* ControlStrongStrokeColorDefault: field bottom edge */
+  --control-strong-fill: rgba(0, 0, 0, 0.447); /* ControlStrongFillColorDefault: slider rail, scrollbar */
+  --scrim: rgba(0, 0, 0, 0.3);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.04);
+  /* Flyout / dialog elevation (ThemeShadow depth 32 ≈ this). */
+  --shadow-pop: 0 8px 16px rgba(0, 0, 0, 0.14), 0 0 1px rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.447);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.6);
+}
+
+html[data-ui-style='fluent'][data-color-scheme='dark'] {
+  --glass-edge: rgba(0, 0, 0, 0.1);
+  --hover: rgba(255, 255, 255, 0.0605);
+  --hover-strong: rgba(255, 255, 255, 0.0419);
+  --field: rgba(255, 255, 255, 0.0605);
+  --field-focus: rgba(30, 30, 30, 0.7);
+  --zebra: rgba(255, 255, 255, 0.0256);
+  --row-hover: rgba(255, 255, 255, 0.0605);
+  --chip: rgba(255, 255, 255, 0.0605);
+  --divider: rgba(255, 255, 255, 0.0837);
+  --control-stroke: rgba(255, 255, 255, 0.0698);
+  --control-stroke-strong: rgba(255, 255, 255, 0.545);
+  --control-strong-fill: rgba(255, 255, 255, 0.545);
+  --scrim: rgba(0, 0, 0, 0.5);
+  --shadow-soft: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-pop: 0 8px 16px rgba(0, 0, 0, 0.37), 0 0 1px rgba(0, 0, 0, 0.5);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.545);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.7);
+}
+
+html[data-ui-style='minimal'] body,
+html[data-ui-style='fluent'] body {
   background: var(--shell);
 }
 
-html[data-ui-style='minimal'] .backdrop {
+html[data-ui-style='minimal'] .backdrop,
+html[data-ui-style='fluent'] .backdrop {
   display: none;
 }
 
 /* Panels: a hairline edge instead of the frosted highlight and glow. */
-html[data-ui-style='minimal'] .glass {
+html[data-ui-style='minimal'] .glass,
+html[data-ui-style='fluent'] .glass {
   box-shadow: 0 0 0 1px var(--glass-edge);
   backdrop-filter: none;
 }
@@ -391,7 +462,7 @@ a {
 /* Visible width = track − 2 × inset (4px at rest, 6px under the pointer). */
 ::-webkit-scrollbar-thumb {
   border: var(--scrollbar-inset) solid transparent;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: transparent;
   background-clip: padding-box;
 }

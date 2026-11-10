@@ -177,3 +177,57 @@
   left: calc(100% + 6px);
   translate: 0 50%;
 }
+
+/* ───────── Fluent: WinUI Slider ───────── */
+/* 4px rail with a 2px radius, accent value fill, 20px thumb with a 12px accent dot (14 on hover, 10 pressed), always visible. */
+
+:global(html[data-ui-style='fluent']) .slider {
+  --rail: 4px;
+  --rail-hover: 4px;
+  --thumb: 20px;
+  --dot: 6px;
+}
+
+:global(html[data-ui-style='fluent']) .small {
+  --thumb: 16px;
+  --dot: 5px;
+}
+
+:global(html[data-ui-style='fluent']) .slider:hover {
+  --dot: 7px;
+}
+
+:global(html[data-ui-style='fluent']) .dragging {
+  --dot: 5px;
+}
+
+:global(html[data-ui-style='fluent']) .rail,
+:global(html[data-ui-style='fluent']) .slider:hover .rail,
+:global(html[data-ui-style='fluent']) .slider:focus-visible .rail,
+:global(html[data-ui-style='fluent']) .dragging .rail {
+  border-radius: var(--radius-2xs);
+  background: var(--control-strong-fill);
+}
+
+:global(html[data-ui-style='fluent']) .ghost {
+  display: none;
+}
+
+:global(html[data-ui-style='fluent']) .thumb,
+:global(html[data-ui-style='fluent']) .slider:hover .thumb,
+:global(html[data-ui-style='fluent']) .dragging .thumb,
+:global(html[data-ui-style='fluent']) .slider:focus-visible .thumb {
+  border: 1px solid var(--thumb-ring, var(--control-stroke));
+  background: radial-gradient(circle closest-side, var(--accent-strong) calc(var(--dot) - 0.5px), var(--knob) var(--dot));
+  box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.25);
+  opacity: 1;
+  transform: translateY(-50%);
+  transition: background 150ms ease;
+}
+
+:global(html[data-ui-style='fluent']) .tooltip {
+  padding: var(--space-1) var(--space-2_5);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--control-stroke);
+  backdrop-filter: none;
+}

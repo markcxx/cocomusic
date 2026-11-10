@@ -45,3 +45,16 @@
   background: var(--hover);
   color: var(--text-secondary);
 }
+
+/* Fluent: WinUI TextBox: control fill, hairline stroke with a strong bottom edge; focus swaps it for a 2px accent underline. */
+:global(html[data-ui-style='fluent']) .field {
+  border-radius: var(--radius-sm);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--control-stroke), inset 0 -1px 0 var(--control-stroke-strong);
+}
+
+:global(html[data-ui-style='fluent']) .field:focus-within {
+  background: var(--field-focus);
+  box-shadow: inset 0 0 0 1px var(--control-stroke), inset 0 -2px 0 var(--accent-strong);
+  color: var(--text-muted);
+}

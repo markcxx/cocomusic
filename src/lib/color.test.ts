@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { accentPalette, contrast, hsvToRgb, parseHex, rgbToHsv, surfacePalette, toHex } from './color.ts';
+import { accentPalette, contrast, deepenTint, hsvToRgb, parseHex, rgbToHsv, surfacePalette, toHex } from './color.ts';
 
 test('parses short and long hex, rejects junk', () => {
   assert.deepEqual(parseHex('#abc'), { r: 170, g: 187, b: 204 });
@@ -63,5 +63,12 @@ test('theme text remains readable against the derived shell and solid panels', (
         assert.ok(contrast(parseHex(accentPalette(pick, scheme).strong)!, background) >= 4.5);
       }
     }
+  }
+});
+
+test('a deepened cover tint carries white text, whatever the cover colour', () => {
+  for (const tint of ['255, 255, 255', '0, 0, 0', '240, 220, 120', '120, 200, 255', '200, 60, 60', '128, 128, 128']) {
+    const [r, g, b] = deepenTint(tint).split(',').map(Number);
+    assert.ok(contrast({ r: 255, g: 255, b: 255 }, { r, g, b }) >= 4.5, `${tint} → ${deepenTint(tint)}`);
   }
 });

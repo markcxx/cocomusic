@@ -1,21 +1,27 @@
 'use client';
 
 import { ListMusic } from 'lucide-react';
+import type { CSSProperties } from 'react';
 import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics';
 import { useNavigation } from '@/components/layout/navigation';
 import { IconButton } from '@/components/ui';
+import { deepenTint } from '@/lib/color';
+import { isEmptyTrack } from '@/lib/mock-data';
+import { useSettings } from '@/lib/settings';
 import { CommentButton, Transport, VolumeControl } from './controls';
 import { MvButton } from './mv/MvButton';
 import { usePlayer } from './player-store';
 import { ProgressBar } from './ProgressBar';
 import { TrackInfo } from './TrackInfo';
 import { useSongStats } from './use-song-stats';
+import { useCoverTint } from './visualizer/cover-tint';
 import styles from './PlayerBar.module.css';
 
 /**
  * Full-bleed three-zone player fixed to the window bottom. The middle zone is
  * centered on the whole window: left and right zones are equal grid tracks.
  * Hidden while the lyrics page is open; that page has its own bar.
+ * Fluent style: the bar takes a deep shade of the cover's colour (white controls on top).
  */
 export function PlayerBar() {
   const player = usePlayer();
@@ -23,6 +29,9 @@ export function PlayerBar() {
   const { track } = player;
   const stats = useSongStats(track.songId, track.source);
   const desktopLyrics = useDesktopLyrics();
+  const tinted = useSettings().windowEffect === 'fluent' && !isEmptyTrack(track);
+  // Sampled only when it is shown; without a source this is the cheap seeded fallback.
+  const tint = useCoverTint(tinted ? track.cover : undefined, track.coverSeed);
   const viewingComments = route.name === 'comments' && route.songId === track.songId && (route.source ?? 'netease') === (track.source ?? 'netease');
 
   const openComments = () => {
@@ -31,7 +40,14 @@ export function PlayerBar() {
   };
 
   return (
-    <footer className={styles.player} data-player-bar aria-label="播放控制" inert={player.lyricsOpen}>
+    <footer
+      className={styles.player}
+      data-player-bar
+      data-tinted={tinted || undefined}
+      style={tinted ? { '--player-tint': deepenTint(tint) } as CSSProperties : undefined}
+      aria-label="播放控制"
+      inert={player.lyricsOpen}
+    >
       <div className={styles.nowPlaying}>
         <TrackInfo />
       </div>

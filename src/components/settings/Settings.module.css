@@ -206,7 +206,7 @@
   height: 24px;
   padding: var(--space-0_5);
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-round);
   background: rgba(var(--accent-strong-rgb), 0.18);
   transition: background-color 200ms ease;
 }

@@ -138,6 +138,25 @@
   box-shadow: none;
 }
 
+/* Fluent: Mica-grey frame, content layer rounded at the top-left only, player bar tinted by the cover. */
+.fluent {
+  --desk: #f3f3f3;
+  --sheet: #fbfbfb;
+  --bar: #3d86b8;
+  --line: rgba(0, 0, 0, 0.12);
+  --edge: transparent;
+}
+
+.fluent .sheet {
+  margin: 9% 0 0;
+  border-radius: 4px 0 0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.fluent .bar {
+  box-shadow: none;
+}
+
 /* ───────── Dark scheme (the sketch's own, not the page's) ───────── */
 
 .thumb.dark {
@@ -184,4 +203,16 @@
 
 .dark.minimal .sheet {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.dark.fluent {
+  --desk: #202020;
+  --sheet: #272727;
+  --bar: #2f6d96;
+  --line: rgba(255, 255, 255, 0.14);
+  --edge: transparent;
+}
+
+.dark.fluent .sheet {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
 }

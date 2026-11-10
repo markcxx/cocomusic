@@ -80,3 +80,17 @@
 :global([data-theme='dark']) .button:disabled {
   color: rgba(255, 255, 255, 0.4);
 }
+
+/* Fluent: subtle fill on hover, text stays primary (no accent tint). */
+:global(html[data-ui-style='fluent']) .button {
+  border-radius: var(--radius-sm);
+  transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+}
+
+:global(html[data-ui-style='fluent']) .muted:hover:not(:disabled) {
+  color: var(--text-strong);
+}
+
+:global(html[data-ui-style='fluent']) .danger:hover:not(:disabled) {
+  background: #c42b1c;
+}

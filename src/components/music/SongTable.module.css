@@ -206,3 +206,41 @@ button.album:hover {
     gap: var(--space-2_5);
   }
 }
+
+/* Fluent: compact rows with quiet zebra and hover fills; an accent bar marks the playing song. */
+:global(html[data-ui-style='fluent']) .song {
+  position: relative;
+  height: 48px;
+  border-radius: var(--radius-sm);
+}
+
+:global(html[data-ui-style='fluent']) .song:hover {
+  box-shadow: none;
+}
+
+:global(html[data-ui-style='fluent']) .current,
+:global(html[data-ui-style='fluent']) .current:nth-child(even) {
+  background: var(--hover);
+}
+
+:global(html[data-ui-style='fluent']) .current .names strong,
+:global(html[data-ui-style='fluent']) .current .index {
+  color: var(--text-strong);
+}
+
+:global(html[data-ui-style='fluent']) .current::before {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 3px;
+  height: 16px;
+  border-radius: var(--radius-2xs);
+  background: var(--accent);
+  translate: 0 -50%;
+  content: '';
+}
+
+:global(html[data-ui-style='fluent']) .head {
+  height: 32px;
+  border-bottom: 1px solid var(--divider);
+}

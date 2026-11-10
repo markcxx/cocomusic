@@ -2,7 +2,7 @@
 
 import { Palette } from 'lucide-react';
 import { Button } from '@/components/ui';
-import { ACCENT_PRESETS, settings, useSettings, type Settings } from '@/lib/settings';
+import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
 import { useResolvedScheme } from '../ApplyAppearance';
 import { ChoiceTiles } from '../ChoiceTiles';
@@ -17,6 +17,7 @@ const WINDOW_EFFECT_HINTS: Record<string, string> = {
   mica: '云母：取桌面壁纸的柔和色调（Windows 11），不透出其他窗口',
   transparent: '和桌面歌词一样的真透明窗口：背后的桌面和窗口清晰可见，不做模糊',
   minimal: '简约：浅灰导航栏与播放栏，白色内容卡片，不透明、无毛玻璃',
+  fluent: 'Fluent：Windows 11 风格的分层与小圆角，播放栏跟随封面主色，不透明、无毛玻璃',
   none: '不透明窗口',
 };
 
@@ -26,7 +27,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
   const desktop = isDesktop();
   // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
   const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
-  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || s.windowEffect === 'minimal' ? s.windowEffect
+  const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || isFlatStyle(s.windowEffect) ? s.windowEffect
     : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
   const scheme = useResolvedScheme();
   const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
@@ -54,7 +55,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
         description={WINDOW_EFFECT_HINTS[shownEffect] ?? WINDOW_EFFECT_HINTS.none}
         vertical
       >
-        {/* Materials need the desktop client; 简约 and 不透明 are drawn by the page itself. */}
+        {/* Materials need the desktop client; 简约, Fluent and 不透明 are drawn by the page itself. */}
         <ChoiceTiles
           value={shownEffect}
           onChange={value => void chooseEffect(value)}
@@ -63,10 +64,11 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
             ...(isMac() ? [['vibrancy', '毛玻璃']] : [['acrylic', '亚克力'], ['mica', '云母']]),
             ['transparent', '透明'],
             ['minimal', '简约'],
+            ['fluent', 'Fluent'],
             ['none', '不透明'],
           ] as Array<[Settings['windowEffect'], string]>).map(([value, label]) => ({
             value, label,
-            disabled: !desktop && value !== 'minimal' && value !== 'none',
+            disabled: !desktop && !isFlatStyle(value) && value !== 'none',
             preview: <WindowSketch effect={value} scheme={scheme} />,
           }))}
         />
@@ -77,7 +79,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
           <Button variant="primary" onClick={() => window.coco?.app?.relaunch()}>立即重启</Button>
         </div>
       )}
-      {s.windowEffect !== 'minimal' && <>
+      {!isFlatStyle(s.windowEffect) && <>
       <Row
         title="窗口不透明度"
         description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}

@@ -35,3 +35,16 @@
   border-radius: var(--radius-2xs);
   background: var(--accent);
 }
+
+/* Fluent: WinUI top navigation / Pivot: selected is primary text with a 3px accent bar under the label. */
+:global(html[data-ui-style='fluent']) .active,
+:global(html[data-ui-style='fluent']) .active:hover {
+  color: var(--text-strong);
+}
+
+:global(html[data-ui-style='fluent']) .indicator {
+  right: 0;
+  left: 0;
+  height: 3px;
+  border-radius: var(--radius-2xs);
+}

@@ -3,7 +3,7 @@
 import { MotionConfig } from 'framer-motion';
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { accentPalette, surfacePalette } from '@/lib/color';
-import { useSettings, type WindowEffect } from '@/lib/settings';
+import { isFlatStyle, useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
  * Applies appearance settings as CSS variables / data attributes on <html>:
@@ -75,6 +75,62 @@ const MINIMAL: Record<'light' | 'dark', Record<string, string>> = {
   },
 };
 
+/**
+ * Fluent style: Windows 11 layering. Light: Mica-grey shell, near-white content
+ * layer; dark: #202020 shell with a slightly lighter layer. Static tokens (hover
+ * fills, edges, radii) live in globals.css under html[data-ui-style='fluent'].
+ */
+const FLUENT: Record<'light' | 'dark', Record<string, string>> = {
+  // Values are WinUI's own (microsoft-ui-xaml Common_themeresources_any.xaml), with the
+  // translucent Layer / Card fills flattened onto the base so nothing shows through.
+  light: {
+    '--shell': '#f3f3f3', // SolidBackgroundFillColorBase
+    '--surface-rgb': '249, 249, 249',
+    '--surface-pinned-rgb': '249, 249, 249',
+    '--raised-rgb': '255, 255, 255',
+    '--player-rgb': '243, 243, 243',
+    '--sheet': '#f9f9f9', // LayerFillColorDefault on the base
+    '--sheet-pinned': 'rgba(249, 249, 249, 0.94)',
+    '--card': '#fdfdfd', // CardBackgroundFillColorDefault
+    '--card-hover': '#f6f6f6',
+    '--player': '#f3f3f3',
+    '--nav-active': 'rgba(0, 0, 0, 0.0373)', // SubtleFillColorSecondary
+    '--popover': 'rgba(249, 249, 249, 0.98)', // SolidBackgroundFillColorTertiary
+    '--popover-solid': '#f9f9f9',
+    '--ink-rgb': '0, 0, 0',
+    '--cover-scrim': 'rgba(0, 0, 0, 0.36)',
+    '--knob': '#ffffff',
+    '--text-strong': 'rgba(0, 0, 0, 0.894)', // TextFillColorPrimary
+    '--text': 'rgba(0, 0, 0, 0.894)',
+    '--text-secondary': 'rgba(0, 0, 0, 0.606)', // TextFillColorSecondary
+    '--text-muted': 'rgba(0, 0, 0, 0.553)', // between Secondary and Tertiary: Tertiary alone fails 4.5:1
+  },
+  dark: {
+    '--shell': '#202020',
+    '--surface-rgb': '40, 40, 40',
+    '--surface-pinned-rgb': '40, 40, 40',
+    '--raised-rgb': '50, 50, 50',
+    '--player-rgb': '32, 32, 32',
+    '--sheet': '#282828',
+    '--sheet-pinned': 'rgba(40, 40, 40, 0.94)',
+    '--card': '#333333',
+    '--card-hover': '#383838',
+    '--player': '#202020',
+    '--nav-active': 'rgba(255, 255, 255, 0.0605)',
+    '--popover': 'rgba(44, 44, 44, 0.98)',
+    '--popover-solid': '#2c2c2c',
+    '--ink-rgb': '0, 0, 0',
+    '--cover-scrim': 'rgba(0, 0, 0, 0.5)',
+    '--knob': '#f2f2f2',
+    '--text-strong': '#ffffff',
+    '--text': '#ffffff',
+    '--text-secondary': 'rgba(255, 255, 255, 0.772)',
+    '--text-muted': 'rgba(255, 255, 255, 0.63)',
+  },
+};
+
+const FLAT_PALETTES = { minimal: MINIMAL, fluent: FLUENT };
+
 /** opacity 0 → ×0.15, 50 → ×1, 100 → fully opaque. Never fully invisible (text must stay readable). */
 function scale(alpha: number, opacity: number) {
   if (opacity <= 50) return alpha * (0.15 + (opacity / 50) * 0.85);
@@ -92,7 +148,7 @@ function useSystemDark() {
 
 /** Effects this platform can render (main falls back the same way). */
 export function supportedEffect(effect: WindowEffect, platform: string | undefined): WindowEffect {
-  if (effect === 'minimal') return 'minimal';
+  if (isFlatStyle(effect)) return effect;
   if (effect === 'none' || !platform) return 'none';
   // The window's own construction decides (main reads the saved setting at launch).
   if (effect === 'transparent' || window.coco?.material === 'transparent') return window.coco?.material === 'transparent' ? 'transparent' : 'none';
@@ -141,30 +197,29 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'li
 export function ApplyAppearance({ children }: { children: ReactNode }) {
   const s = useSettings();
   const scheme = useSchemeAndAccent({ notifyMain: true });
-  const minimal = s.windowEffect === 'minimal';
 
 
   // Whole window: OS material (desktop only) + how much the app paints over it.
   // Window opacity scales the drawn backdrop *and* every panel, so lowering it
   // really lets the (OS-blurred) desktop through the whole window, not just the gaps.
   // Runs after useSchemeAndAccent's effects (and again whenever they do: same deps),
-  // so in 简约 mode its flat tokens win over the theme-tinted ones.
+  // so in the flat styles (简约, Fluent) their tokens win over the theme-tinted ones.
   useEffect(() => {
     // A window launched see-through stays so until restart, whatever the setting says now.
     const launchedTransparent = window.coco?.material === 'transparent';
     const effect = launchedTransparent ? 'transparent' : supportedEffect(s.windowEffect, window.coco?.platform);
-    // 简约 paints an opaque window: no OS material behind it.
-    if (!launchedTransparent) window.coco?.app?.setMaterial(effect === 'minimal' ? 'none' : effect);
+    // The flat styles paint an opaque window: no OS material behind it.
+    if (!launchedTransparent) window.coco?.app?.setMaterial(isFlatStyle(effect) ? 'none' : effect);
     const html = document.documentElement;
-    html.dataset.material = effect === 'minimal' ? 'none' : effect;
-    html.dataset.uiStyle = minimal ? 'minimal' : 'glass';
-    if (minimal) {
+    html.dataset.material = isFlatStyle(effect) ? 'none' : effect;
+    html.dataset.uiStyle = isFlatStyle(effect) ? effect : 'glass';
+    if (isFlatStyle(effect)) {
       html.style.setProperty('--window-opacity', '1');
-      for (const [name, value] of Object.entries(MINIMAL[scheme])) html.style.setProperty(name, value);
+      for (const [name, value] of Object.entries(FLAT_PALETTES[effect][scheme])) html.style.setProperty(name, value);
       html.style.setProperty('--glass-blur', 'none');
       return;
     }
-    // Back from 简约: restore the theme-tinted tones it overwrote.
+    // Back from a flat style: restore the theme-tinted tones it overwrote.
     for (const [name, value] of Object.entries(surfacePalette(s.accent, scheme))) html.style.setProperty(name, value);
     // Without a material there is nothing behind the window to reveal; stay opaque.
     const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
@@ -175,7 +230,7 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
       html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * panelFactor).toFixed(3)})`);
     }
     html.style.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-  }, [minimal, scheme, s.accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
+  }, [scheme, s.accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';

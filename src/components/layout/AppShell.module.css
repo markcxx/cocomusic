@@ -86,3 +86,20 @@
   margin-right: var(--space-2);
   border-radius: var(--radius-2xl);
 }
+
+/* Fluent: nav and content sit edge to edge, like a Windows 11 NavigationView; the sheet keeps only its top-left corner. */
+:global(html[data-ui-style='fluent']) .sidebar {
+  padding: var(--space-2) var(--space-2) 0;
+}
+
+:global(html[data-ui-style='fluent']) .main {
+  padding: var(--space-2) 0 0;
+}
+
+:global(html[data-ui-style='fluent']) .topBar {
+  padding-left: var(--space-4);
+}
+
+:global(html[data-ui-style='fluent']) .collapsed {
+  --sidebar-width: 56px;
+}

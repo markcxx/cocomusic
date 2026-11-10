@@ -59,3 +59,23 @@
   background: var(--hover);
   color: var(--text-secondary);
 }
+
+/* Fluent: WinUI AutoSuggestBox: 32px, 4px corners, hairline stroke with a strong bottom edge; open swaps it for a 2px accent underline. */
+:global(html[data-ui-style='fluent']) .field {
+  height: 32px;
+  padding: 0 var(--space-2_5) 0 var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--field);
+  box-shadow: inset 0 0 0 1px var(--control-stroke), inset 0 -1px 0 var(--control-stroke-strong);
+  backdrop-filter: none;
+}
+
+:global(html[data-ui-style='fluent']) .field[data-open='true'] {
+  background: var(--field-focus);
+  box-shadow: inset 0 0 0 1px var(--control-stroke), inset 0 -2px 0 var(--accent-strong);
+  color: var(--text-secondary);
+}
+
+:global(html[data-ui-style='fluent']) .clear {
+  border-radius: var(--radius-xs);
+}
