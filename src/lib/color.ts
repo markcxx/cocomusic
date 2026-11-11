@@ -159,10 +159,22 @@ function pack(accent: Hsl, strong: Hsl, tint: Hsl, tintStrong: Hsl): AccentPalet
   return { accent: toHex(a), strong: toHex(st), tint: toHex(t), tintStrong: toHex(ts), accentRgb: rgbTriplet(a), strongRgb: rgbTriplet(st) };
 }
 
-/** A deeper take on a "r, g, b" tint: darkened until white text reaches 4.5:1 on it (Fluent player bar). */
+/** A deeper take on a "r, g, b" tint: with headroom for a coloured foreground on the Fluent player bar. */
 export function deepenTint(tint: string) {
   const [r, g, b] = tint.split(',').map(Number);
   const { h, s } = rgbToHsl({ r, g, b });
-  const deep = reachContrast({ h, s: clamp(s, 0.3, 0.62), l: 0.42 }, { r: 255, g: 255, b: 255 }, 4.5, -1);
+  const deep = reachContrast({ h, s: clamp(s, 0.3, 0.62), l: 0.42 }, { r: 255, g: 255, b: 255 }, 7, -1);
   return rgbTriplet(hslToRgb(deep));
+}
+
+/** Keep the theme hue visible over the deep artwork colour of the Fluent transport. */
+export function playerAccentRgb(hex: string, background: string) {
+  const [r, g, b] = background.split(',').map(Number);
+  const base = parseHex(accentPalette(hex, 'dark').strong)!;
+  for (let i = 0; i <= 20; i++) {
+    const lift = (channel: number) => Math.round(channel + (255 - channel) * i / 20);
+    const candidate = { r: lift(base.r), g: lift(base.g), b: lift(base.b) };
+    if (contrast(candidate, { r, g, b }) >= 4.5) return rgbTriplet(candidate);
+  }
+  return '255, 255, 255';
 }

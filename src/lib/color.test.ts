@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { accentPalette, contrast, deepenTint, hsvToRgb, parseHex, rgbToHsv, surfacePalette, toHex } from './color.ts';
+import { accentPalette, contrast, deepenTint, hsvToRgb, parseHex, playerAccentRgb, rgbToHsv, surfacePalette, toHex } from './color.ts';
 
 test('parses short and long hex, rejects junk', () => {
   assert.deepEqual(parseHex('#abc'), { r: 170, g: 187, b: 204 });
@@ -70,5 +70,16 @@ test('a deepened cover tint carries white text, whatever the cover colour', () =
   for (const tint of ['255, 255, 255', '0, 0, 0', '240, 220, 120', '120, 200, 255', '200, 60, 60', '128, 128, 128']) {
     const [r, g, b] = deepenTint(tint).split(',').map(Number);
     assert.ok(contrast({ r: 255, g: 255, b: 255 }, { r, g, b }) >= 4.5, `${tint} → ${deepenTint(tint)}`);
+  }
+});
+
+test('Fluent player accents stay readable on a contrasting or matching cover', () => {
+  for (const cover of ['255, 230, 10', '0, 0, 255', '255, 0, 0', '0, 0, 0']) {
+    const background = deepenTint(cover);
+    const [r, g, b] = background.split(',').map(Number);
+    for (const accent of ['#ff0000', '#0000ff', '#00ff00', '#000000', '#ffffff']) {
+      const [red, green, blue] = playerAccentRgb(accent, background).split(',').map(Number);
+      assert.ok(contrast({ r, g, b }, { r: red, g: green, b: blue }) >= 4.5);
+    }
   }
 });

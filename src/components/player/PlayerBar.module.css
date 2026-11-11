@@ -54,18 +54,18 @@
   --text: rgba(255, 255, 255, 0.92);
   --text-secondary: rgba(255, 255, 255, 0.74);
   --text-muted: rgba(255, 255, 255, 0.62);
-  --accent: #fff;
-  --accent-strong: #fff;
-  --accent-rgb: 255, 255, 255;
-  --accent-strong-rgb: 255, 255, 255;
-  --accent-soft: rgba(255, 255, 255, 0.18);
+  --accent: rgb(var(--player-accent-rgb));
+  --accent-strong: var(--accent);
+  --accent-rgb: var(--player-accent-rgb);
+  --accent-strong-rgb: var(--player-accent-rgb);
+  --accent-soft: rgba(var(--player-accent-rgb), 0.18);
   --accent-tint: transparent;
-  --accent-tint-strong: rgba(255, 255, 255, 0.14);
+  --accent-tint-strong: rgba(var(--player-accent-rgb), 0.14);
   --hover: rgba(255, 255, 255, 0.12);
   --hover-strong: rgba(255, 255, 255, 0.2);
   --glass-edge: rgba(255, 255, 255, 0.28);
   --knob: rgb(var(--player-tint, 60, 60, 60));
-  --thumb-ring: #fff;
+  --thumb-ring: var(--accent);
   /* Popovers opened from the bar (slider tooltip, volume) carry the white text and accent above, so they are dark. */
   --popover: rgba(43, 43, 43, 0.96);
   --popover-solid: #2b2b2b;

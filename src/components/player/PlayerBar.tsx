@@ -5,9 +5,9 @@ import type { CSSProperties } from 'react';
 import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics';
 import { useNavigation } from '@/components/layout/navigation';
 import { IconButton } from '@/components/ui';
-import { deepenTint } from '@/lib/color';
+import { useFluentAccent } from '@/components/settings/ApplyAppearance';
+import { deepenTint, playerAccentRgb } from '@/lib/color';
 import { isEmptyTrack } from '@/lib/mock-data';
-import { useSettings } from '@/lib/settings';
 import { CommentButton, Transport, VolumeControl } from './controls';
 import { MvButton } from './mv/MvButton';
 import { usePlayer } from './player-store';
@@ -29,9 +29,11 @@ export function PlayerBar() {
   const { track } = player;
   const stats = useSongStats(track.songId, track.source);
   const desktopLyrics = useDesktopLyrics();
-  const tinted = useSettings().windowEffect === 'fluent' && !isEmptyTrack(track);
+  const accent = useFluentAccent();
+  const tinted = !!accent && !isEmptyTrack(track);
   // Sampled only when it is shown; without a source this is the cheap seeded fallback.
   const tint = useCoverTint(tinted ? track.cover : undefined, track.coverSeed);
+  const background = tinted ? deepenTint(tint) : undefined;
   const viewingComments = route.name === 'comments' && route.songId === track.songId && (route.source ?? 'netease') === (track.source ?? 'netease');
 
   const openComments = () => {
@@ -44,7 +46,7 @@ export function PlayerBar() {
       className={styles.player}
       data-player-bar
       data-tinted={tinted || undefined}
-      style={tinted ? { '--player-tint': deepenTint(tint) } as CSSProperties : undefined}
+      style={accent && background ? { '--player-tint': background, '--player-accent-rgb': playerAccentRgb(accent, background) } as CSSProperties : undefined}
       aria-label="播放控制"
       inert={player.lyricsOpen}
     >
