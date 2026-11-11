@@ -179,26 +179,10 @@
 }
 
 /* ───────── Fluent: WinUI Slider ───────── */
-/* 4px rail with a 2px radius, accent value fill, 20px thumb with a 12px accent dot (14 on hover, 10 pressed), always visible. */
-
 :global(html[data-ui-style='fluent']) .slider {
   --rail: 4px;
   --rail-hover: 4px;
   --thumb: 20px;
-  --dot: 6px;
-}
-
-:global(html[data-ui-style='fluent']) .small {
-  --thumb: 16px;
-  --dot: 5px;
-}
-
-:global(html[data-ui-style='fluent']) .slider:hover {
-  --dot: 7px;
-}
-
-:global(html[data-ui-style='fluent']) .dragging {
-  --dot: 5px;
 }
 
 :global(html[data-ui-style='fluent']) .rail,
@@ -218,11 +202,44 @@
 :global(html[data-ui-style='fluent']) .dragging .thumb,
 :global(html[data-ui-style='fluent']) .slider:focus-visible .thumb {
   border: 1px solid var(--thumb-ring, var(--control-stroke));
-  background: radial-gradient(circle closest-side, var(--accent-strong) calc(var(--dot) - 0.5px), var(--knob) var(--dot));
+  display: grid;
+  place-items: center;
+  background: var(--knob);
   box-shadow: 0 1px 2px rgba(var(--ink-rgb), 0.25);
+  pointer-events: auto;
   opacity: 1;
-  transform: translateY(-50%);
-  transition: background 150ms ease;
+  transform: var(--thumb-offset, translateY(-50%));
+  transition: none;
+}
+
+:global(html[data-ui-style='fluent']) .vertical {
+  --thumb-offset: translateX(-50%);
+}
+
+:global(html[data-ui-style='fluent']) .thumb::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  transition: transform 100ms ease-out;
+}
+
+:global(html[data-ui-style='fluent']) .thumb:hover::after {
+  transform: scale(1.17);
+}
+
+:global(html[data-ui-style='fluent']) .dragging .thumb::after {
+  transform: scale(.83);
+}
+
+:global(html[data-ui-style='fluent']) .slider:focus-visible .thumb {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(html[data-ui-style='fluent']) .thumb::after { transition: none; }
 }
 
 :global(html[data-ui-style='fluent']) .tooltip {
@@ -230,4 +247,11 @@
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-soft), inset 0 0 0 1px var(--control-stroke);
   backdrop-filter: none;
+}
+
+:global(html[data-ui-style='fluent']) :global([data-theme='dark']) .slider {
+  --accent-strong: var(--fluent-accent-on-dark);
+}
+:global(html[data-ui-style='fluent']) :global([data-theme='dark']) .fill {
+  background: var(--accent-strong);
 }

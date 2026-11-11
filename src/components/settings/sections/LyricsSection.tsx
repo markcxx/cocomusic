@@ -6,7 +6,7 @@ import { pickTemplate, TEMPLATES } from '@/components/player/visualizer/Visualiz
 import { Button } from '@/components/ui';
 import { needsSamples, settings, useSettings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
-import { ChoiceExpander, Range, Row, Section, Segmented, Select, Switch } from '../controls';
+import { DependentSettings, ChoiceExpander, Range, Row, Section, Segmented, Select, Switch } from '../controls';
 import { keysOf, setter } from '../shared';
 
 /** Quick picks next to the custom visualizer colour (the full picker is one click away). */
@@ -51,13 +51,15 @@ export function LyricsSection() {
           options={[{ value: 'off', label: '关闭' }, ...TEMPLATES]}
         />
       </Row>
-      <ChoiceExpander icon={<Disc size={16} strokeWidth={1.5} />} title="经典唱片搭配" description="经典唱片下方同时显示的频谱效果" disabled={s.lyricsVisualizer !== 'vinyl'} value={s.lyricsVinylEffect} onChange={value => pickTemplate(s.lyricsVisualizer, s.lyricsVisualizer, player.reloadStream, value)} label="经典唱片搭配" options={[{ value: 'none', label: '无' }, { value: 'lines', label: '细线频谱' }, { value: 'glow', label: '柔光波' }]} />
-      <ChoiceExpander icon={<Palette size={16} strokeWidth={1.5} />} title="播放器模式配色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)} value={s.lyricsVisualizerColor} onChange={setter('lyricsVisualizerColor')} label="播放器模式配色" options={[{ value: 'blue', label: '湖光蓝' }, { value: 'cover', label: '跟随封面' }, { value: 'white', label: '月光白' }, { value: 'accent', label: '主题色' }, { value: 'aurora', label: '极光' }, { value: 'custom', label: '自定义' }]} />
-      {s.lyricsVisualizerColor === 'custom' && (
-        <Row icon={<Pipette size={16} strokeWidth={1.5} />} title="自定义颜色" description="选一个你喜欢的颜色，也可以用吸管从屏幕取色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
-          <ThemeColorControl value={s.lyricsVisualizerCustomColor} presets={VISUALIZER_COLOR_PRESETS} onChange={setter('lyricsVisualizerCustomColor')} label="自定义颜色" />
-        </Row>
-      )}
+      <DependentSettings label="播放器模式">
+        <ChoiceExpander icon={<Disc size={16} strokeWidth={1.5} />} title="经典唱片搭配" description="经典唱片下方同时显示的频谱效果" disabled={s.lyricsVisualizer !== 'vinyl'} value={s.lyricsVinylEffect} onChange={value => pickTemplate(s.lyricsVisualizer, s.lyricsVisualizer, player.reloadStream, value)} label="经典唱片搭配" options={[{ value: 'none', label: '无' }, { value: 'lines', label: '细线频谱' }, { value: 'glow', label: '柔光波' }]} />
+        <ChoiceExpander icon={<Palette size={16} strokeWidth={1.5} />} title="播放器模式配色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)} value={s.lyricsVisualizerColor} onChange={setter('lyricsVisualizerColor')} label="播放器模式配色" options={[{ value: 'blue', label: '湖光蓝' }, { value: 'cover', label: '跟随封面' }, { value: 'white', label: '月光白' }, { value: 'accent', label: '主题色' }, { value: 'aurora', label: '极光' }, { value: 'custom', label: '自定义' }]} />
+        {s.lyricsVisualizerColor === 'custom' && (
+          <Row icon={<Pipette size={16} strokeWidth={1.5} />} title="自定义颜色" description="选一个你喜欢的颜色，也可以用吸管从屏幕取色" disabled={!needsSamples(s.lyricsVisualizer, s.lyricsVinylEffect)}>
+            <ThemeColorControl value={s.lyricsVisualizerCustomColor} presets={VISUALIZER_COLOR_PRESETS} onChange={setter('lyricsVisualizerCustomColor')} label="自定义颜色" />
+          </Row>
+        )}
+      </DependentSettings>
       <Row icon={<Timer size={16} strokeWidth={1.5} />} title="歌词偏移" description="歌词总是快或慢时微调，桌面歌词和迷你模式同样生效">
         <Range value={s.lyricsOffset} min={-3} max={3} step={0.1} onChange={value => settings.set('lyricsOffset', Math.round(value * 10) / 10)} label="歌词偏移" format={value => (value === 0 ? '0 秒' : `${value > 0 ? '提前' : '延后'} ${Math.abs(value).toFixed(1)} 秒`)} />
       </Row>

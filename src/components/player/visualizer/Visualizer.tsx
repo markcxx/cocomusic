@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { cn } from '@/lib/cn';
-import { parseHex, rgbTriplet } from '@/lib/color';
+import { useFluentAccent } from '@/components/settings/ApplyAppearance';
+import { accentPalette, parseHex, rgbTriplet } from '@/lib/color';
 import { isRingTemplate, stripTemplate, useSettings, type VisualizerColor, type VisualizerTemplate } from '@/lib/settings';
 import { useLatest } from '@/lib/use-latest';
 import { usePlayer } from '../player-store';
@@ -36,7 +37,13 @@ export function accentRgb() {
   return rgb ? rgbTriplet(rgb) : '199, 184, 234';
 }
 
-type LoopOptions = { active: boolean; color: VisualizerColor; tint: string; custom?: string; synthetic?: boolean };
+/** Lyrics and their preview always sit on a dark surface. */
+export function useVisualizerAccent() {
+  const accent = useFluentAccent();
+  return useMemo(() => accent ? accentPalette(accent, 'dark').strongRgb : undefined, [accent]);
+}
+
+type LoopOptions = { active: boolean; color: VisualizerColor; tint: string; fluentAccent?: string; custom?: string; synthetic?: boolean };
 
 /**
  * Drives one canvas: sizes it for the device pixel ratio, samples the shared
@@ -46,7 +53,8 @@ type LoopOptions = { active: boolean; color: VisualizerColor; tint: string; cust
  */
 export function useVisualizerCanvas(template: VisualizerTemplate, options: LoopOptions & { bands: number }) {
   const { audioElement } = usePlayer();
-  const latest = useLatest(options);
+  const fluentAccent = useVisualizerAccent();
+  const latest = useLatest({ ...options, fluentAccent });
   const { bands, active } = options;
   const [element, setElement] = useState<HTMLCanvasElement | null>(null);
   // A fresh painter per template keeps stateful ones (ripple motes) separate per canvas.
@@ -102,7 +110,7 @@ function runLoop(element: HTMLCanvasElement, spectrum: Spectrum, paint: Painter,
         ? spectrum.synthetic(now / 1000, current.active)
         : spectrum.sample(null, null, false);
     ctx.clearRect(0, 0, width, height);
-    const palette: Palette = { mode: current.color, base: current.tint, accent, hue: (hue + now / 120) % 360, custom: current.custom };
+    const palette: Palette = { mode: current.color, base: current.tint, accent: current.fluentAccent ?? accent, hue: (hue + now / 120) % 360, custom: current.custom };
     paint(ctx, width, height, values, palette, { time: now / 1000, delta });
     // Nothing left to animate: stop until something changes.
     if (!current.active && !spectrum.moving()) { frame = 0; return; }

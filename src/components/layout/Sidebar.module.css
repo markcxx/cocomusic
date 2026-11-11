@@ -276,3 +276,18 @@
 :global(html[data-ui-style='fluent']) .collapsed .navItem {
   padding: 0 var(--space-3);
 }
+
+:global(html[data-ui-style='fluent']) .toggle {
+  left: 0;
+  right: auto;
+  width: 40px;
+  height: 36px;
+  opacity: 1;
+  color: var(--text);
+}
+:global(html[data-ui-style='fluent']) .brand { padding-left: 48px; }
+:global(html[data-ui-style='fluent']) .navItem,
+:global(html[data-ui-style='fluent']) .collapsed .navItem { padding-left: 11px; border-radius: 4px; }
+:global(html[data-ui-style='fluent']) .collapsed .groupLabel { margin: 4px 8px; }
+
+.footer { padding: 4px 0; border-top: 1px solid var(--glass-edge); }

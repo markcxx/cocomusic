@@ -4,10 +4,10 @@ import { AppWindow, Blend, Droplets, Layers, Palette, SunMoon, Wind, ZoomIn } fr
 import { Button } from '@/components/ui';
 import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
-import { useResolvedScheme } from '../ApplyAppearance';
+import { useFluentStyle, useResolvedScheme, useThemeColorPicker } from '../ApplyAppearance';
 import { ChoiceTiles } from '../ChoiceTiles';
 import { WindowSketch } from '../WindowSketch';
-import { ChoiceExpander, Range, Row, Section, Switch } from '../controls';
+import { ChoiceExpander, Range, Row, Section, Select, Switch } from '../controls';
 import { isDesktop, isMac, keysOf, setter, type AppSettings } from '../shared';
 import styles from '../Settings.module.css';
 
@@ -21,14 +21,22 @@ const WINDOW_EFFECT_HINTS: Record<string, string> = {
   none: '不透明窗口',
 };
 
+const MODES = [
+  { value: 'system', label: '跟随系统', scheme: 'split' },
+  { value: 'light', label: '浅色', scheme: 'light' },
+  { value: 'dark', label: '深色', scheme: 'dark' },
+] as const;
+
 /** 设置 › 外观 */
 export function AppearanceSection({ app }: { app: AppSettings }) {
   const s = useSettings();
+  const themeColor = useThemeColorPicker();
   const desktop = isDesktop();
   // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
   const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
   const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || isFlatStyle(s.windowEffect) ? s.windowEffect
     : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
+  const fluent = useFluentStyle();
   const scheme = useResolvedScheme();
   const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
   const chooseEffect = async (value: Settings['windowEffect']) => {
@@ -37,19 +45,22 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
   };
   return (
     <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口效果、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
-      <Row icon={<SunMoon size={16} strokeWidth={1.5} />} title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical>
-        {/* Each tile previews the window effect chosen below, in that scheme. */}
-        <ChoiceTiles
-          value={s.themeMode}
-          onChange={setter('themeMode')}
-          label="外观模式"
-          options={([['system', '跟随系统', 'split'], ['light', '浅色', 'light'], ['dark', '深色', 'dark']] as const).map(([value, label, sketch]) => ({
-            value, label, preview: <WindowSketch effect={shownEffect} scheme={sketch} />,
-          }))}
-        />
+      <Row icon={<SunMoon size={16} strokeWidth={1.5} />} title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical={!fluent}>
+        {fluent ? (
+          <Select value={s.themeMode} onChange={setter('themeMode')} label="外观模式" options={MODES} />
+        ) : (
+          <ChoiceTiles
+            value={s.themeMode}
+            onChange={setter('themeMode')}
+            label="外观模式"
+            options={MODES.map(({ value, label, scheme }) => ({
+              value, label, preview: <WindowSketch effect={shownEffect} scheme={scheme} />,
+            }))}
+          />
+        )}
       </Row>
 
-      <div className={styles.groupLabel}>窗口</div>
+      {!fluent && <div className={styles.groupLabel}>窗口</div>}
       <Row
         icon={<AppWindow size={16} strokeWidth={1.5} />}
         title="窗口效果"
@@ -99,9 +110,9 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
       </Row>
       </>}
 
-      <div className={styles.groupLabel}>颜色与显示</div>
-      <Row icon={<Palette size={16} strokeWidth={1.5} />} title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{s.accent.toUpperCase()}</span></>}>
-        <ThemeColorControl value={s.accent} presets={ACCENT_PRESETS} onChange={setter('accent')} />
+      {!fluent && <div className={styles.groupLabel}>颜色与显示</div>}
+      <Row icon={<Palette size={16} strokeWidth={1.5} />} title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{themeColor.value.toUpperCase()}</span></>}>
+        <ThemeColorControl {...themeColor} presets={ACCENT_PRESETS} />
       </Row>
       <ChoiceExpander icon={<ZoomIn size={16} strokeWidth={1.5} />} title="界面缩放" description="整体放大或缩小界面" value={s.zoom} onChange={setter('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />
       <Row icon={<Wind size={16} strokeWidth={1.5} />} title="减弱动态效果" description="关闭页面过渡、旋转唱片等动画；系统开启“减弱动态效果”时会自动生效">

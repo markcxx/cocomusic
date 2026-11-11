@@ -10,7 +10,7 @@ import { usePlayer } from '../player-store';
 import { useCoverTint } from './cover-tint';
 import type { Palette } from './renderers';
 import { TemplateArt } from './TemplateArt';
-import { accentRgb } from './Visualizer';
+import { accentRgb, useVisualizerAccent } from './Visualizer';
 import styles from './VisualizerPicker.module.css';
 
 /** One flat set of looks (no categories), shown as an even grid. */
@@ -76,6 +76,7 @@ const VINYL_EFFECTS: Array<{ value: VinylEffect; label: string }> = [
  */
 export function VisualizerPicker() {
   const prefs = useSettings();
+  const fluentAccent = useVisualizerAccent();
   const { track, reloadStream } = usePlayer();
   // Cached per cover: the lyrics page behind this card already sampled it.
   const tint = useCoverTint(track.cover, track.coverSeed);
@@ -108,7 +109,7 @@ export function VisualizerPicker() {
   // The colours the real effect would use. Read only while the card is open (accent comes from CSS).
   const custom = parseHex(prefs.lyricsVisualizerCustomColor);
   const palette: Palette | null = open
-    ? { mode: prefs.lyricsVisualizerColor, base: tint, accent: accentRgb(), hue: 265, custom: custom ? rgbTriplet(custom) : undefined }
+    ? { mode: prefs.lyricsVisualizerColor, base: tint, accent: fluentAccent ?? accentRgb(), hue: 265, custom: custom ? rgbTriplet(custom) : undefined }
     : null;
 
   const tile = (value: VisualizerTemplate, label: string, index: number) => {

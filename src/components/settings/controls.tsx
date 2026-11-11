@@ -5,7 +5,7 @@ import { ChevronDown, RotateCcw } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { Menu, Slider, type MenuItem } from '@/components/ui';
 import { cn } from '@/lib/cn';
-import { useSettings } from '@/lib/settings';
+import { useFluentStyle } from './ApplyAppearance';
 import styles from './Settings.module.css';
 
 /** iOS-style switch with a springy knob. */
@@ -122,6 +122,7 @@ export function Range({ value, min = 0, max, step = 1, onChange, label, format }
  * `icon` is the 16px glyph Fluent shows in front of the title (hidden in the other styles).
  */
 export function Row({ icon, title, description, children, disabled, vertical }: { icon?: ReactNode; title: ReactNode; description?: ReactNode; children: ReactNode; disabled?: boolean; vertical?: boolean }) {
+  const fluent = useFluentStyle();
   return (
     <div className={cn(styles.row, disabled && styles.rowDisabled, vertical && styles.rowVertical)} data-described={description ? '' : undefined}>
       {icon && <span className={styles.rowIcon} aria-hidden>{icon}</span>}
@@ -129,7 +130,7 @@ export function Row({ icon, title, description, children, disabled, vertical }: 
         <div className={styles.rowTitle}>{title}</div>
         {description && <div className={styles.rowDescription}>{description}</div>}
       </div>
-      <div className={styles.rowControl}>{children}</div>
+      <div className={styles.rowControl} inert={fluent && disabled}>{children}</div>
     </div>
   );
 }
@@ -152,7 +153,7 @@ export function ChoiceExpander<T extends string | number>({ icon, title, descrip
 }) {
   const [open, setOpen] = useState(false);
   const bodyId = useId();
-  const fluent = useSettings().windowEffect === 'fluent';
+  const fluent = useFluentStyle();
   if (!fluent) {
     return (
       <Row icon={icon} title={title} description={description} disabled={disabled}>
@@ -174,7 +175,7 @@ export function ChoiceExpander<T extends string | number>({ icon, title, descrip
         <span className={styles.expanderValue}>{current?.label}</span>
         <span className={styles.expanderChevron} aria-hidden><ChevronDown size={14} strokeWidth={1.8} /></span>
       </button>
-      <div id={bodyId} className={styles.expanderBody} inert={!open}>
+      <div id={bodyId} className={styles.expanderBody} inert={!open || disabled}>
         <div className={styles.expanderItems} role="radiogroup" aria-label={label}>
           {options.map(option => (
             <button key={String(option.value)} type="button" role="radio" aria-checked={option.value === value} className={styles.radio} onClick={() => onChange(option.value)}>
@@ -186,6 +187,12 @@ export function ChoiceExpander<T extends string | number>({ icon, title, descrip
       </div>
     </div>
   );
+}
+
+/** Related controls whose values refine the preceding setting. */
+export function DependentSettings({ label, children }: { label: string; children: ReactNode }) {
+  const fluent = useFluentStyle();
+  return fluent ? <div role="group" aria-label={label} className={styles.dependent}>{children}</div> : <>{children}</>;
 }
 
 /** A titled group of rows; `onReset` restores just this section's defaults. */

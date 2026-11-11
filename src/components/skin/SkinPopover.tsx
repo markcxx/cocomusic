@@ -4,7 +4,7 @@ import { Palette } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { ChoiceTiles } from '@/components/settings/ChoiceTiles';
 import { ThemeColorControl } from '@/components/settings/ColorPicker';
-import { useResolvedScheme } from '@/components/settings/ApplyAppearance';
+import { useResolvedScheme, useThemeColorPicker } from '@/components/settings/ApplyAppearance';
 import { Segmented, Switch } from '@/components/settings/controls';
 import { chooseWindowEffect, isMac, setter } from '@/components/settings/shared';
 import { WindowSketch } from '@/components/settings/WindowSketch';
@@ -23,6 +23,7 @@ type Style = 'glass' | 'minimal' | 'fluent';
  */
 export function SkinPopover() {
   const s = useSettings();
+  const themeColor = useThemeColorPicker();
   const scheme = useResolvedScheme();
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLSpanElement>(null);
@@ -73,7 +74,7 @@ export function SkinPopover() {
           </section>
           <section>
             <h3>主题色</h3>
-            <ThemeColorControl value={s.accent} presets={ACCENT_PRESETS} onChange={setter('accent')} />
+            <ThemeColorControl {...themeColor} presets={ACCENT_PRESETS} />
             <div className={styles.line}>
               <span>跟随封面取色<small>主题色随正在播放的歌曲变化</small></span>
               <Switch checked={s.accentFollowsCover} onChange={setter('accentFollowsCover')} label="跟随封面取色" />

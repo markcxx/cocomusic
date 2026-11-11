@@ -12,9 +12,9 @@ const GLIDE_MS = 700;
 /**
  * 设置 › 主题色 › 跟随封面: publishes the playing cover's colour for ApplyAppearance,
  * gliding from the previous song's colour so a skip does not flash the whole window.
- * Renders nothing; lives inside the player provider.
+ * Returns the final colour for secondary windows so animation frames stay local.
  */
-export function CoverAccent() {
+export function usePlayingCoverAccent() {
   const { accentFollowsCover } = useSettings();
   const { track } = usePlayer();
   const tint = useCoverTint(accentFollowsCover ? track.cover : undefined, track.coverSeed);
@@ -36,5 +36,7 @@ export function CoverAccent() {
     return () => cancelAnimationFrame(frame);
   }, [accentFollowsCover, target]);
 
-  return null;
+  if (!accentFollowsCover || !target) return undefined;
+  const [r, g, b] = target.split(',').map(Number);
+  return toHex({ r, g, b });
 }

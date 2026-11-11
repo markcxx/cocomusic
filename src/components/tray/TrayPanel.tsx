@@ -2,7 +2,8 @@
 
 import { ArrowRightToLine, Heart, LogIn, Mic2, Pause, PictureInPicture2, Play, Power, Repeat, Repeat1, Settings, Shuffle, SkipBack, SkipForward, Volume1, Volume2, VolumeX } from 'lucide-react';
 import { useEffect, useLayoutEffect, useState } from 'react';
-import { useSchemeAndAccent } from '@/components/settings/ApplyAppearance';
+import { useSettings } from '@/lib/settings';
+import { useSchemeAndAccent, useFluentStyle } from '@/components/settings/ApplyAppearance';
 import { Slider } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import styles from './TrayPanel.module.css';
@@ -19,8 +20,10 @@ const send = (action: string) => window.coco?.tray?.action(action);
  * player state; every button sends an action back.
  */
 export function TrayPanel() {
-  useSchemeAndAccent();
   const [state, setState] = useState<CocoTrayState | null>(null);
+  const fluent = useFluentStyle();
+  const { accentFollowsCover } = useSettings();
+  useSchemeAndAccent({ accent: fluent && accentFollowsCover ? state?.coverAccent : undefined });
   const [opened, setOpened] = useState(0);
   const [card, setCard] = useState<HTMLDivElement | null>(null);
   // Local volume while dragging, so the thumb does not jump back between IPC round trips.

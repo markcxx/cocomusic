@@ -28,6 +28,7 @@ export interface PlayerState {
   /** 0–1. */
   volume: number;
   cover: string;
+  coverAccent?: string;
   /** Signed-in nickname on the current platform ('' when logged out). */
   nickname: string;
   /** 设置 › 系统: show the menu-bar / tray icon. */
@@ -171,6 +172,7 @@ export function parsePlayerState(raw: unknown): PlayerState | null {
     volume: typeof value.volume === 'number' && Number.isFinite(value.volume) ? Math.min(1, Math.max(0, value.volume)) : 0.62,
     // Only HTTPS artwork or an indexed local cover, never arbitrary filesystem paths.
     nickname: text(value.nickname, 60),
+    coverAccent: typeof value.coverAccent === 'string' && /^#[0-9a-f]{6}$/i.test(value.coverAccent) ? value.coverAccent : undefined,
     cover: typeof value.cover === 'string' && (/^https:\/\//.test(value.cover) || /^\/api\/local\/[a-f0-9]{20}\?part=cover$/.test(value.cover)) ? value.cover.slice(0, 1000) : '',
     showTray: bool(value.showTray, true),
     trayLyrics: bool(value.trayLyrics, true),

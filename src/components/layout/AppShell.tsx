@@ -4,8 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
 import { ConceptAutoCheckIn } from '@/components/account/ConceptAutoCheckIn';
-import { ApplyAppearance } from '@/components/settings/ApplyAppearance';
-import { CoverAccent } from '@/components/settings/CoverAccent';
+import { ApplyAppearance, useFluentStyle } from '@/components/settings/ApplyAppearance';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
@@ -19,9 +18,10 @@ import { ScrollArea } from '@/components/scroll';
 import { Toaster, TooltipLayer } from '@/components/ui';
 import { LegacyDataNotice } from './LegacyDataNotice';
 import { NavigationProvider, useNavigation } from './navigation';
+import { FluentNavigation } from './FluentNavigation';
 import { Sidebar } from './Sidebar';
 import { SystemBridge } from './SystemBridge';
-import { useSidebarCollapsed } from './sidebar-state';
+import { setSidebarCollapsed, useSidebarCollapsed } from './sidebar-state';
 import { TopBar } from './TopBar';
 import styles from './AppShell.module.css';
 
@@ -45,6 +45,7 @@ function ContentSheet({ children }: { children: ReactNode }) {
 export function AppShell({ children }: { children: ReactNode }) {
   useWindowMaterial();
   const collapsed = useSidebarCollapsed();
+  const fluent = useFluentStyle();
   const mini = useMiniMode();
   // Lets global CSS drop the window backdrop so the capsule's corners are see-through.
   useEffect(() => { document.documentElement.dataset.mini = mini ? 'true' : 'false'; }, [mini]);
@@ -55,15 +56,16 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AccountProvider>
           <ConceptAutoCheckIn />
           <PlayerProvider>
-            <CoverAccent />
             <div className="backdrop" aria-hidden />
             {/* The full UI stays mounted under the mini bar: playback and state carry over. */}
             <div className={`${styles.shell} ${collapsed ? styles.collapsed : ''}`} inert={mini} aria-hidden={mini || undefined} style={mini ? { visibility: 'hidden' } : undefined}>
               {/* The window's top edge (padding above the toolbar) drags the window too. */}
               <div className={styles.dragStrip} aria-hidden />
-              <div className={styles.sidebar}>
-                <Sidebar />
-              </div>
+              {fluent ? <FluentNavigation /> : (
+                <div className={styles.sidebar}>
+                  <Sidebar collapsed={collapsed} onToggle={() => setSidebarCollapsed(!collapsed)} />
+                </div>
+              )}
               <div className={styles.main}>
                 <div className={styles.topBar}>
                   <TopBar />

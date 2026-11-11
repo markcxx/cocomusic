@@ -3,7 +3,7 @@
 import { Baseline, Highlighter, Languages, Mic2, MoveHorizontal, Palette, PanelBottom, Type } from 'lucide-react';
 import { settings, useSettings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
-import { ChoiceExpander, Range, Row, Section, Switch } from '../controls';
+import { DependentSettings, ChoiceExpander, Range, Row, Section, Switch } from '../controls';
 import { keysOf, setter } from '../shared';
 
 /** 设置 › 任务栏歌词 */
@@ -25,12 +25,14 @@ export function TaskbarLyricsSection() {
         <Switch checked={s.taskbarCustomColors} onChange={setter('taskbarCustomColors')} label="自定义任务栏歌词配色" disabled={!s.taskbarLyrics} />
       </Row>
       {s.taskbarCustomColors && <>
-        <Row icon={<Baseline size={16} strokeWidth={1.5} />} title="文字颜色" description="尚未唱到的歌词颜色" disabled={!s.taskbarLyrics}>
-          <ThemeColorControl label="任务栏歌词文字颜色" value={s.taskbarTextColor} presets={[{ label: '柔灰', color: '#626771' }, { label: '浅灰', color: '#bfc4cc' }, { label: '纯白', color: '#ffffff' }, { label: '深灰', color: '#30343b' }]} onChange={setter('taskbarTextColor')} />
-        </Row>
-        <Row icon={<Highlighter size={16} strokeWidth={1.5} />} title="高亮颜色" description="随演唱进度填充的颜色" disabled={!s.taskbarLyrics}>
-          <ThemeColorControl label="任务栏歌词高亮颜色" value={s.taskbarHighlightColor} presets={[{ label: '晴空蓝', color: '#0078d4' }, { label: '薰衣草', color: '#a799d4' }, { label: '薄荷', color: '#4fb797' }, { label: '暖橙', color: '#dd9b53' }]} onChange={setter('taskbarHighlightColor')} />
-        </Row>
+        <DependentSettings label="自定义歌词配色">
+          <Row icon={<Baseline size={16} strokeWidth={1.5} />} title="文字颜色" description="尚未唱到的歌词颜色" disabled={!s.taskbarLyrics}>
+            <ThemeColorControl label="任务栏歌词文字颜色" value={s.taskbarTextColor} presets={[{ label: '柔灰', color: '#626771' }, { label: '浅灰', color: '#bfc4cc' }, { label: '纯白', color: '#ffffff' }, { label: '深灰', color: '#30343b' }]} onChange={setter('taskbarTextColor')} />
+          </Row>
+          <Row icon={<Highlighter size={16} strokeWidth={1.5} />} title="高亮颜色" description="随演唱进度填充的颜色" disabled={!s.taskbarLyrics}>
+            <ThemeColorControl label="任务栏歌词高亮颜色" value={s.taskbarHighlightColor} presets={[{ label: '晴空蓝', color: '#0078d4' }, { label: '薰衣草', color: '#a799d4' }, { label: '薄荷', color: '#4fb797' }, { label: '暖橙', color: '#dd9b53' }]} onChange={setter('taskbarHighlightColor')} />
+          </Row>
+        </DependentSettings>
       </>}
       <Row icon={<Languages size={16} strokeWidth={1.5} />} title="显示翻译" description="有翻译时显示在第二行，其他情况显示歌名与歌手" disabled={!s.taskbarLyrics}>
         <Switch checked={s.taskbarTranslation} onChange={setter('taskbarTranslation')} label="任务栏歌词显示翻译" disabled={!s.taskbarLyrics} />

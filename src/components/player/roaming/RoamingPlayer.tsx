@@ -7,6 +7,7 @@ import { LyricsPanel } from '../LyricsPanel';
 import { usePlaybackPosition, usePlayer } from '../player-store';
 import { useTrackLyrics } from '../use-track-lyrics';
 import { analyserFor } from '../visualizer/audio-graph';
+import { useVisualizerAccent } from '../visualizer/Visualizer';
 import { useCoverTint } from '../visualizer/cover-tint';
 import { RoamingEngine, type EngineOptions } from './engine';
 import styles from './RoamingPlayer.module.css';
@@ -48,7 +49,9 @@ function Scene() {
 
   // Sung text takes the artwork's theme colour (a custom colour from 设置 › 播放器模式配色 overrides it).
   const tint = useCoverTint(track.cover, track.coverSeed);
-  const accent = prefs.lyricsVisualizerColor === 'custom' ? prefs.lyricsVisualizerCustomColor : `rgb(${tint})`;
+  const theme = useVisualizerAccent();
+  const sungTint = prefs.lyricsVisualizerColor === 'accent' && theme ? theme : tint;
+  const accent = prefs.lyricsVisualizerColor === 'custom' ? prefs.lyricsVisualizerCustomColor : `rgb(${sungTint})`;
   const options = useMemo<EngineOptions>(() => ({
     font: { family: typeof document === 'undefined' ? 'sans-serif' : lyricFont(), weight: 700 },
     fontScale: prefs.lyricsFontSize / 18,

@@ -4,6 +4,7 @@ import { AppWindow, CircleArrowUp, Disc3, Download, HardDrive, Info, Keyboard, M
 import { useEffect, useRef, useState } from 'react';
 import { sectionScrollTop } from '@/components/scroll/wheel-motion';
 import { Page, useScrollArea } from '@/components/scroll';
+import { useFluentStyle } from './ApplyAppearance';
 import { cn } from '@/lib/cn';
 import { AboutSection } from './sections/AboutSection';
 import { AppearanceSection } from './sections/AppearanceSection';
@@ -41,13 +42,14 @@ const SECTIONS = [
 export function SettingsView() {
   const { element, scrollTo } = useScrollArea();
   const app = useAppSettings();
+  const fluent = useFluentStyle();
   const [active, setActive] = useState<string>(SECTIONS[0].id);
   const clicking = useRef(0);
 
   // Highlight the section in view (scroll-spy), unless a click just scrolled us there.
   useEffect(() => {
     const root = element();
-    if (!root) return;
+    if (fluent || !root) return;
     const onScroll = () => {
       if (performance.now() - clicking.current < 600) return;
       const sections = [...root.querySelectorAll<HTMLElement>('[data-settings-section]')];
@@ -60,7 +62,7 @@ export function SettingsView() {
     };
     root.addEventListener('scroll', onScroll, { passive: true });
     return () => root.removeEventListener('scroll', onScroll);
-  }, [element]);
+  }, [element, fluent]);
 
   const jump = (id: string, at: number) => {
     const root = element();
@@ -75,17 +77,17 @@ export function SettingsView() {
     <Page className={styles.page}>
       <header className={styles.hero}>
         <h1>设置</h1>
-        <p>所有设置即时生效，并保存在本机。</p>
+        {!fluent && <p>所有设置即时生效，并保存在本机。</p>}
       </header>
 
       <div className={styles.layout}>
-        <nav className={styles.index} aria-label="设置分类">
+        {!fluent && <nav className={styles.index} aria-label="设置分类">
           {SECTIONS.filter(section => section.id !== 'taskbar-lyrics' || app.result?.info.platform === 'win32').map(({ id, label, icon: Icon }) => (
             <button key={id} type="button" className={cn(styles.indexItem, active === id && styles.indexActive)} onClick={() => jump(id, performance.now())} aria-current={active === id ? 'true' : undefined}>
               <Icon size={15} strokeWidth={1.6} />{label}
             </button>
           ))}
-        </nav>
+        </nav>}
 
         <div className={styles.sections}>
           <CatalogSection />

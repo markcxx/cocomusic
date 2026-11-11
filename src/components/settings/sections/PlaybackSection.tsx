@@ -3,7 +3,7 @@
 import { AudioLines, Crown, Gauge, Headphones, History, MousePointerClick, Play, RotateCcw, SkipForward, SlidersHorizontal, Speaker } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { settings, useSettings } from '@/lib/settings';
-import { ChoiceExpander, Range, Row, Section, Select, Switch } from '../controls';
+import { DependentSettings, ChoiceExpander, Range, Row, Section, Select, Switch } from '../controls';
 import { keysOf, QUALITIES, setter } from '../shared';
 
 function useOutputDevices() {
@@ -42,9 +42,11 @@ export function PlaybackSection() {
       <Row icon={<RotateCcw size={16} strokeWidth={1.5} />} title="启动时恢复上次播放" description="打开应用时恢复播放列表和上次的歌曲（不会自动开始播放）">
         <Switch checked={s.resumeOnLaunch} onChange={setter('resumeOnLaunch')} label="启动时恢复上次播放" />
       </Row>
-      <Row icon={<History size={16} strokeWidth={1.5} />} title="恢复播放进度" description="从上次停下的位置继续，而不是从头开始" disabled={!s.resumeOnLaunch}>
-        <Switch checked={s.resumePosition} onChange={setter('resumePosition')} label="恢复播放进度" disabled={!s.resumeOnLaunch} />
-      </Row>
+      <DependentSettings label="启动时恢复上次播放">
+        <Row icon={<History size={16} strokeWidth={1.5} />} title="恢复播放进度" description="从上次停下的位置继续，而不是从头开始" disabled={!s.resumeOnLaunch}>
+          <Switch checked={s.resumePosition} onChange={setter('resumePosition')} label="恢复播放进度" disabled={!s.resumeOnLaunch} />
+        </Row>
+      </DependentSettings>
       <Row icon={<SkipForward size={16} strokeWidth={1.5} />} title="播放失败时自动跳过" description="遇到无版权或无法播放的歌曲时自动播放下一首">
         <Switch checked={s.skipOnError} onChange={setter('skipOnError')} label="播放失败时自动跳过" />
       </Row>

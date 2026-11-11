@@ -27,3 +27,5 @@
   position: absolute;
   display: inline-flex;
 }
+
+:global(html[data-ui-style='fluent']) .on { color: var(--text-on-accent); }

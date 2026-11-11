@@ -5,7 +5,7 @@ import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useBackdropImage } from '@/lib/backdrop-image';
 import { accentPalette, surfacePalette } from '@/lib/color';
 import { useCoverAccent } from '@/lib/cover-accent';
-import { isFlatStyle, useSettings, type WindowEffect } from '@/lib/settings';
+import { isFlatStyle, settings, useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
  * Applies appearance settings as CSS variables / data attributes on <html>:
@@ -159,7 +159,32 @@ export function supportedEffect(effect: WindowEffect, platform: string | undefin
   return 'none';
 }
 
-/** Colour scheme + theme colour only (secondary windows such as the tray panel). */
+/** A window launched transparent keeps its material until restart. */
+export function useFluentStyle() {
+  const effect = useSettings().windowEffect;
+  return effect === 'fluent' && (typeof window === 'undefined' || window.coco?.material !== 'transparent');
+}
+
+/** The colour actually driving Fluent controls, before per-surface contrast adjustment. */
+export function useFluentAccent() {
+  const fluent = useFluentStyle();
+  const s = useSettings();
+  const cover = useCoverAccent();
+  return fluent ? (s.accentFollowsCover && cover ? cover : s.accent) : undefined;
+}
+
+export function useThemeColorPicker() {
+  const s = useSettings();
+  const fluentAccent = useFluentAccent();
+  return {
+    value: fluentAccent ?? s.accent,
+    onChange(hex: string) {
+      settings.set('accent', hex);
+      if (fluentAccent) settings.set('accentFollowsCover', false);
+    },
+  };
+}
+
 /** The colour scheme in use: 外观模式, with 跟随系统 resolved. */
 export function useResolvedScheme(): 'light' | 'dark' {
   const { themeMode } = useSettings();
@@ -170,6 +195,7 @@ export function useResolvedScheme(): 'light' | 'dark' {
 export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'light' | 'dark'; accent?: string } = {}) {
   const s = useSettings();
   const accent = options.accent ?? s.accent;
+  const fluent = useFluentStyle();
   const resolved = useResolvedScheme();
   const scheme = options.scheme ?? resolved;
   const notifyMain = options.notifyMain ?? false;
@@ -183,17 +209,19 @@ export function useSchemeAndAccent(options: { notifyMain?: boolean; scheme?: 'li
   useEffect(() => {
     const palette = accentPalette(accent, scheme);
     const root = document.documentElement.style;
-    root.setProperty('--accent', palette.accent);
+    root.setProperty('--accent', fluent ? palette.strong : palette.accent);
     root.setProperty('--accent-strong', palette.strong);
     root.setProperty('--accent-tint', palette.tint);
     root.setProperty('--accent-tint-strong', palette.tintStrong);
-    root.setProperty('--accent-rgb', palette.accentRgb);
+    root.setProperty('--accent-rgb', fluent ? palette.strongRgb : palette.accentRgb);
+    if (fluent) root.setProperty('--fluent-accent-on-dark', accentPalette(accent, 'dark').strong);
+    else root.removeProperty('--fluent-accent-on-dark');
     root.setProperty('--accent-strong-rgb', palette.strongRgb);
     root.setProperty('--accent-soft', `rgba(${palette.accentRgb}, ${scheme === 'dark' ? 0.2 : 0.16})`);
     for (const [name, value] of Object.entries(surfacePalette(accent, scheme))) {
       root.setProperty(name, value);
     }
-  }, [accent, scheme]);
+  }, [accent, scheme, fluent]);
   return scheme;
 }
 

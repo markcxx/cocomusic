@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useMemo } from 'react';
+import { usePlayingCoverAccent } from '@/components/settings/CoverAccent';
+import { useFluentStyle } from '@/components/settings/ApplyAppearance';
 import { useAccount } from '@/components/account/account-store';
 import { useNavigation } from '@/components/layout/navigation';
 import { playModes, usePlaybackPosition, usePlayer, type PlayMode } from '@/components/player/player-store';
@@ -23,6 +25,8 @@ export function SystemBridge() {
   const account = useAccount();
   const { navigate } = useNavigation();
   const prefs = useSettings();
+  const coverAccent = usePlayingCoverAccent();
+  const fluent = useFluentStyle();
   const lyrics = useTrackLyrics(track);
   const position = usePlaybackPosition();
 
@@ -44,10 +48,11 @@ export function SystemBridge() {
   const cover = track.cover && (/^https:\/\//.test(track.cover) || /^\/api\/local\/[a-f0-9]{20}\?part=cover$/.test(track.cover)) ? track.cover : '';
   const nickname = account.profile?.nickname ?? '';
   const state = useMemo<CocoSystemPlayerState>(() => ({
+    coverAccent: fluent ? coverAccent : undefined,
     hasTrack, title: track.title, artist: track.artist, playing, liked, mode, lyric, lyricTranslation, progress, volume, cover, nickname,
     showTray: prefs.showTray, trayLyrics: prefs.trayLyrics, menuBarText: prefs.menuBarText, lyricColor: desktopLyricColor(prefs).to,
     taskbarLyrics: prefs.taskbarLyrics, taskbarWidth: prefs.taskbarWidth, taskbarPosition: prefs.taskbarPosition,
-  }), [hasTrack, track.title, track.artist, playing, liked, mode, lyric, lyricTranslation, progress, volume, cover, nickname, prefs]);
+  }), [hasTrack, track.title, track.artist, playing, liked, mode, lyric, lyricTranslation, progress, volume, cover, nickname, prefs, fluent, coverAccent]);
 
   useEffect(() => { window.coco?.system?.setPlayerState(state); }, [state]);
 

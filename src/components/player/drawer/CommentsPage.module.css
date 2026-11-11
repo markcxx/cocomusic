@@ -57,3 +57,8 @@
 .commentsBody {
   padding: var(--space-1) 0 var(--space-8);
 }
+
+:global(html[data-ui-style='fluent']) .comments {
+  --accent: var(--fluent-accent-on-dark);
+  --accent-strong: var(--fluent-accent-on-dark);
+}

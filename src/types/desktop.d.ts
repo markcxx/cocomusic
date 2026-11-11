@@ -113,6 +113,7 @@ interface CocoSystemPlayerState {
   lyricColor: string;
   volume: number;
   cover: string;
+  coverAccent?: string;
   nickname: string;
   showTray: boolean;
   trayLyrics: boolean;

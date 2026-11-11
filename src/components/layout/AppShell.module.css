@@ -103,3 +103,8 @@
 :global(html[data-ui-style='fluent']) .collapsed {
   --sidebar-width: 56px;
 }
+
+@media (max-width: 640px) {
+  :global(html[data-ui-style='fluent']) .topBar { padding-left: 52px; }
+  :global(html[data-ui-style='fluent'][data-platform='darwin']) .topBar { padding-top: 24px; }
+}
