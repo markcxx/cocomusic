@@ -197,11 +197,45 @@ test('membership coalesces concurrent claims, sends only today and re-reads plat
   assert.equal(seen.filter(x => x.pathname.includes('receive_vip')).length, 1);
   assert.equal(seen.find(x => x.pathname.includes('receive_vip'))!.searchParams.get('receive_day'), conceptToday());
   assert.equal(first.records[0].date, '2026-11-04');
+  assert.equal(first.claimedDay, conceptToday());
+  const { autoConceptCheckIn } = require('./auto-check-in') as typeof import('./auto-check-in');
+  assert.equal((await autoConceptCheckIn()).status, 'already-done');
+  await claimConceptMembership();
+  assert.equal(seen.filter(x => x.pathname.includes('receive_vip')).length, 1);
+  session.clear('kugou-lite');
+});
+
+test('concept activity history uses receive_vip, not just the presence of today’s row', async t => {
+  session.set('kugou-lite', { userid: 'history-only', token: 'concept' });
+  const { conceptMembership, conceptToday } = require('./membership') as typeof import('./membership');
+  let received = 0;
+  t.mock.method(globalThis, 'fetch', async (input: string) => Response.json({
+    status: 1, data: input.includes('get_union_vip') ? { vip_type: 0 } : [{ day: conceptToday(), receive_vip: received }],
+  }));
+  assert.equal((await conceptMembership()).claimedDay, undefined);
+  received = 1;
+  assert.equal((await conceptMembership()).claimedDay, conceptToday());
+  session.clear('kugou-lite');
+});
+
+test('an automatic claim survives a failed membership refresh without a second claim', async t => {
+  session.set('kugou-lite', { userid: 'auto-first', token: 'concept' });
+  let claims = 0;
+  t.mock.method(globalThis, 'fetch', async (input: string) => {
+    if (input.includes('receive_vip_listen_song')) { claims++; return Response.json({ status: 1 }); }
+    return Response.json({ status: 0, error_msg: '查询暂不可用' });
+  });
+  const { autoConceptCheckIn } = require('./auto-check-in') as typeof import('./auto-check-in');
+  const { claimConceptMembership, conceptToday } = require('./membership') as typeof import('./membership');
+  const [, membership] = await Promise.all([autoConceptCheckIn(), claimConceptMembership()]);
+  assert.equal(membership.claimedDay, conceptToday());
+  assert.equal(membership.refreshError, '查询暂不可用');
+  assert.equal(claims, 1);
   session.clear('kugou-lite');
 });
 
 test('membership refuses ambiguous success responses instead of claiming benefits were granted', async t => {
-  session.set('kugou-lite', { userid: '202', token: 'concept' });
+  session.set('kugou-lite', { userid: '203', token: 'concept' });
   t.mock.method(globalThis, 'fetch', async () => Response.json({ data: {} }));
   const { claimConceptMembership } = require('./membership') as typeof import('./membership');
   await assert.rejects(claimConceptMembership(), /平台未确认领取成功/);

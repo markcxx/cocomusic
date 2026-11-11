@@ -91,7 +91,7 @@ export function SettingsView() {
 
         <div className={styles.sections}>
           <CatalogSection />
-          <AppearanceSection app={app} />
+          <AppearanceSection />
           <PlaybackSection />
           <LyricsSection />
           <DesktopLyricsSection />

@@ -1,3 +1,5 @@
+export const CONCEPT_CLAIMED_EVENT = 'coco:concept-claimed';
+
 /** Request a credential check for the platform whose request was rejected. */
 export const ACCOUNT_RECHECK_EVENT = 'coco:account-recheck';
 export function requestAccountRecheck(source: string) {

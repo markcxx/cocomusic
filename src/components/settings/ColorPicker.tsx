@@ -154,10 +154,15 @@ export function ThemeColorControl({ value, presets, onChange, label = '主题色
       if (panel.current?.contains(node) || anchor.current?.contains(node)) return;
       setOpen(false);
     };
-    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setOpen(false); };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.stopPropagation();
+      setOpen(false);
+      anchor.current?.focus();
+    };
     document.addEventListener('pointerdown', onPointer);
-    window.addEventListener('keydown', onKey);
-    return () => { document.removeEventListener('pointerdown', onPointer); window.removeEventListener('keydown', onKey); };
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey); };
   }, [open]);
 
   return (

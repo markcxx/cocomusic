@@ -36,12 +36,13 @@ export function DialogActions({ onCancel, onConfirm, confirmLabel, cancelLabel =
  * the dialog stays open with a spinner until it settles, shows its error inline
  * on failure, and closes on success.
  */
-export function ConfirmDialog({ open, onClose, title, message, confirmLabel = '确定', tone = 'primary', onConfirm }: {
+export function ConfirmDialog({ open, onClose, title, message, confirmLabel = '确定', cancelLabel = '取消', tone = 'primary', onConfirm }: {
   open: boolean;
   onClose: () => void;
   title: string;
   message: ReactNode;
   confirmLabel?: string;
+  cancelLabel?: string;
   tone?: 'primary' | 'danger';
   onConfirm: () => void | Promise<void>;
 }) {
@@ -68,7 +69,7 @@ export function ConfirmDialog({ open, onClose, title, message, confirmLabel = '�
       <form className={styles.body} onSubmit={event => { event.preventDefault(); void confirm(); }}>
         <div className={styles.message}>{message}</div>
         {error && <p className={styles.error} role="alert">{error}</p>}
-        <DialogActions onCancel={close} onConfirm={() => void confirm()} confirmLabel={busy ? `${confirmLabel}中…` : confirmLabel} busy={busy} tone={tone} />
+        <DialogActions onCancel={close} onConfirm={() => void confirm()} confirmLabel={busy ? `${confirmLabel}中…` : confirmLabel} cancelLabel={cancelLabel} busy={busy} tone={tone} />
       </form>
     </Dialog>
   );

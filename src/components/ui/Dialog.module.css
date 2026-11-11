@@ -9,6 +9,11 @@
   backdrop-filter: blur(6px);
 }
 
+.clearBackdrop {
+  background: transparent;
+  backdrop-filter: none;
+}
+
 .dialog {
   position: relative;
   width: min(420px, calc(100vw - 48px));

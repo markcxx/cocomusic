@@ -5,6 +5,7 @@ import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
 import { ConceptAutoCheckIn } from '@/components/account/ConceptAutoCheckIn';
 import { ApplyAppearance, useFluentStyle } from '@/components/settings/ApplyAppearance';
+import { WindowEffectRestartDialog } from '@/components/settings/WindowEffectRestartDialog';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
@@ -81,6 +82,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {!mini && <LocalDropOverlay />}
             <SystemBridge />
             <LegacyDataNotice />
+            <WindowEffectRestartDialog />
             <LoginDialog />
             <DownloadDialog />
             {!mini && <UpdateDialog />}

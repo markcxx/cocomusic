@@ -5,7 +5,7 @@ import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { useBackdropImage } from '@/lib/backdrop-image';
 import { accentPalette, surfacePalette } from '@/lib/color';
 import { useCoverAccent } from '@/lib/cover-accent';
-import { isFlatStyle, settings, useSettings, type WindowEffect } from '@/lib/settings';
+import { isFlatStyle, settings, supportsBackdropImage, useSettings, type WindowEffect } from '@/lib/settings';
 
 /**
  * Applies appearance settings as CSS variables / data attributes on <html>:
@@ -133,9 +133,9 @@ const FLUENT: Record<'light' | 'dark', Record<string, string>> = {
 
 const FLAT_PALETTES = { minimal: MINIMAL, fluent: FLUENT };
 
-/** opacity 0 → ×0.15, 50 → ×1, 100 → fully opaque. Never fully invisible (text must stay readable). */
+/** Interpolate from transparent through the normal surface alpha at 50% to opaque. */
 function scale(alpha: number, opacity: number) {
-  if (opacity <= 50) return alpha * (0.15 + (opacity / 50) * 0.85);
+  if (opacity <= 50) return alpha * opacity / 50;
   return alpha + (1 - alpha) * ((opacity - 50) / 50);
 }
 
@@ -149,13 +149,14 @@ function useSystemDark() {
 }
 
 /** Effects this platform can render (main falls back the same way). */
-export function supportedEffect(effect: WindowEffect, platform: string | undefined): WindowEffect {
+export function supportedEffect(effect: WindowEffect): WindowEffect {
+  const bridge = typeof window !== 'undefined' ? window.coco : undefined;
+  // Native transparency is fixed when the window is created, until the next restart.
+  if (bridge?.material === 'transparent') return 'transparent';
   if (isFlatStyle(effect)) return effect;
-  if (effect === 'none' || !platform) return 'none';
-  // The window's own construction decides (main reads the saved setting at launch).
-  if (effect === 'transparent' || window.coco?.material === 'transparent') return window.coco?.material === 'transparent' ? 'transparent' : 'none';
-  if (platform === 'darwin') return 'vibrancy';
-  if (platform === 'win32') return effect === 'vibrancy' ? 'acrylic' : effect;
+  if (effect === 'none' || effect === 'transparent') return 'none';
+  if (bridge?.platform === 'darwin') return 'vibrancy';
+  if (bridge?.platform === 'win32') return effect === 'vibrancy' ? 'acrylic' : effect;
   return 'none';
 }
 
@@ -233,18 +234,13 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
   const scheme = useSchemeAndAccent({ notifyMain: true, accent });
   const image = useBackdropImage();
 
-
-  // Whole window: OS material (desktop only) + how much the app paints over it.
-  // Window opacity scales the drawn backdrop *and* every panel, so lowering it
-  // really lets the (OS-blurred) desktop through the whole window, not just the gaps.
-  // Runs after useSchemeAndAccent's effects (and again whenever they do: same deps),
-  // so in the flat styles (简约, Fluent) their tokens win over the theme-tinted ones.
+  const effect = supportedEffect(s.windowEffect);
+  // Only update the native backing when the material changes.
   useEffect(() => {
-    // A window launched see-through stays so until restart, whatever the setting says now.
-    const launchedTransparent = window.coco?.material === 'transparent';
-    const effect = launchedTransparent ? 'transparent' : supportedEffect(s.windowEffect, window.coco?.platform);
-    // The flat styles paint an opaque window: no OS material behind it.
-    if (!launchedTransparent) window.coco?.app?.setMaterial(isFlatStyle(effect) ? 'none' : effect);
+    if (effect !== 'transparent') window.coco?.app?.setMaterial(isFlatStyle(effect) ? 'none' : effect);
+  }, [effect]);
+
+  useEffect(() => {
     const html = document.documentElement;
     html.dataset.material = isFlatStyle(effect) ? 'none' : effect;
     html.dataset.uiStyle = isFlatStyle(effect) ? effect : 'glass';
@@ -259,16 +255,14 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
     // Without a material there is nothing behind the window to reveal; stay opaque.
     const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
     html.style.setProperty('--window-opacity', String(opacity));
-    // Panels keep a little body even at 0 so their edges and text stay legible.
-    const panelFactor = effect === 'none' ? 1 : 0.12 + 0.88 * opacity;
     for (const [name, rgbVar, alpha] of SURFACES) {
-      html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * panelFactor).toFixed(3)})`);
+      html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * opacity).toFixed(3)})`);
     }
     html.style.setProperty('--glass-blur', s.glassBlur ? `blur(${s.glassBlur}px) saturate(1.5)` : 'none');
-  }, [scheme, accent, s.windowEffect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
+  }, [scheme, accent, effect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
 
-  // 换肤 › 背景图: drawn by the 毛玻璃 style's backdrop; the flat styles paint plain surfaces and ignore it.
-  const showImage = Boolean(image) && !isFlatStyle(s.windowEffect);
+  // A saved photo is rendered only over glass, including while a material switch awaits restart.
+  const showImage = Boolean(image) && supportsBackdropImage(s.windowEffect) && effect !== 'transparent';
   useEffect(() => {
     const html = document.documentElement;
     html.dataset.backdropImage = showImage ? 'true' : 'false';

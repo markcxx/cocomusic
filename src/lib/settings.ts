@@ -27,6 +27,8 @@ export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'mi
 export const FLAT_STYLES = ['minimal', 'fluent'] as const;
 export type FlatStyle = (typeof FLAT_STYLES)[number];
 export const isFlatStyle = (effect: WindowEffect): effect is FlatStyle => (FLAT_STYLES as readonly string[]).includes(effect);
+/** Custom wallpaper belongs to the glass materials, independently of window transparency. */
+export const supportsBackdropImage = (effect: WindowEffect) => effect === 'acrylic' || effect === 'mica' || effect === 'vibrancy';
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 /** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
 export type DesktopColor = LyricColorId | 'custom';
@@ -179,7 +181,7 @@ export const DEFAULT_SETTINGS: Settings = {
   catalogSource: 'netease',
   conceptAutoCheckIn: false,
   themeMode: 'system',
-  windowEffect: 'acrylic',
+  windowEffect: 'minimal',
   windowOpacity: 100,
   glassOpacity: 50,
   glassBlur: 36,

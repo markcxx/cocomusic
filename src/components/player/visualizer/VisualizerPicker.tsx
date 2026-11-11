@@ -98,11 +98,11 @@ export function VisualizerPicker() {
       // Close the card only; the lyrics page's own Escape must not fire too.
       event.stopImmediatePropagation();
       setOpen(false);
-      button.current?.focus();
+      button.current?.focus({ preventScroll: true });
     };
     document.addEventListener('pointerdown', onPointer);
     window.addEventListener('keydown', onKey, true);
-    requestAnimationFrame(() => card.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus());
+    requestAnimationFrame(() => card.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true }));
     return () => { document.removeEventListener('pointerdown', onPointer); window.removeEventListener('keydown', onKey, true); };
   }, [open]);
 

@@ -6,6 +6,8 @@ import { initialBounds, MIN_HEIGHT, MIN_WIDTH, trackWindowState } from './window
 
 const isMac = process.platform === 'darwin';
 const isWindows = process.platform === 'win32';
+// This material lets more of the colours behind the window through in both appearances.
+const macGlassMaterial = 'popover';
 
 /** Only http(s) links leave the app, and they open in the system browser. */
 function openExternal(url: string) {
@@ -54,7 +56,7 @@ export async function createMainWindow(origin: string, token: string, options: {
     // draws everything, so the desktop shows through wherever it is translucent.
     transparent,
     backgroundMaterial: isWindows && !transparent ? 'acrylic' : undefined,
-    vibrancy: isMac && !transparent ? 'under-window' : undefined,
+    vibrancy: isMac && !transparent ? macGlassMaterial : undefined,
     visualEffectState: isMac && !transparent ? 'active' : undefined,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'index.js'),
@@ -117,7 +119,7 @@ export function setWindowMaterial(window: BrowserWindow, effect: WindowEffect) {
 function applyMaterial(window: BrowserWindow, effect: WindowEffect) {
   if (transparentWindows.has(window)) { window.setBackgroundColor('#00000000'); return; }
   if (isWindows) window.setBackgroundMaterial(effect === 'mica' ? 'mica' : effect === 'acrylic' ? 'acrylic' : 'none');
-  if (isMac) window.setVibrancy(effect === 'vibrancy' ? 'under-window' : null);
+  if (isMac) window.setVibrancy(effect === 'vibrancy' ? macGlassMaterial : null);
   const dark = nativeTheme.shouldUseDarkColors;
   window.setBackgroundColor(effect !== 'none' ? '#00000000' : dark ? '#15131f' : '#dfe1f5');
 }

@@ -7,7 +7,7 @@ import { updateDialog, useUpdateState } from '@/components/updates/update-store'
 import { IconButton } from '@/components/ui';
 import { useNavigation } from './navigation';
 import { useFluentStyle } from '@/components/settings/ApplyAppearance';
-import { SkinPopover } from '@/components/skin/SkinPopover';
+import { SkinDialog } from '@/components/skin/SkinDialog';
 import { WindowControls } from './WindowControls';
 import styles from './TopBar.module.css';
 
@@ -34,7 +34,7 @@ export function TopBar() {
       <div className={styles.actions}>
         <AccountButton />
         <span className={styles.divider} aria-hidden />
-        <SkinPopover />
+        <SkinDialog />
         <IconButton label="迷你模式" iconHover={{ scale: 0.9, y: 1 }} onClick={() => window.coco?.window.toggleMini()}>
           <PictureInPicture2 size={18} strokeWidth={1.4} />
         </IconButton>

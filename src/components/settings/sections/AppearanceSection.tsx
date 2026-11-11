@@ -1,14 +1,14 @@
 'use client';
 
-import { AppWindow, Blend, Droplets, Layers, Palette, SunMoon, Wind, ZoomIn } from 'lucide-react';
-import { Button } from '@/components/ui';
+import { AppWindow, Palette, SunMoon, Wind, ZoomIn } from 'lucide-react';
 import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
 import { useFluentStyle, useResolvedScheme, useThemeColorPicker } from '../ApplyAppearance';
 import { ChoiceTiles } from '../ChoiceTiles';
+import { GlassControls } from '../GlassControls';
 import { WindowSketch } from '../WindowSketch';
-import { ChoiceExpander, Range, Row, Section, Select, Switch } from '../controls';
-import { isDesktop, isMac, keysOf, setter, type AppSettings } from '../shared';
+import { ChoiceExpander, Row, Section, Select, Switch } from '../controls';
+import { chooseWindowEffect, isDesktop, isMac, keysOf, setter } from '../shared';
 import styles from '../Settings.module.css';
 
 const WINDOW_EFFECT_HINTS: Record<string, string> = {
@@ -28,21 +28,14 @@ const MODES = [
 ] as const;
 
 /** 设置 › 外观 */
-export function AppearanceSection({ app }: { app: AppSettings }) {
+export function AppearanceSection() {
   const s = useSettings();
   const themeColor = useThemeColorPicker();
   const desktop = isDesktop();
-  // Transparency is fixed when the window is created: switching to/from 透明 needs a restart.
-  const launchedTransparent = typeof window !== 'undefined' && window.coco?.material === 'transparent';
   const shownEffect = s.windowEffect === 'none' || s.windowEffect === 'transparent' || isFlatStyle(s.windowEffect) ? s.windowEffect
     : isMac() ? 'vibrancy' : s.windowEffect === 'vibrancy' ? 'acrylic' : s.windowEffect;
   const fluent = useFluentStyle();
   const scheme = useResolvedScheme();
-  const needsRestart = desktop && (s.windowEffect === 'transparent') !== launchedTransparent;
-  const chooseEffect = async (value: Settings['windowEffect']) => {
-    settings.set('windowEffect', value);
-    await app.update({ transparentWindow: value === 'transparent' });
-  };
   return (
     <Section id="appearance" icon={<Palette size={17} strokeWidth={1.6} />} title="外观" description="深浅色、窗口效果、毛玻璃与主题色" onReset={() => settings.reset(keysOf('themeMode', 'windowEffect', 'windowOpacity', 'glassOpacity', 'glassBlur', 'accent', 'reduceMotion', 'zoom'))}>
       <Row icon={<SunMoon size={16} strokeWidth={1.5} />} title="外观模式" description="跟随系统时，系统切换深浅色会自动同步" vertical={!fluent}>
@@ -70,13 +63,13 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
         {/* Materials need the desktop client; 简约, Fluent and 不透明 are drawn by the page itself. */}
         <ChoiceTiles
           value={shownEffect}
-          onChange={value => void chooseEffect(value)}
+          onChange={chooseWindowEffect}
           label="窗口效果"
           options={([
-            ...(isMac() ? [['vibrancy', '毛玻璃']] : [['acrylic', '亚克力'], ['mica', '云母']]),
-            ['transparent', '透明'],
             ['minimal', '简约'],
             ['fluent', 'Fluent'],
+            ...(isMac() ? [['vibrancy', '毛玻璃']] : [['acrylic', '亚克力'], ['mica', '云母']]),
+            ['transparent', '透明'],
             ['none', '不透明'],
           ] as Array<[Settings['windowEffect'], string]>).map(([value, label]) => ({
             value, label,
@@ -85,30 +78,7 @@ export function AppearanceSection({ app }: { app: AppSettings }) {
           }))}
         />
       </Row>
-      {needsRestart && (
-        <div className={styles.notice}>
-          <span>“透明”需要重新创建窗口，重启应用后生效。</span>
-          <Button variant="primary" onClick={() => window.coco?.app?.relaunch()}>立即重启</Button>
-        </div>
-      )}
-      {!isFlatStyle(s.windowEffect) && <>
-      <Row
-        icon={<Blend size={16} strokeWidth={1.5} />}
-        title="窗口不透明度"
-        description={!desktop ? '需要在桌面客户端中使用' : s.windowEffect === 'none' ? '先选择毛玻璃、亚克力或透明' : s.windowEffect === 'transparent' ? '越低越能清楚看到背后的桌面和其他窗口，文字和按钮始终保持清晰' : '越低越能看到背后被系统模糊的桌面'}
-        disabled={!desktop || s.windowEffect === 'none'}
-      >
-        <Range value={s.windowOpacity} max={100} step={5} onChange={setter('windowOpacity')} label="窗口不透明度" format={value => `${value}%`} />
-      </Row>
-
-      <div className={styles.groupLabel}>面板毛玻璃</div>
-      <Row icon={<Layers size={16} strokeWidth={1.5} />} title="面板不透明度" description="内容区、播放栏和卡片的透明程度">
-        <Range value={s.glassOpacity} max={100} onChange={setter('glassOpacity')} label="面板不透明度" format={value => `${value}%`} />
-      </Row>
-      <Row icon={<Droplets size={16} strokeWidth={1.5} />} title="面板模糊" description="面板背后内容的模糊程度，设为 0 时为清透玻璃">
-        <Range value={s.glassBlur} max={60} step={2} onChange={setter('glassBlur')} label="面板模糊" format={value => `${value}px`} />
-      </Row>
-      </>}
+      <GlassControls />
 
       {!fluent && <div className={styles.groupLabel}>颜色与显示</div>}
       <Row icon={<Palette size={16} strokeWidth={1.5} />} title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{themeColor.value.toUpperCase()}</span></>}>

@@ -38,11 +38,21 @@
 }
 
 .image {
-  display: block;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-2);
   width: 100%;
   height: 100%;
   background-position: center;
   background-size: cover;
+}
+
+.caption {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-sm);
+  color: white;
+  background: rgba(0, 0, 0, 0.62);
+  font-size: var(--fs-xs);
 }
 
 .actions {

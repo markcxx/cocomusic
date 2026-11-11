@@ -318,7 +318,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-3_5);
-  width: 300px;
+  width: var(--settings-range-width, 300px);
 }
 
 .rangeSlider {
@@ -535,7 +535,7 @@
   }
 
   .range {
-    width: 220px;
+    width: var(--settings-range-width, 220px);
   }
 }
 
@@ -573,20 +573,6 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* Inline notice inside a settings card (e.g. restart to apply). */
-.notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  margin: 0 var(--space-5) var(--space-3);
-  padding: var(--space-2_5) var(--space-3_5);
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  font-size: var(--fs-md);
-  color: var(--text-strong);
 }
 
 /* ───────── Fluent: Windows 11 Settings layout ───────── */

@@ -1,37 +1,34 @@
 'use client';
 
 import { Palette } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ChoiceTiles } from '@/components/settings/ChoiceTiles';
+import { GlassControls } from '@/components/settings/GlassControls';
 import { ThemeColorControl } from '@/components/settings/ColorPicker';
 import { useResolvedScheme, useThemeColorPicker } from '@/components/settings/ApplyAppearance';
 import { Segmented, Switch } from '@/components/settings/controls';
 import { chooseWindowEffect, isMac, setter } from '@/components/settings/shared';
 import { WindowSketch } from '@/components/settings/WindowSketch';
-import { IconButton, Popover } from '@/components/ui';
-import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
+import { Dialog, IconButton } from '@/components/ui';
+import { ACCENT_PRESETS, isFlatStyle, settings, supportsBackdropImage, useSettings, type Settings } from '@/lib/settings';
 import { activeSkin, type Skin } from '@/lib/skins';
 import { BackdropPicker } from './BackdropPicker';
 import { SkinGallery } from './SkinGallery';
-import styles from './SkinPopover.module.css';
+import styles from './SkinDialog.module.css';
 
 type Style = 'glass' | 'minimal' | 'fluent';
 
-/**
- * 换肤: preset skins, a custom background picture, 外观模式, 界面风格 and 主题色 in one popover.
- * Skins and the picture belong to the 毛玻璃 style; in the flat styles they are shown dimmed.
- */
-export function SkinPopover() {
+export function SkinDialog() {
   const s = useSettings();
   const themeColor = useThemeColorPicker();
   const scheme = useResolvedScheme();
   const [open, setOpen] = useState(false);
-  const anchor = useRef<HTMLSpanElement>(null);
   const desktop = typeof window !== 'undefined' && Boolean(window.coco);
 
   // 毛玻璃 is whichever OS material this platform offers; a browser has none, so it stays opaque.
   const glass: Settings['windowEffect'] = !desktop ? 'none' : isMac() ? 'vibrancy' : 'acrylic';
   const flat = isFlatStyle(s.windowEffect);
+  const wallpaperAvailable = supportsBackdropImage(s.windowEffect) && (typeof window === 'undefined' || window.coco?.material !== 'transparent');
   const style: Style = isFlatStyle(s.windowEffect) ? s.windowEffect : 'glass';
   const pickStyle = (next: Style) => { void chooseWindowEffect(next === 'glass' ? glass : next); };
   const pickSkin = (skin: Skin) => {
@@ -42,28 +39,30 @@ export function SkinPopover() {
 
   return (
     <>
-      <span ref={anchor} className={styles.anchor}>
-        <IconButton label="换肤" iconHover={{ rotate: -14, scale: 1.1 }} onClick={() => setOpen(value => !value)} active={open} pressed={open}>
-          <Palette size={18} strokeWidth={1.4} />
-        </IconButton>
-      </span>
-      <Popover open={open} anchor={anchor} onClose={() => setOpen(false)} label="换肤" width={372}>
-        <div className={styles.content}>
+      <IconButton label="换肤" iconHover={{ rotate: -14, scale: 1.1 }} onClick={() => setOpen(true)} active={open}>
+        <Palette size={18} strokeWidth={1.4} />
+      </IconButton>
+      <Dialog open={open} onClose={() => setOpen(false)} title="换肤" width={560} className={styles.dialog} clearBackdrop>
+        <div className={styles.content} data-scroll-native>
           <section>
-            <h3>皮肤{flat && <small>切换到毛玻璃风格后可用</small>}</h3>
-            <SkinGallery active={activeSkin(s.accent, scheme)} disabled={flat} onPick={pickSkin} />
+            <h3>预设主题{!wallpaperAvailable && <small>毛玻璃风格下可用</small>}</h3>
+            <SkinGallery active={activeSkin(s.accent, scheme)} disabled={!wallpaperAvailable} onPick={pickSkin} />
           </section>
-          <section>
-            <h3>背景图{flat && <small>切换到毛玻璃风格后可用</small>}</h3>
-            <BackdropPicker disabled={flat} />
-          </section>
+          {wallpaperAvailable && <section>
+            <h3>背景图</h3>
+            <BackdropPicker />
+          </section>}
+          {!flat && <section>
+            <h3>窗口与面板</h3>
+            <GlassControls />
+          </section>}
           <section>
             <h3>界面风格</h3>
             <ChoiceTiles<Style>
               value={style}
               onChange={pickStyle}
               label="界面风格"
-              options={([['glass', '毛玻璃'], ['minimal', '简约'], ['fluent', 'Fluent']] as const).map(([value, label]) => ({
+              options={([['minimal', '简约'], ['fluent', 'Fluent'], ['glass', '毛玻璃']] as const).map(([value, label]) => ({
                 value, label, preview: <WindowSketch effect={value === 'glass' ? glass : value} scheme={scheme} />,
               }))}
             />
@@ -81,7 +80,7 @@ export function SkinPopover() {
             </div>
           </section>
         </div>
-      </Popover>
+      </Dialog>
     </>
   );
 }

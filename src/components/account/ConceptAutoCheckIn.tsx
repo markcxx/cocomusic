@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { CONCEPT_CLAIMED_EVENT } from '@/lib/account-events';
 import { accountApi } from '@/lib/account-client';
 import { useSettings } from '@/lib/settings';
 import { toast } from '@/components/ui';
@@ -23,7 +24,10 @@ export function ConceptAutoCheckIn() {
         const result = await accountApi.autoCheckIn(retry);
         if (!active || !result.attempted) return;
         requestKugouVerification(result.verificationUrl);
-        if (result.status === 'success') toast.success(result.message);
+        if (result.status === 'success') {
+          window.dispatchEvent(new Event(CONCEPT_CLAIMED_EVENT));
+          toast.success(result.message);
+        }
         else toast.error(`酷狗概念版自动签到未成功：${result.message}`);
       } catch (error) {
         if (active) toast.error(error instanceof Error ? error.message : '自动签到服务暂不可用');

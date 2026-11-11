@@ -10,7 +10,7 @@ import { IconButton } from './IconButton';
 import styles from './Dialog.module.css';
 
 /** Centered modal with a soft scrim. Escape / scrim click closes; focus returns on close. */
-export function Dialog({ open, onClose, title, children, width, className, ariaLabel }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; width?: number; className?: string; ariaLabel?: string }) {
+export function Dialog({ open, onClose, title, children, width, className, ariaLabel, clearBackdrop }: { open: boolean; onClose: () => void; title?: string; children: ReactNode; width?: number; className?: string; ariaLabel?: string; clearBackdrop?: boolean }) {
   const panel = useRef<HTMLDivElement>(null);
   const close = useLatest(onClose);
   useEffect(() => {
@@ -26,7 +26,7 @@ export function Dialog({ open, onClose, title, children, width, className, ariaL
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div className={styles.overlay} onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
+        <motion.div className={cn(styles.overlay, clearBackdrop && styles.clearBackdrop)} onPointerDown={event => { if (event.target === event.currentTarget) onClose(); }} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.18 }}>
           <motion.div
             ref={panel}
             role="dialog"

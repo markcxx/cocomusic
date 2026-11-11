@@ -23,7 +23,7 @@ export function BackdropPicker({ disabled }: { disabled?: boolean }) {
   return (
     <div className={styles.picker}>
       <button type="button" className={styles.drop} disabled={disabled} onClick={() => input.current?.click()} aria-label={image ? '更换背景图' : '选择背景图'}>
-        {image ? <span className={styles.image} style={{ backgroundImage: `url("${image}")` }} /> : <span className={styles.empty}><ImagePlus size={20} strokeWidth={1.5} />选择一张图片作为窗口背景</span>}
+        {image ? <span className={styles.image} style={{ backgroundImage: `url("${image}")` }}><span className={styles.caption}>已选原图</span></span> : <span className={styles.empty}><ImagePlus size={20} strokeWidth={1.5} />选择一张图片作为窗口背景</span>}
       </button>
       <input ref={input} type="file" accept="image/*" hidden onChange={event => { void onFile(event.target.files?.[0]); event.target.value = ''; }} />
       {image && (
