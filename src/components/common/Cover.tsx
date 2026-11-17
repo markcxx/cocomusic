@@ -18,7 +18,9 @@ export const coverHue = (seed: string) => hash(seed) % 360;
  * Artwork with a seeded gradient underneath. A real `src` fades in once loaded;
  * if it is missing or fails, the gradient remains as the placeholder.
  */
-export function Cover({ seed, src, size, radius, className, alt = '', empty = false }: {
+export function Cover({ seed, src, size, radius, className, alt = '', empty = false, 'data-flow-shape': flowShape }: {
+  /** Marks the artwork the cover flow grows out of and returns into. */
+  'data-flow-shape'?: boolean;
   seed: string;
   src?: string;
   size?: number;
@@ -44,7 +46,7 @@ export function Cover({ seed, src, size, radius, className, alt = '', empty = fa
 
   const showImage = src && state !== 'error';
   return (
-    <span className={cn(styles.cover, empty && styles.empty, showImage && state === 'loading' && styles.loading, className)} style={style} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
+    <span className={cn(styles.cover, empty && styles.empty, showImage && state === 'loading' && styles.loading, className)} style={style} data-flow-shape={flowShape || undefined} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
       {showImage ? (
         <img
           key={src}

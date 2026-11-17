@@ -1,0 +1,251 @@
+/* Over the lyrics page only: the top bar and the player bar stay usable above it. */
+.overlay {
+  position: absolute;
+  right: 0;
+  left: 0;
+  z-index: 2;
+}
+
+/* Dark stage like the reference, reaching under the (transparent) bars. */
+.backdrop {
+  position: absolute;
+  inset: -140px 0 -320px;
+  background:
+    radial-gradient(70% 60% at 50% 44%, rgba(74, 72, 80, 0.55), transparent 70%),
+    linear-gradient(180deg, #1d1c21 0%, #141317 55%, #0c0b0e 100%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.scene {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  perspective: var(--perspective);
+  /* Above the top edge of the books so the top thickness is visible on every card. */
+  perspective-origin: 50% calc(var(--cy) - var(--w) * 0.65);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+
+.scene[data-dragging] {
+  cursor: grabbing;
+}
+
+.overlay[data-closing] .scene {
+  pointer-events: none;
+}
+
+/* Each record is its own small 3D box (front + spines), flattened in z-index order. */
+.card {
+  position: absolute;
+  top: calc(var(--cy) - var(--w) / 2);
+  left: calc(50% - var(--w) / 2);
+  width: var(--w);
+  height: var(--w);
+  transform-style: preserve-3d;
+  /* Never put opacity in will-change here: Chromium flattens preserve-3d to 2D. */
+  will-change: transform;
+  cursor: pointer;
+}
+
+.scene[data-dragging] .card {
+  cursor: grabbing;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: var(--radius, 3px);
+  background: #26242b;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.5);
+  transform: translateZ(calc(var(--d) / 2 * var(--spine, 1)));
+  backface-visibility: hidden;
+}
+
+.back {
+  position: absolute;
+  inset: 0;
+  border-radius: var(--radius, 3px);
+  background:
+    linear-gradient(rgba(20, 18, 28, 0.72), rgba(14, 12, 20, 0.85)),
+    rgb(var(--tint, 220, 214, 230));
+  opacity: var(--spine, 0);
+  transform: rotateY(180deg) translateZ(calc(var(--d) / 2 * var(--spine, 1)));
+  backface-visibility: hidden;
+}
+
+/* Faint print sheen and a hairline edge, like a sleeve catching the light. */
+.face::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(118deg, rgba(255, 255, 255, 0.14) 0%, rgba(255, 255, 255, 0) 38%, rgba(0, 0, 0, 0) 70%, rgba(0, 0, 0, 0.12) 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  content: '';
+  pointer-events: none;
+}
+
+.cover {
+  width: 100%;
+  height: 100%;
+}
+
+/* Spine: a solid book-style edge tinted by the cover, mini thumb + title + artist. */
+.spine {
+  position: absolute;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: calc(var(--w) * 0.032);
+  width: var(--d);
+  height: 100%;
+  padding: calc(var(--w) * 0.028) 0;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 18%, rgba(0, 0, 0, 0) 76%, rgba(0, 0, 0, 0.16) 100%),
+    linear-gradient(rgba(255, 255, 255, 0.68), rgba(255, 255, 255, 0.56)),
+    rgb(var(--tint, 220, 214, 230));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  color: rgba(24, 20, 32, 0.88);
+  font-size: calc(var(--w) * 0.028);
+  line-height: 1;
+  white-space: nowrap;
+  opacity: var(--spine, 0);
+  writing-mode: vertical-rl;
+  backface-visibility: hidden;
+}
+
+.spineThumb {
+  flex-shrink: 0;
+  width: calc(var(--d) * 0.68);
+  height: calc(var(--d) * 0.68);
+  overflow: hidden;
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.spine strong {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.spine > span:last-child {
+  opacity: 0.72;
+}
+
+/* Left & right faces of the 3D box, centred on x = 0 and x = W. */
+.spineLeft {
+  left: calc(var(--d) / -2);
+  transform: rotateY(-90deg);
+}
+
+.spineRight {
+  left: calc(var(--w) - var(--d) / 2);
+  transform: rotateY(90deg);
+}
+
+/* Top & bottom faces of the 3D box, centred on y = 0 and y = W. */
+.edge {
+  position: absolute;
+  left: 0;
+  width: var(--w);
+  height: var(--d);
+  opacity: var(--spine, 0);
+  backface-visibility: hidden;
+}
+
+.edgeTop {
+  top: calc(var(--d) / -2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08)),
+    linear-gradient(rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.48)),
+    rgb(var(--tint, 220, 214, 230));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+  transform: rotateX(90deg);
+}
+
+.edgeBottom {
+  top: calc(var(--w) - var(--d) / 2);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.34)),
+    linear-gradient(rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.26)),
+    rgb(var(--tint, 220, 214, 230));
+  transform: rotateX(-90deg);
+}
+
+.play,
+.pause {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: rgba(255, 255, 255, 0.9);
+  filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.35));
+  pointer-events: none;
+  animation: fadeIn 260ms ease both;
+}
+
+.play svg,
+.pause svg {
+  width: calc(var(--w) * 0.12);
+  height: calc(var(--w) * 0.12);
+}
+
+/* The playing record shows pause only on hover. */
+.pause {
+  opacity: 0;
+  animation: none;
+  transition: opacity 180ms ease;
+}
+
+.card:hover .pause {
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+.caption {
+  position: absolute;
+  top: calc(var(--cy) + var(--w) / 2 + 28px);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: min(var(--w) * 1.1, 80%);
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.caption strong,
+.caption span {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.caption strong {
+  font-size: var(--fs-heading);
+  font-weight: 600;
+  animation: fadeIn 240ms ease both;
+}
+
+.caption span {
+  font-size: var(--fs-md);
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.caption small {
+  margin-top: 6px;
+  font-size: var(--fs-sm);
+  color: rgba(255, 255, 255, 0.36);
+}

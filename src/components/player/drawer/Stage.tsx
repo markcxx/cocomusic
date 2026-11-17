@@ -30,7 +30,12 @@ const fadeBlock = {
  * The artwork and the text blocks are `layout` elements, so a switch glides
  * them to their new place and size; parts a layout drops fade out.
  */
-export function Stage({ progress }: { progress: MotionValue<number> }) {
+export function Stage({ progress, flowActive = false, onOpenFlow }: {
+  progress: MotionValue<number>;
+  /** 封面流 is up: its centre record stands in for the artwork, which hides. */
+  flowActive?: boolean;
+  onOpenFlow?: () => void;
+}) {
   const { track, playing, trial } = usePlayer();
   const prefs = useSettings();
   const layout = prefs.lyricsLayout;
@@ -56,6 +61,14 @@ export function Stage({ progress }: { progress: MotionValue<number> }) {
         exit={{ scale: 0.8, opacity: 0, transition: { duration: 0.28 } }}
         transition={{ ...LAYOUT_SPRING, delay: 0.05, layout: LAYOUT_SPRING }}
       >
+        {/* 封面流 grows out of (and returns into) this artwork; click it to open. */}
+        <div
+          className={cn(styles.flowOrigin, flowActive && styles.flowOriginHidden)}
+          data-flow-origin
+          data-flow-radius={template === 'vinyl' || ringTemplate || prefs.lyricsSpinCover ? 999 : 18}
+          onClick={onOpenFlow}
+          data-tooltip={onOpenFlow ? '点击进入流动切歌' : undefined}
+        >
         {template === 'vinyl' ? (
           // 经典唱片: the familiar record with its tonearm, no effect.
           <div className={styles.record}>
@@ -65,16 +78,18 @@ export function Stage({ progress }: { progress: MotionValue<number> }) {
           // Effects around the artwork: a round cover that turns while playing, the effect circling it.
           <div className={styles.disc}>
             <RingVisualizer />
-            <Cover seed={track.coverSeed} src={track.cover} radius={999} className={cn(styles.discCover, styles.artSpin, playing && styles.artSpinning)} />
+            <Cover data-flow-shape seed={track.coverSeed} src={track.cover} radius={999} className={cn(styles.discCover, styles.artSpin, playing && styles.artSpinning)} />
           </div>
         ) : (
           <Cover
+            data-flow-shape
             seed={track.coverSeed}
             src={track.cover}
             className={cn(styles.artCover, !playing && styles.artPaused, prefs.lyricsSpinCover && styles.artSpin, prefs.lyricsSpinCover && playing && styles.artSpinning)}
             radius={prefs.lyricsSpinCover ? 999 : 18}
           />
         )}
+        </div>
         {layout === 'standard' && <MirrorVisualizer />}
         {layout === 'centered' && (
           <motion.div layout="position" {...fadeBlock} className={styles.centeredMeta}>

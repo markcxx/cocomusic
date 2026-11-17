@@ -162,6 +162,17 @@
 
 .roamingStage { height: 100%; min-height: 0; transform-origin: center top; }
 
+/* Holder of the artwork the 封面流 grows out of; click to open it. */
+.flowOrigin {
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+
+.flowOriginHidden {
+  visibility: hidden;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .artCover {
     transition: none;

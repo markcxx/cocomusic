@@ -1,11 +1,12 @@
 'use client';
 
 import { AnimatePresence, motion, useTransform } from 'framer-motion';
-import { ChevronDown, ChevronsDown, ChevronsUp } from 'lucide-react';
+import { ChevronDown, ChevronsDown, ChevronsUp, GalleryHorizontal } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Cover } from '@/components/common/Cover';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
+import { CoverFlow } from './coverflow/CoverFlow';
 import { CommentsPage } from './drawer/CommentsPage';
 import { Stage } from './drawer/Stage';
 import { LyricsPlayerBar } from './LyricsPlayerBar';
@@ -13,6 +14,7 @@ import { usePlayer } from './player-store';
 import { usePageSnap } from './use-page-snap';
 import { useSongStats } from './use-song-stats';
 import { useIdlePlayerBar } from './use-idle-player-bar';
+import { useLatest } from '@/lib/use-latest';
 import { ProgressVisualizer } from './visualizer/Visualizer';
 import { VisualizerPicker } from './visualizer/VisualizerPicker';
 import styles from './LyricsDrawer.module.css';
@@ -42,7 +44,8 @@ export function LyricsDrawer() {
     document.addEventListener('visibilitychange', acquire);
     return () => { released = true; document.removeEventListener('visibilitychange', acquire); void lock?.release().catch(() => undefined); };
   }, [lyricsOpen, playing, lyricsKeepAwake]);
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const [viewportElement, setViewportElement] = useState<HTMLDivElement | null>(null);
   const viewport = useCallback(() => viewportRef.current, []);
   const snap = usePageSnap(viewport, lyricsOpen && Boolean(track.songId));
   const { goTo, onWheel } = snap;
@@ -50,6 +53,15 @@ export function LyricsDrawer() {
   const progress = useTransform(snap.y, value => Math.min(1, Math.max(0, -value / (viewportRef.current?.clientHeight || 1))));
   const compactOpacity = useTransform(progress, [0.4, 0.9], [0, 1]);
   const onComments = snap.page === 1;
+
+  // 封面流: the queue as a shelf of records, grown out of the artwork.
+  // 'closing' keeps it mounted while the records return into the artwork.
+  const [flow, setFlow] = useState<'closed' | 'open' | 'closing'>('closed');
+  const [flowSession, setFlowSession] = useState(lyricsOpen);
+  if (flowSession !== lyricsOpen) { setFlowSession(lyricsOpen); setFlow('closed'); }
+  const openFlow = useCallback(() => setFlow(current => (current === 'closed' ? 'open' : current)), []);
+  const closeFlow = useCallback(() => setFlow(current => (current === 'open' ? 'closing' : current)), []);
+  const flowUp = flow !== 'closed';
 
   useEffect(() => {
     if (!lyricsOpen) return;
@@ -71,6 +83,23 @@ export function LyricsDrawer() {
     drawer.addEventListener('wheel', onWheel, { passive: false });
     return () => drawer.removeEventListener('wheel', onWheel);
   }, [drawer, onWheel]);
+
+  // A sideways trackpad swipe on the lyrics page opens the 封面流.
+  const flowSwipe = useLatest({ enabled: !onComments && !flowUp, openFlow });
+  useEffect(() => {
+    if (!drawer) return;
+    let pull = 0;
+    let idle: ReturnType<typeof setTimeout> | undefined;
+    const onSwipe = (event: WheelEvent) => {
+      if (!flowSwipe.current.enabled || event.ctrlKey || Math.abs(event.deltaX) <= Math.abs(event.deltaY) * 1.2) return;
+      pull += event.deltaX;
+      clearTimeout(idle);
+      idle = setTimeout(() => { pull = 0; }, 180);
+      if (Math.abs(pull) > 60) { pull = 0; flowSwipe.current.openFlow(); }
+    };
+    drawer.addEventListener('wheel', onSwipe, { passive: true });
+    return () => { clearTimeout(idle); drawer.removeEventListener('wheel', onSwipe); };
+  }, [drawer, flowSwipe]);
 
   // New song: back to its lyrics.
   useEffect(() => { goTo(0); }, [track.id, goTo]);
@@ -131,7 +160,13 @@ export function LyricsDrawer() {
               <span><strong>{track.title}</strong><small>{track.artist}</small></span>
             </motion.div>
             <div className={styles.topActions}>
-              {track.songId && (
+              {!onComments && (
+                <button type="button" className={styles.jump} onClick={flowUp ? closeFlow : openFlow} aria-pressed={flowUp} data-tooltip={flowUp ? '返回歌词 (Esc)' : '展开专辑流动切歌（左右滑动也可打开）'}>
+                  <GalleryHorizontal size={15} strokeWidth={1.6} />
+                  {flowUp ? '返回歌词' : '流动切歌'}
+                </button>
+              )}
+              {track.songId && !flowUp && (
                 <button type="button" className={styles.jump} onClick={() => goTo(onComments ? 0 : 1)}>
                   {onComments ? <ChevronsUp size={15} strokeWidth={1.6} /> : <ChevronsDown size={15} strokeWidth={1.6} />}
                   {onComments ? '回到歌词' : '查看评论'}
@@ -141,16 +176,26 @@ export function LyricsDrawer() {
             </div>
           </div>
 
-          <div ref={viewportRef} className={styles.viewport}>
+          <div ref={element => { viewportRef.current = element; setViewportElement(element); }} className={styles.viewport}>
             <motion.div className={styles.track} style={{ y: snap.y }}>
               <div className={styles.page} inert={onComments}>
-                <Stage progress={progress} />
+                <Stage progress={progress} flowActive={flowUp} onOpenFlow={onComments ? undefined : openFlow} />
               </div>
               <div className={styles.page} inert={!onComments}>
                 {track.songId && <CommentsPage songId={track.songId} source={track.source} total={stats.commentCount} />}
               </div>
             </motion.div>
           </div>
+
+          {flowUp && (
+            <CoverFlow
+              drawer={drawer}
+              viewport={viewportElement}
+              closing={flow === 'closing'}
+              onRequestClose={closeFlow}
+              onClosed={() => setFlow('closed')}
+            />
+          )}
 
           <motion.div
             ref={barRef}
