@@ -65,8 +65,10 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
   }
 
   async function featured(): Promise<HomeFeatured> {
-    const [special, tracks, chartList] = await Promise.all([specialRecommend(0, 1, 12), newSongs(9), charts(2)]);
-    return { playlists: special.items.slice(0, 12).map(item => mapPlaylist(item, text(item.show) || '推荐歌单')), tracks, charts: chartList };
+    const [special, tracks, chartList] = await Promise.all([specialRecommend(0, 1, 30), newSongs(9), charts(2)]);
+    const pool = special.items.map(item => mapPlaylist(item, text(item.show) || '推荐歌单'));
+    const offset = pool.length > 12 ? Math.floor(Math.random() * Math.min(pool.length - 11, 18)) : 0;
+    return { playlists: pool.slice(offset, offset + 12), tracks, charts: chartList };
   }
 
   async function newReleases() {

@@ -5,6 +5,7 @@ import { persistentStorage } from '@/lib/persistent-storage';
 import { useSyncExternalStore } from 'react';
 import { parseHex, toHex } from './color';
 import type { AudioQuality } from '@/server/music/types';
+import type { CoverQuality } from './cover-quality';
 
 /**
  * App settings (renderer side). Stored in Electron userData (localStorage in web preview),
@@ -82,6 +83,8 @@ export interface Settings {
   backdropDim: number;
   /** Turn off non-essential animation regardless of the OS setting. */
   reduceMotion: boolean;
+  /** Cover artwork resolution for large views (歌词页 / 详情头图). */
+  coverQuality: CoverQuality;
   /** UI zoom, percent. */
   zoom: number;
 
@@ -190,6 +193,7 @@ export const DEFAULT_SETTINGS: Settings = {
   backdropBlur: 12,
   backdropDim: 20,
   reduceMotion: false,
+  coverQuality: 'high',
   zoom: 100,
 
   quality: 'exhigh',
@@ -291,7 +295,7 @@ const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
   conceptAutoCheckIn: bool,
   themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'none'), windowOpacity: num(0, 100),
-  glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, zoom: num(80, 130),
+  glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, coverQuality: oneOf('standard', 'high', 'original'), zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'fluid', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,

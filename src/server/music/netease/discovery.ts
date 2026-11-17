@@ -1,4 +1,6 @@
 import type { CatalogChart, CatalogTrack, CategoryGroup, HomeFeatured, PlaylistOrder, PlaylistPage } from '../types';
+import { sampleUnique } from '../index';
+import { session } from '../session';
 import { neteaseRequest } from './client';
 import { image, mapAlbum, mapArtist, mapPlaylist, mapTrack, num, record, rows, SOURCE, text, type Raw } from './mappers';
 
@@ -26,13 +28,17 @@ export async function charts(limit: number): Promise<CatalogChart[]> {
 }
 
 export async function featured(): Promise<HomeFeatured> {
-  const [playlistData, songs, chartList] = await Promise.all([
-    neteaseRequest<Raw>('/personalized/playlist', { limit: 12, total: true, n: 1000 }),
+  const loggedIn = Boolean(session.get('netease')?.cookie.MUSIC_U);
+  const [dailyData, playlistData, songs, chartList] = await Promise.all([
+    loggedIn ? neteaseRequest<Raw>('/recommend/resource').catch(() => ({} as Raw)) : Promise.resolve({} as Raw),
+    neteaseRequest<Raw>('/personalized/playlist', { limit: 36, total: true, n: 1000 }),
     neteaseRequest<Raw>('/personalized/newsong', { type: 'recommend', limit: 9, areaId: 0 }),
     charts(2),
   ]);
+  const daily = rows(dailyData.recommend).map(item => mapPlaylist({ ...item, playCount: item.playcount ?? item.playCount }, '每日推荐'));
+  const pool = rows(playlistData.result).map(item => mapPlaylist(item));
   return {
-    playlists: rows(playlistData.result).map(item => mapPlaylist(item)),
+    playlists: sampleUnique(daily, pool, 12),
     tracks: rows(songs.result).map(item => {
       const track = mapTrack(record(item.song));
       // personalized/newsong puts the cover on the wrapper.

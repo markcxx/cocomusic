@@ -1,6 +1,6 @@
 'use client';
 
-import { AppWindow, Palette, SunMoon, Wind, ZoomIn } from 'lucide-react';
+import { AppWindow, Image as ImageIcon, Palette, SunMoon, Wind, ZoomIn } from 'lucide-react';
 import { ACCENT_PRESETS, isFlatStyle, settings, useSettings, type Settings } from '@/lib/settings';
 import { ThemeColorControl } from '../ColorPicker';
 import { useFluentStyle, useResolvedScheme, useThemeColorPicker } from '../ApplyAppearance';
@@ -84,6 +84,7 @@ export function AppearanceSection() {
       <Row icon={<Palette size={16} strokeWidth={1.5} />} title="主题色" description={<>按钮、进度条、高亮等强调色，可点最后一个色块自定义任意颜色 <span className={styles.hexTag}>{themeColor.value.toUpperCase()}</span></>}>
         <ThemeColorControl {...themeColor} presets={ACCENT_PRESETS} />
       </Row>
+      <ChoiceExpander icon={<ImageIcon size={16} strokeWidth={1.5} />} title="封面画质" description="歌词页、流动切歌与详情页等大尺寸封面的加载清晰度" value={s.coverQuality} onChange={setter('coverQuality')} label="封面画质" options={[{ value: 'standard', label: '标准' }, { value: 'high', label: '高清 (800px)' }, { value: 'original', label: '原图' }]} />
       <ChoiceExpander icon={<ZoomIn size={16} strokeWidth={1.5} />} title="界面缩放" description="整体放大或缩小界面" value={s.zoom} onChange={setter('zoom')} label="界面缩放" options={[{ value: 90, label: '90%' }, { value: 100, label: '100%' }, { value: 110, label: '110%' }, { value: 120, label: '120%' }]} />
       <Row icon={<Wind size={16} strokeWidth={1.5} />} title="减弱动态效果" description="关闭页面过渡、旋转唱片等动画；系统开启“减弱动态效果”时会自动生效">
         <Switch checked={s.reduceMotion} onChange={setter('reduceMotion')} label="减弱动态效果" />

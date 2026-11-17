@@ -1,7 +1,8 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { useMemo, useState } from 'react';
 import { ErrorState } from '@/components/common/AsyncState';
 import { staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
@@ -10,6 +11,7 @@ import { PlaylistCard } from '@/components/music/PlaylistCard';
 import { SectionHeader } from '@/components/music/SectionHeader';
 import { TrackTile } from '@/components/music/TrackTile';
 import { usePlayer } from '@/components/player/player-store';
+import { Button } from '@/components/ui';
 import { catalogApi, useCatalog } from '@/lib/catalog-client';
 import { toTrack } from '@/lib/to-track';
 import { ChartSkeleton, PlaylistSkeleton, TrackSkeleton } from './skeletons';
@@ -18,7 +20,8 @@ import styles from './Home.module.css';
 export function FeaturedTab() {
   const { navigate } = useNavigation();
   const player = usePlayer();
-  const { data, loading, error, retry } = useCatalog(catalogApi.featured, 'featured');
+  const [batch, setBatch] = useState(0);
+  const { data, loading, error, retry } = useCatalog(signal => catalogApi.featured(signal, batch > 0), `featured:${batch}`);
   const tracks = useMemo(() => (data?.tracks ?? []).map(toTrack), [data]);
 
   if (error) return <ErrorState message={error} onRetry={retry} />;
@@ -26,7 +29,11 @@ export function FeaturedTab() {
   return (
     <>
       <section className={styles.section}>
-        <SectionHeader title="推荐歌单" actionLabel="歌单广场" onAction={() => navigate({ name: 'discover' })} />
+        <SectionHeader title="推荐歌单" actionLabel="歌单广场" onAction={() => navigate({ name: 'discover' })}>
+          <Button variant="ghost" icon={<RefreshCw size={13} strokeWidth={1.6} />} disabled={loading} onClick={() => setBatch(value => value + 1)}>
+            换一批
+          </Button>
+        </SectionHeader>
         {loading || !data ? <PlaylistSkeleton count={12} /> : (
           <motion.div className={styles.playlistGrid} variants={staggerList} initial="hidden" animate="show">
             {data.playlists.map(playlist => (

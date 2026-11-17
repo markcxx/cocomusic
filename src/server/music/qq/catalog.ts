@@ -2,6 +2,7 @@ import type {
   ArtistInfo, BestMatch, CatalogAlbum, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, HomeFeatured, PlaylistOrder, PlaylistPage,
   SearchDiscovery, SearchResult, SearchSuggestion, SearchType,
 } from '../types';
+import { sampleUnique } from '../index';
 import { QQError, qqBatch, qqLegacy, qqRequest } from './client';
 import { albumCover, https, mapAlbum, mapArtist, mapPlaylistBasic, mapTrack, num, record, rows, singerAvatar, SOURCE, text, type Raw } from './mappers';
 
@@ -32,13 +33,24 @@ export async function charts(limit: number): Promise<CatalogChart[]> {
 }
 
 export async function featured(): Promise<HomeFeatured> {
-  const [square, songs, chartList] = await Promise.all([
-    qqRequest<Raw>('music.playlist.PlayListCategory', 'get_category_content', { caller: '0', category_id: 3317, size: 12, page: 0, use_page: 1 }),
+  const [hot, square, songs, chartList] = await Promise.all([
+    qqRequest<Raw>('playlist.HotRecommendServer', 'get_hot_recommend', { async: 1, cmd: 2 }).catch(() => ({} as Raw)),
+    qqRequest<Raw>('music.playlist.PlayListCategory', 'get_category_content', { caller: '0', category_id: 3317, size: 30, page: 0, use_page: 1 }),
     qqRequest<Raw>('newsong.NewSongServer', 'get_new_song_info', { type: 5 }),
     charts(2),
   ]);
+  const hotItems = rows(hot.v_hot).map(item => ({
+    id: text(item.content_id),
+    source: SOURCE,
+    name: text(item.title),
+    cover: https(item.cover),
+    playCount: num(item.listen_num),
+    creator: text(item.username) || undefined,
+    tag: '热门推荐',
+  })).filter(item => item.id && item.name);
+  const officialPool = rows(record(square.content).v_item).map(item => mapPlaylistBasic(item, '官方歌单'));
   return {
-    playlists: rows(record(square.content).v_item).map(item => mapPlaylistBasic(item, '官方歌单')),
+    playlists: sampleUnique([], [...hotItems, ...officialPool], 12),
     tracks: rows(songs.songlist).slice(0, 9).map(mapTrack),
     charts: chartList,
   };

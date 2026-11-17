@@ -3,6 +3,8 @@
 import { Music2 } from 'lucide-react';
 import { useState, type CSSProperties } from 'react';
 import { cn } from '@/lib/cn';
+import { resolveCoverUrl } from '@/lib/cover-quality';
+import { useSettings } from '@/lib/settings';
 import styles from './Cover.module.css';
 
 function hash(seed: string) {
@@ -30,8 +32,10 @@ export function Cover({ seed, src, size, radius, className, alt = '', empty = fa
   /** Neutral placeholder (no seeded colour), e.g. the player before anything is chosen. */
   empty?: boolean;
 }) {
-  const [status, setStatus] = useState<{ src?: string; state: 'loading' | 'loaded' | 'error' }>({ src, state: 'loading' });
-  const state = status.src === src ? status.state : 'loading';
+  const coverQuality = useSettings().coverQuality;
+  const resolvedSrc = resolveCoverUrl(src, coverQuality, size);
+  const [status, setStatus] = useState<{ src?: string; state: 'loading' | 'loaded' | 'error' }>({ src: resolvedSrc, state: 'loading' });
+  const state = status.src === resolvedSrc ? status.state : 'loading';
   const h = hash(seed);
   const hue = h % 360;
   const style = {
@@ -44,21 +48,21 @@ export function Cover({ seed, src, size, radius, className, alt = '', empty = fa
     borderRadius: radius,
   } as CSSProperties;
 
-  const showImage = src && state !== 'error';
+  const showImage = resolvedSrc && state !== 'error';
   return (
     <span className={cn(styles.cover, empty && styles.empty, showImage && state === 'loading' && styles.loading, className)} style={style} data-flow-shape={flowShape || undefined} role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true}>
       {showImage ? (
         <img
-          key={src}
-          src={src}
+          key={resolvedSrc}
+          src={resolvedSrc}
           alt=""
           className={cn(styles.image, state === 'loaded' && styles.loaded)}
           draggable={false}
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          onLoad={() => setStatus({ src, state: 'loaded' })}
-          onError={() => setStatus({ src, state: 'error' })}
+          onLoad={() => setStatus({ src: resolvedSrc, state: 'loaded' })}
+          onError={() => setStatus({ src: resolvedSrc, state: 'error' })}
         />
       ) : (
         <Music2 className={styles.glyph} strokeWidth={1.25} aria-hidden />
