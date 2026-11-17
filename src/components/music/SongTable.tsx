@@ -3,8 +3,8 @@
 import { motion } from 'framer-motion';
 import { Play } from 'lucide-react';
 import { LikeButton } from '@/components/account/LikeButton';
-import { TrackMenuButton } from '@/components/account/TrackMenuButton';
-import type { MouseEvent } from 'react';
+import { TrackMenuButton, useTrackMenu } from '@/components/account/TrackMenuButton';
+import { useState, type MouseEvent } from 'react';
 import { SkeletonBlock } from '@/components/common/AsyncState';
 import { Cover } from '@/components/common/Cover';
 import { riseItem, staggerList } from '@/components/common/motion';
@@ -12,7 +12,7 @@ import { useNavigation } from '@/components/layout/navigation';
 import { formatTime, usePlayer } from '@/components/player/player-store';
 import { DownloadButton } from '@/components/downloads/DownloadButton';
 import type { PlaylistRef } from '@/components/playlists/add-to-playlist';
-import { Checkbox } from '@/components/ui';
+import { Checkbox, Menu } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
 import type { Selection } from '@/lib/selection';
@@ -60,6 +60,8 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
   const { navigate } = useNavigation();
   const showVip = useSettings().showVipBadge;
   const selecting = Boolean(selection?.active);
+  const { itemsFor, dialogs } = useTrackMenu(playlist, onRemoved, track => (onPlayTrack ? onPlayTrack(track, 'play') : player.play(track, tracks)));
+  const [contextMenu, setContextMenu] = useState<{ track: Track; point: { x: number; y: number } } | null>(null);
 
   if (loading) {
     return (
@@ -104,6 +106,11 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
               variants={index >= animateFrom ? riseItem : stillItem}
               onClick={event => onRowClick(event, track.id)}
               onDoubleClick={() => { if (selecting) return; if (onPlayTrack) onPlayTrack(track, 'list'); else player.playFromList(track, tracks); }}
+              onContextMenu={event => {
+                if (selecting) return;
+                event.preventDefault();
+                setContextMenu({ track, point: { x: event.clientX, y: event.clientY } });
+              }}
             >
               <span role="cell" className={styles.index}>
                 {selecting && selection ? (
@@ -161,6 +168,14 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
         })}
       </motion.div>
       {!tracks.length && <p className={styles.empty}>{emptyText}</p>}
+      <Menu
+        open={Boolean(contextMenu)}
+        anchor={null}
+        point={contextMenu?.point}
+        items={contextMenu ? itemsFor(contextMenu.track) : []}
+        onClose={() => setContextMenu(null)}
+      />
+      {dialogs}
     </div>
   );
 }

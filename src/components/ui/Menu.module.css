@@ -2,7 +2,7 @@
   position: fixed;
   z-index: 160;
   min-width: 180px;
-  max-height: 360px;
+  max-height: calc(100vh - 24px);
   overflow-y: auto;
   padding: var(--space-1_5);
   border-radius: var(--radius-2xl);

@@ -21,22 +21,28 @@ const resolveAnchor = (anchor: Anchor) => (anchor && 'current' in anchor ? ancho
  * Pass either a ref to the trigger or a captured element (e.g. from a context-menu event).
  * Closes on outside click, Escape, scroll or selection.
  */
-export function Menu({ open, anchor, items, onClose, align = 'start', placement = 'bottom', portalContainer }: { open: boolean; anchor: Anchor; items: MenuItem[]; onClose: () => void; align?: 'start' | 'end'; placement?: 'top' | 'bottom'; portalContainer?: HTMLElement | null }) {
+export function Menu({ open, anchor, point, items, onClose, align = 'start', placement = 'bottom', portalContainer }: { open: boolean; anchor: Anchor; point?: { x: number; y: number } | null; items: MenuItem[]; onClose: () => void; align?: 'start' | 'end'; placement?: 'top' | 'bottom'; portalContainer?: HTMLElement | null }) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number; origin: string } | null>(null);
 
   useLayoutEffect(() => {
+    if (!open) return;
     const target = resolveAnchor(anchor);
-    if (!open || !target) return;
-    const rect = target.getBoundingClientRect();
+    if (!point && !target) return;
+    const rect = point
+      ? { left: point.x, right: point.x, top: point.y, bottom: point.y }
+      : target!.getBoundingClientRect();
     const height = panel.current?.offsetHeight ?? 240;
     const width = panel.current?.offsetWidth ?? 200;
     const fitsBelow = rect.bottom + 6 + height < window.innerHeight - 12;
     const fitsAbove = rect.top - 6 - height > 12;
     const below = placement === 'top' ? !fitsAbove && fitsBelow : fitsBelow;
+    const gap = point ? 2 : 6;
+    const rawTop = below ? rect.bottom + gap : rect.top - gap - height;
+    const top = Math.max(12, Math.min(window.innerHeight - height - 12, rawTop));
     const left = Math.min(window.innerWidth - width - 12, Math.max(12, align === 'end' ? rect.right - width : rect.left));
-    setPosition({ top: below ? rect.bottom + 6 : rect.top - 6 - height, left, origin: `${align === 'end' ? 'right' : 'left'} ${below ? 'top' : 'bottom'}` });
-  }, [open, anchor, align, placement, items.length]);
+    setPosition({ top, left, origin: `${align === 'end' ? 'right' : 'left'} ${below ? 'top' : 'bottom'}` });
+  }, [open, anchor, point, align, placement, items.length]);
 
   useEffect(() => {
     if (!open) return;

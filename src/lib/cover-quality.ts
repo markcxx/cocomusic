@@ -26,3 +26,27 @@ export function resolveCoverUrl(src: string | undefined, quality: CoverQuality, 
 
   return src;
 }
+
+/** Download a cover image at the configured quality via same-origin proxy so CORS never opens a web tab. */
+export async function downloadCoverImage(src: string | undefined, name: string, quality: CoverQuality) {
+  const url = resolveCoverUrl(src, quality);
+  if (!url) throw new Error('该歌曲暂无封面');
+  const safeName = (name || 'cover').replace(/[\\/:*?"<>|]/g, '_').trim() || 'cover';
+  const sameOrigin = url.startsWith('/') || url.startsWith('blob:') || url.startsWith('data:');
+  const fetchUrl = sameOrigin
+    ? url
+    : `/api/music/cover?url=${encodeURIComponent(url)}&name=${encodeURIComponent(safeName)}`;
+
+  const response = await fetch(fetchUrl);
+  if (!response.ok) throw new Error(`封面下载失败 (${response.status})`);
+  const blob = await response.blob();
+  const ext = blob.type === 'image/png' ? '.png' : blob.type === 'image/webp' ? '.webp' : '.jpg';
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = `${safeName}${ext}`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+}
