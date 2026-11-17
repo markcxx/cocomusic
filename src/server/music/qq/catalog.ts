@@ -2,7 +2,7 @@ import type {
   ArtistInfo, BestMatch, CatalogAlbum, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, HomeFeatured, PlaylistOrder, PlaylistPage,
   SearchDiscovery, SearchResult, SearchSuggestion, SearchType,
 } from '../types';
-import { sampleUnique } from '../index';
+import { sampleUnique } from '../sample-unique';
 import { QQError, qqBatch, qqLegacy, qqRequest } from './client';
 import { albumCover, https, mapAlbum, mapArtist, mapPlaylistBasic, mapTrack, num, record, rows, singerAvatar, SOURCE, text, type Raw } from './mappers';
 

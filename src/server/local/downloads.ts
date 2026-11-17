@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
-import { createWriteStream, existsSync, mkdirSync } from 'node:fs';
-import { rename, rm, writeFile } from 'node:fs/promises';
+import { createWriteStream, existsSync, mkdirSync, statSync } from 'node:fs';
+import { rename, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { Readable } from 'node:stream';
@@ -9,7 +9,7 @@ import type { ReadableStream as WebReadableStream } from 'node:stream/web';
 import { catalog } from '../music';
 import { AUDIO_QUALITIES, type AudioQuality, type CatalogTrack } from '../music/types';
 import { AUDIO_TYPES, extensionOf, safeFileName } from './formats';
-import { addFiles, getTrack, removeTrack, trackId } from './library';
+import { addFiles, removeTrack, trackId } from './library';
 import { clipLyrics, toLrc } from './lrc-writer';
 import { database } from '../db/database';
 import { transaction } from '../db/sql';
@@ -184,21 +184,29 @@ function pump() {
 
 /* ───────── Public API ───────── */
 
-export function listDownloads() {
+// Keep history intact: a temporarily disconnected drive can come back at the same path.
+const indexedJobs = () => readDownloadJobs(database(), { requireIndexedFile: true });
+
+export async function listDownloads() {
   resumeOnce();
-  // Overlay in-memory progress (saved progress is throttled).
-  return { settings: currentSettings(), jobs: allJobs().map(job => (live.has(job.id) ? { ...job, ...live.get(job.id) } : job)) };
+  const jobs = indexedJobs();
+  // Polling checks the recorded path asynchronously, including files in a previous download folder.
+  const visible = await Promise.all(jobs.map(job => job.status !== 'done' ||
+    (job.path && stat(job.path).then(info => info.isFile(), () => false))));
+  return { settings: currentSettings(), jobs: jobs.filter((_, index) => visible[index]).map(job => ({ ...job, ...live.get(job.id) })) };
 }
 
 /** Skip active jobs and existing files of the selected quality; allow a new quality. */
 export function enqueue(tracks: CatalogTrack[], options?: DownloadOptions) {
   resumeOnce();
-  const jobs = allJobs();
+  const requested = new Set(tracks.map(track => `${track.source}:${track.id}`));
+  const jobs = indexedJobs();
   const active = new Set(jobs
     .filter(job => {
       if (job.status === 'queued' || job.status === 'downloading') return true;
       const sameQuality = !options || (job.level === options.quality && (!job.trial || options.allowTrial));
-      return job.status === 'done' && sameQuality && job.localId && getTrack(job.localId) && existsSync(job.path ?? '');
+      if (job.status !== 'done' || !sameQuality || !job.path || !requested.has(`${job.source}:${job.songId}`)) return false;
+      try { return statSync(job.path).isFile(); } catch { return false; }
     })
     .map(job => `${job.source}:${job.songId}`));
   const fresh: DownloadJob[] = [];

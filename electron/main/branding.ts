@@ -37,7 +37,7 @@ export function applyBranding() {
     applicationName: 'CoCo Music',
     applicationVersion: app.getVersion(),
     copyright: 'Copyright © 2026 markcxx',
-    website: 'https://github.com/markcxx/cocomusic',
+    website: 'https://cocomusic.cn',
     iconPath: app.isPackaged ? path.join(process.resourcesPath, 'icon.png') : path.join(app.getAppPath(), 'build', 'icon.png'),
   });
 }

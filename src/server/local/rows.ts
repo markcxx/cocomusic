@@ -45,8 +45,11 @@ export function readDownloadJob(db: DatabaseSync, id: string): DownloadJob | und
 }
 
 /** Newest first; jobs queued together keep their batch order. */
-export function readDownloadJobs(db: DatabaseSync): DownloadJob[] {
-  return (db.prepare('SELECT data FROM download_jobs ORDER BY created_at DESC, rowid DESC').all() as Array<{ data: string }>)
+export function readDownloadJobs(db: DatabaseSync, { requireIndexedFile = false } = {}): DownloadJob[] {
+  const where = requireIndexedFile ? `WHERE status != 'done' OR EXISTS (
+    SELECT 1 FROM library_tracks WHERE id = CASE WHEN json_valid(download_jobs.data) THEN json_extract(download_jobs.data, '$.localId') END
+  )` : '';
+  return (db.prepare(`SELECT data FROM download_jobs ${where} ORDER BY created_at DESC, rowid DESC`).all() as Array<{ data: string }>)
     .map(row => parseRow<DownloadJob>(row.data))
     .filter((job): job is DownloadJob => Boolean(job));
 }

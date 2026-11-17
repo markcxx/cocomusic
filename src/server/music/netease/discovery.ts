@@ -1,5 +1,5 @@
 import type { CatalogChart, CatalogTrack, CategoryGroup, HomeFeatured, PlaylistOrder, PlaylistPage } from '../types';
-import { sampleUnique } from '../index';
+import { sampleUnique } from '../sample-unique';
 import { session } from '../session';
 import { neteaseRequest } from './client';
 import { image, mapAlbum, mapArtist, mapPlaylist, mapTrack, num, record, rows, SOURCE, text, type Raw } from './mappers';
