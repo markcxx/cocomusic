@@ -53,7 +53,7 @@
 
 ### 歌词与可视化
 
-歌词页提供标准、居中与纯歌词三种布局，支持同步滚动、翻译、点击歌词跳转，以及字号、对齐和时间偏移调整。可选择封面或纯色背景，并自定义歌词与可视化配色。
+歌词页提供标准、居中与纯歌词三种布局，支持同步滚动、翻译、点击歌词跳转，以及字号、对齐和时间偏移调整。背景可选择流体动态、封面模糊或纯色，并自定义歌词与可视化配色。展开封面流后，可以滚动或拖动浏览播放队列，点击封面切歌。
 
 内置细线频谱、柔光波、镜面倒影、经典唱片、跳动旋律、迷幻水波、动感音阶和星河漫游八种效果。经典唱片可叠加频谱或柔光效果，星河漫游提供独立的三维歌词场景；设备不支持 WebGL 或启用减弱动态效果时可回退到普通歌词。
 
@@ -100,16 +100,16 @@
 
 ### 简约与 Fluent
 
-![简约风格：首页与播放栏](docs/screenshots/minimal-home.jpg)
+![QQ 音乐 · 简约浅色首页与播放栏](docs/screenshots/minimal-home.png)
 
-![Fluent 风格：首页、导航和封面配色播放栏](docs/screenshots/fluent-home.jpg)
+![网易云音乐 · Fluent 浅色首页](docs/screenshots/fluent-home.png)
 
 <details>
 <summary>深色模式、Fluent 收起导航与设置页</summary>
 
-![简约深色模式](docs/screenshots/minimal-dark.jpg)
+![QQ 音乐 · 简约深色首页](docs/screenshots/minimal-dark.png)
 
-![Fluent 深色模式](docs/screenshots/fluent-dark.jpg)
+![网易云音乐 · Fluent 深色歌单广场](docs/screenshots/fluent-dark.png)
 
 ![Fluent 收起导航](docs/screenshots/fluent-navigation-compact.jpg)
 
@@ -122,21 +122,43 @@
 <details>
 <summary>毛玻璃风格与换肤</summary>
 
-![毛玻璃风格首页](docs/screenshots/glass-home.jpg)
+![酷狗音乐 · 毛玻璃浅色首页](docs/screenshots/glass-home.png)
 
 ![换肤](docs/screenshots/skin-panel.jpg)
 
 </details>
 
-![毛玻璃风格的自定义背景图](docs/screenshots/custom-background.png)
+![网易云音乐 · 毛玻璃深色歌手目录](docs/screenshots/glass-artists.png)
 
 ### 透明窗口
 
-![透明窗口效果](docs/screenshots/transparent-window.png)
+![酷狗音乐 · 透明窗口浅色首页](docs/screenshots/transparent-window.png)
+
+<details>
+<summary>透明窗口深色排行榜</summary>
+
+![酷狗音乐 · 透明窗口深色排行榜](docs/screenshots/transparent-charts.png)
+
+</details>
+
+### 封面流与歌词背景
+
+在歌词页展开封面流，滚动或拖动浏览播放队列，点击中央封面播放，按 Esc 返回歌词。
+
+![封面流：滚动浏览队列中的专辑封面](docs/screenshots/cover-flow.png)
+
+播放器背景可选择随封面取色的流体动态、封面模糊或纯色。
+
+![流体动态背景与同步歌词](docs/screenshots/lyrics-fluid.png)
+
+<details>
+<summary>封面模糊背景</summary>
+
+![封面模糊背景与同步歌词](docs/screenshots/lyrics-cover-blur.png)
+
+</details>
 
 ### 歌词布局与可视化
-
-![标准歌词布局：专辑封面与同步滚动歌词](docs/screenshots/lyrics-standard.jpg)
 
 <details>
 <summary>居中、纯歌词布局与播放模式面板</summary>
@@ -154,19 +176,19 @@
 
 | 细线频谱 | 柔光波 |
 | --- | --- |
-| ![细线频谱](docs/screenshots/lyrics-lines.jpg) | ![柔光波](docs/screenshots/lyrics-glow.jpg) |
+| ![细线频谱](docs/screenshots/lyrics-lines.png) | ![柔光波](docs/screenshots/lyrics-glow.png) |
 
 | 镜面倒影 | 经典唱片 |
 | --- | --- |
-| ![镜面倒影](docs/screenshots/lyrics-mirror.jpg) | ![经典唱片](docs/screenshots/lyrics-vinyl.jpg) |
+| ![镜面倒影](docs/screenshots/lyrics-mirror.png) | ![经典唱片](docs/screenshots/lyrics-vinyl.png) |
 
 | 跳动旋律 | 迷幻水波 |
 | --- | --- |
-| ![跳动旋律](docs/screenshots/lyrics-melody.jpg) | ![迷幻水波](docs/screenshots/lyrics-ripple.jpg) |
+| ![跳动旋律](docs/screenshots/lyrics-melody.png) | ![迷幻水波](docs/screenshots/lyrics-ripple.png) |
 
 | 动感音阶 | 星河漫游 |
 | --- | --- |
-| ![动感音阶](docs/screenshots/lyrics-scale.jpg) | ![星河漫游的三维歌词场景](docs/screenshots/lyrics-roaming.jpg) |
+| ![动感音阶](docs/screenshots/lyrics-scale.png) | ![星河漫游的三维歌词场景](docs/screenshots/lyrics-roaming.png) |
 
 </details>
 
@@ -177,10 +199,6 @@
 
 ![曲库平台选择](docs/screenshots/catalog-platforms.jpg)
 
-![网易云音乐首页](docs/screenshots/netease-home.jpg)
-
-![酷狗音乐首页](docs/screenshots/kugou-home.jpg)
-
 ![酷狗概念版首页](docs/screenshots/concept-home.jpg)
 
 </details>
@@ -188,7 +206,7 @@
 <details>
 <summary>发现音乐、新歌速递与排行榜</summary>
 
-![发现音乐：分类与歌单](docs/screenshots/discover-current.jpg)
+![发现音乐：分类与歌单](docs/screenshots/fluent-dark.png)
 
 ![新歌速递](docs/screenshots/new-releases.jpg)
 
@@ -199,7 +217,7 @@
 <details>
 <summary>歌手目录、歌曲、专辑与简介</summary>
 
-![歌手目录：地区、类型与首字母筛选](docs/screenshots/artists-current.jpg)
+![歌手目录：地区、类型与首字母筛选](docs/screenshots/glass-artists.png)
 
 ![歌手详情：热门歌曲](docs/screenshots/artist-current.jpg)
 
