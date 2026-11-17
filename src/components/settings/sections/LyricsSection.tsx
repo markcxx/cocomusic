@@ -37,7 +37,7 @@ export function LyricsSection() {
         <Switch checked={s.lyricsBlurInactive} onChange={setter('lyricsBlurInactive')} label="景深效果" />
       </Row>
       <Row icon={<ImageIcon size={16} strokeWidth={1.5} />} title="背景">
-        <Segmented value={s.lyricsBackground} onChange={setter('lyricsBackground')} label="背景" options={[{ value: 'cover', label: '封面模糊' }, { value: 'plain', label: '纯色' }]} />
+        <Segmented value={s.lyricsBackground} onChange={setter('lyricsBackground')} label="背景" options={[{ value: 'cover', label: '封面模糊' }, { value: 'fluid', label: '流体动态' }, { value: 'plain', label: '纯色' }]} />
       </Row>
       <Row icon={<Disc3 size={16} strokeWidth={1.5} />} title="唱片封面" description="封面显示为旋转的唱片">
         <Switch checked={s.lyricsSpinCover} onChange={setter('lyricsSpinCover')} label="唱片封面" />

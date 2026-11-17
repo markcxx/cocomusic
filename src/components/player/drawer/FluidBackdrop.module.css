@@ -1,0 +1,93 @@
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 20% 15%, rgba(var(--c1, 90, 74, 160), 0.48), transparent 65%),
+    radial-gradient(110% 100% at 85% 85%, rgba(var(--c4, 58, 96, 156), 0.45), transparent 65%),
+    #120f1c;
+  pointer-events: none;
+  transition: background 1.2s ease;
+}
+
+.blob {
+  position: absolute;
+  border-radius: 44% 56% 62% 38% / 48% 42% 58% 52%;
+  filter: blur(62px) saturate(1.55);
+  mix-blend-mode: screen;
+  opacity: 0.88;
+  will-change: transform;
+  transition: background 1.2s ease;
+}
+
+.b1 {
+  top: -12%;
+  left: -8%;
+  width: 52vw;
+  height: 52vw;
+  background: radial-gradient(circle at 40% 40%, rgba(var(--c1), 0.92) 0%, rgba(var(--c1), 0.35) 50%, rgba(var(--c1), 0) 76%);
+  animation: driftA 11s ease-in-out infinite alternate;
+}
+
+.b2 {
+  top: -8%;
+  right: -10%;
+  width: 48vw;
+  height: 48vw;
+  background: radial-gradient(circle at 55% 45%, rgba(var(--c2), 0.88) 0%, rgba(var(--c2), 0.32) 50%, rgba(var(--c2), 0) 76%);
+  animation: driftB 13s ease-in-out infinite alternate;
+}
+
+.b3 {
+  bottom: -18%;
+  left: 6%;
+  width: 54vw;
+  height: 54vw;
+  background: radial-gradient(circle at 45% 55%, rgba(var(--c3), 0.86) 0%, rgba(var(--c3), 0.3) 50%, rgba(var(--c3), 0) 76%);
+  animation: driftC 15s ease-in-out infinite alternate;
+}
+
+.b4 {
+  right: 4%;
+  bottom: -14%;
+  width: 46vw;
+  height: 46vw;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--c4), 0.84) 0%, rgba(var(--c4), 0.28) 50%, rgba(var(--c4), 0) 76%);
+  animation: driftD 12s ease-in-out infinite alternate;
+}
+
+.paused .blob {
+  animation-play-state: paused;
+}
+
+/* Soft vignette so white lyrics always stay crisp over bright covers. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(92% 84% at 50% 50%, rgba(10, 8, 18, 0.08) 0%, rgba(8, 6, 16, 0.34) 100%);
+}
+
+@keyframes driftA {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(26vw, 18vh, 0) rotate(90deg) scale(1.16); }
+  100% { transform: translate3d(14vw, 34vh, 0) rotate(180deg) scale(0.92); }
+}
+
+@keyframes driftB {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1.06); }
+  50% { transform: translate3d(-28vw, 20vh, 0) rotate(-85deg) scale(0.9); }
+  100% { transform: translate3d(-16vw, 36vh, 0) rotate(-175deg) scale(1.15); }
+}
+
+@keyframes driftC {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50% { transform: translate3d(28vw, -22vh, 0) rotate(95deg) scale(1.14); }
+  100% { transform: translate3d(-12vw, -30vh, 0) rotate(190deg) scale(0.92); }
+}
+
+@keyframes driftD {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg) scale(0.96); }
+  50% { transform: translate3d(-26vw, -22vh, 0) rotate(-95deg) scale(1.18); }
+  100% { transform: translate3d(12vw, -14vh, 0) rotate(-180deg) scale(1); }
+}

@@ -30,10 +30,12 @@ const fadeBlock = {
  * The artwork and the text blocks are `layout` elements, so a switch glides
  * them to their new place and size; parts a layout drops fade out.
  */
-export function Stage({ progress, flowActive = false, onOpenFlow }: {
+export function Stage({ progress, flowActive = false, hideArt = false, onOpenFlow }: {
   progress: MotionValue<number>;
   /** 封面流 is up: its centre record stands in for the artwork, which hides. */
   flowActive?: boolean;
+  /** Shared-element flight is in progress: hide the stage artwork until it lands. */
+  hideArt?: boolean;
   onOpenFlow?: () => void;
 }) {
   const { track, playing, trial } = usePlayer();
@@ -63,7 +65,7 @@ export function Stage({ progress, flowActive = false, onOpenFlow }: {
       >
         {/* 封面流 grows out of (and returns into) this artwork; click it to open. */}
         <div
-          className={cn(styles.flowOrigin, flowActive && styles.flowOriginHidden)}
+          className={cn(styles.flowOrigin, (flowActive || hideArt) && styles.flowOriginHidden)}
           data-flow-origin
           data-flow-radius={template === 'vinyl' || ringTemplate || prefs.lyricsSpinCover ? 999 : 18}
           onClick={onOpenFlow}

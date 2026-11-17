@@ -69,6 +69,12 @@ const VINYL_EFFECTS: Array<{ value: VinylEffect; label: string }> = [
   { value: 'glow', label: '柔光波' },
 ];
 
+const BACKGROUNDS: Array<{ value: 'cover' | 'fluid' | 'plain'; label: string }> = [
+  { value: 'fluid', label: '流体动态' },
+  { value: 'cover', label: '封面模糊' },
+  { value: 'plain', label: '纯色' },
+];
+
 /**
  * 歌词页右上角的「播放器模式」按钮与卡片。每个模式配一张静态示意图（TemplateArt），
  * 按 播放器模式配色 着色，不读音频、不加载封面图片（只用已缓存的封面主色）；
@@ -219,6 +225,20 @@ export function VisualizerPicker() {
                 </motion.div>
               )}
             </AnimatePresence>
+            <div className={styles.pairInner}>
+              <span className={styles.pairLabel}>背景风格</span>
+              <div className={styles.pairOptions} role="radiogroup" aria-label="背景风格">
+                {BACKGROUNDS.map(item => {
+                  const on = prefs.lyricsBackground === item.value;
+                  return (
+                    <button key={item.value} type="button" role="radio" aria-checked={on} className={cn(styles.pairOption, on && styles.pairOptionOn)} onClick={() => settings.set('lyricsBackground', item.value)}>
+                      {on && <motion.span layoutId="lyrics-bg" className={styles.pairPill} transition={{ type: 'spring', stiffness: 520, damping: 40 }} />}
+                      <span>{item.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
             {prefs.reduceMotion && <p className={styles.note}>已开启「减少动效」，播放器模式暂不显示动画；配色可在 设置 › 歌词页 中修改</p>}
           </motion.div>
         )}

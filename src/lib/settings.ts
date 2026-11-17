@@ -113,7 +113,7 @@ export interface Settings {
   lyricsBlurInactive: boolean;
   lyricsAlign: 'left' | 'center';
   /** Background: blurred artwork, or a flat dark backdrop. */
-  lyricsBackground: 'cover' | 'plain';
+  lyricsBackground: 'cover' | 'fluid' | 'plain';
   /** Seconds added to playback time when matching lines (+ = earlier lyrics). */
   lyricsOffset: number;
   lyricsSpinCover: boolean;
@@ -208,7 +208,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lyricsShowTranslation: true,
   lyricsBlurInactive: false,
   lyricsAlign: 'left',
-  lyricsBackground: 'cover',
+  lyricsBackground: 'fluid',
   lyricsOffset: 0,
   lyricsSpinCover: false,
   lyricsKeepAwake: true,
@@ -294,7 +294,7 @@ const RULES: Record<keyof Settings, Rule> = {
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
-  lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
+  lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'fluid', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
   desktopFontSize: num(20, 64), desktopColor: oneOf(...Object.keys(LYRIC_COLORS), 'custom'), desktopCustomColor: { type: 'hex' }, desktopShowTranslation: bool, desktopSecondLine: oneOf('translation', 'next', 'none'),
   desktopKaraoke: bool, desktopStroke: bool, desktopAlign: oneOf('left', 'center', 'right'), desktopFontWeight: oneOf(500, 700, 900),
   miniShowLyrics: bool, miniSpinRecord: bool,

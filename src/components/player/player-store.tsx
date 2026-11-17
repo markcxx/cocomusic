@@ -13,6 +13,7 @@ import { useLatest } from '@/lib/use-latest';
 import { requestKugouVerification } from '@/lib/kugou-verification';
 import { isPlayable, type Track } from '@/types/music';
 import { playModeLabels, playModes, randomOtherIndex, type PlayMode } from './play-mode';
+import { pickNextTrack, rememberPreloadedSource, takePreloadedSource } from './preload-next';
 import { DEFAULT_VOLUME, readMode, readVolume, saveMode, saveVolume } from './player-prefs';
 import type { PlaybackStatus, PlayerState } from './player-types';
 import { usePlayerIntegrations } from './use-player-integrations';
@@ -225,15 +226,24 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       attach(localAudioUrl(track.localId));
       return () => controller.abort();
     }
-    catalogApi.songSource(track.songId!, controller.signal, appSettings.get().quality, track.source)
+    const quality = appSettings.get().quality;
+    const applySource = (source: SongSource) => {
+      setTrial(source.trial);
+      setLevel(source.level);
+      if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
+      // Previews can mean the login lapsed: let the account store verify it now.
+      if (source.trial) window.dispatchEvent(new Event(ACCOUNT_RECHECK_EVENT));
+      attach(source.url);
+    };
+    const cached = takePreloadedSource(track.id, quality);
+    if (cached) {
+      applySource(cached);
+      return () => controller.abort();
+    }
+    catalogApi.songSource(track.songId!, controller.signal, quality, track.source)
       .then(source => {
         if (controller.signal.aborted) return;
-        setTrial(source.trial);
-        setLevel(source.level);
-        if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
-        // Previews can mean the login lapsed: let the account store verify it now.
-        if (source.trial) window.dispatchEvent(new Event(ACCOUNT_RECHECK_EVENT));
-        attach(source.url);
+        applySource(source);
       })
       .catch(error => {
         if (controller.signal.aborted) return;
@@ -254,6 +264,43 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // Keyed on identity (id) and loadKey; track object changes alone must not reload.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track.id, loadKey, latest]);
+
+  // Pre-resolve and warm the next track once the current song has settled.
+  useEffect(() => {
+    if (status !== 'ready' || !playing) return;
+    const next = pickNextTrack(queue, track.id, mode);
+    if (!next) return;
+    const controller = new AbortController();
+    let warm: HTMLAudioElement | null = null;
+    const timer = setTimeout(() => {
+      const quality = appSettings.get().quality;
+      const wantsSamples = desktop() && needsSamples(appSettings.get().lyricsVisualizer, appSettings.get().lyricsVinylEffect);
+      const warmStream = (url: string, isLocal: boolean) => {
+        warm = new Audio();
+        warm.preload = 'auto';
+        warm.volume = 0;
+        if (wantsSamples && !isLocal) warm.crossOrigin = 'anonymous';
+        warm.src = url;
+      };
+      if (next.localId) {
+        warmStream(localAudioUrl(next.localId), true);
+        return;
+      }
+      if (!next.songId) return;
+      catalogApi.songSource(next.songId, controller.signal, quality, next.source)
+        .then(source => {
+          if (controller.signal.aborted) return;
+          rememberPreloadedSource(next.id, quality, source);
+          warmStream(source.url, false);
+        })
+        .catch(() => undefined);
+    }, 4000);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+      if (warm) { warm.removeAttribute('src'); warm.load(); warm = null; }
+    };
+  }, [track.id, queue, mode, status, playing]);
 
   // 设置 › 播放: speed (keeps pitch) and output device.
   useEffect(() => {

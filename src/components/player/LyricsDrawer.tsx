@@ -2,12 +2,14 @@
 
 import { AnimatePresence, motion, useTransform } from 'framer-motion';
 import { ChevronDown, ChevronsDown, ChevronsUp, GalleryHorizontal } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Cover } from '@/components/common/Cover';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
 import { CoverFlow } from './coverflow/CoverFlow';
 import { CommentsPage } from './drawer/CommentsPage';
+import { FluidBackdrop } from './drawer/FluidBackdrop';
+import { SharedCoverFlight, type CoverFlight } from './drawer/SharedCoverFlight';
 import { Stage } from './drawer/Stage';
 import { LyricsPlayerBar } from './LyricsPlayerBar';
 import { usePlayer } from './player-store';
@@ -28,7 +30,7 @@ import styles from './LyricsDrawer.module.css';
 export function LyricsDrawer() {
   const { lyricsOpen, closeLyrics, track, playing, queueOpen } = usePlayer();
   const stats = useSongStats(track.songId, track.source);
-  const { lyricsBackground, lyricsKeepAwake, reduceMotion } = useSettings();
+  const { lyricsBackground, lyricsKeepAwake, lyricsLayout, reduceMotion } = useSettings();
 
   // 设置 › 歌词页 › 保持屏幕常亮: hold a screen wake lock while lyrics are open and playing.
   useEffect(() => {
@@ -58,7 +60,15 @@ export function LyricsDrawer() {
   // 'closing' keeps it mounted while the records return into the artwork.
   const [flow, setFlow] = useState<'closed' | 'open' | 'closing'>('closed');
   const [flowSession, setFlowSession] = useState(lyricsOpen);
-  if (flowSession !== lyricsOpen) { setFlowSession(lyricsOpen); setFlow('closed'); }
+  const [flight, setFlight] = useState<CoverFlight | null>(null);
+  const [flightHiding, setFlightHiding] = useState(false);
+  const flightSeq = useRef(0);
+  const lastStageRect = useRef<CoverFlight['from'] | null>(null);
+  if (flowSession !== lyricsOpen) {
+    setFlowSession(lyricsOpen);
+    setFlow('closed');
+    setFlightHiding(lyricsOpen && !reduceMotion && lyricsLayout !== 'lyrics');
+  }
   const openFlow = useCallback(() => setFlow(current => (current === 'closed' ? 'open' : current)), []);
   const closeFlow = useCallback(() => setFlow(current => (current === 'open' ? 'closing' : current)), []);
   const flowUp = flow !== 'closed';
@@ -74,8 +84,68 @@ export function LyricsDrawer() {
     return () => window.removeEventListener('keydown', onKey);
   }, [lyricsOpen, closeLyrics, onComments, goTo]);
 
-  // Native listener: React's wheel handlers are passive and cannot preventDefault.
   const [drawer, setDrawer] = useState<HTMLElement | null>(null);
+
+  const wasOpen = useRef(lyricsOpen);
+
+  // Shared-element flight between the bottom player bar thumbnail and the stage artwork.
+  useLayoutEffect(() => {
+    const justOpened = !wasOpen.current && lyricsOpen;
+    const justClosed = wasOpen.current && !lyricsOpen;
+
+    const readThumb = (): CoverFlight['from'] | null => {
+      const el = document.querySelector<HTMLElement>('[data-player-thumb]');
+      if (!el) return null;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      return { left: r.left, top: r.top, width: r.width, height: r.height, radius: Number(el.dataset.thumbRadius ?? 8) };
+    };
+    const readStage = (root: HTMLElement | null): CoverFlight['to'] | null => {
+      const holder = root?.querySelector<HTMLElement>('[data-flow-origin]');
+      const shape = holder?.querySelector<HTMLElement>('[data-flow-shape]') ?? holder;
+      if (!holder || !shape) return null;
+      const r = shape.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      const radius = Math.min(Number(holder.dataset.flowRadius ?? 18), r.width / 2);
+      return { left: r.left, top: r.top, width: r.width, height: r.height, radius };
+    };
+
+    if (lyricsOpen && drawer && justOpened) {
+      wasOpen.current = true;
+      if (reduceMotion || lyricsLayout === 'lyrics') return;
+      const from = readThumb();
+      const to = readStage(drawer);
+      if (!from || !to) { queueMicrotask(() => setFlightHiding(false)); return; }
+      lastStageRect.current = to;
+      const id = ++flightSeq.current;
+      queueMicrotask(() => setFlight({ id, from, to, src: track.cover, seed: track.coverSeed, direction: 'in' }));
+      return;
+    }
+
+    if (justClosed) {
+      wasOpen.current = false;
+      if (reduceMotion || lyricsLayout === 'lyrics') return;
+      const to = readThumb();
+      const from = readStage(drawer) ?? lastStageRect.current;
+      if (!from || !to) return;
+      const id = ++flightSeq.current;
+      queueMicrotask(() => setFlight({ id, from, to, src: track.cover, seed: track.coverSeed, direction: 'out' }));
+    }
+  }, [lyricsOpen, drawer, reduceMotion, lyricsLayout, track.cover, track.coverSeed]);
+
+  // Keep the latest stage rect updated while open so closing always knows where to fly from.
+  useEffect(() => {
+    if (!lyricsOpen || !drawer || onComments || flowUp) return;
+    const holder = drawer.querySelector<HTMLElement>('[data-flow-origin]');
+    const shape = holder?.querySelector<HTMLElement>('[data-flow-shape]') ?? holder;
+    if (!holder || !shape) return;
+    const r = shape.getBoundingClientRect();
+    if (r.width && r.height) {
+      lastStageRect.current = { left: r.left, top: r.top, width: r.width, height: r.height, radius: Math.min(Number(holder.dataset.flowRadius ?? 18), r.width / 2) };
+    }
+  }, [lyricsOpen, drawer, onComments, flowUp, track.id, lyricsLayout]);
+
+  // Native listener: React's wheel handlers are passive and cannot preventDefault.
   const barRef = useRef<HTMLDivElement>(null);
   const barHidden = useIdlePlayerBar(drawer, lyricsOpen && !onComments && !queueOpen);
   useEffect(() => {
@@ -124,27 +194,34 @@ export function LyricsDrawer() {
     return () => observer.disconnect();
   }, [drawer]);
 
+  const useSharedFlight = !reduceMotion && lyricsLayout !== 'lyrics';
+
   return (
-    <AnimatePresence>
-      {lyricsOpen && (
-        <motion.section
-          ref={setDrawer}
-          className={styles.drawer}
-          data-theme="dark"
-          data-player-surface
-          data-lyrics-drawer
-          role="dialog"
-          aria-modal="true"
-          aria-label="歌词"
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', stiffness: 260, damping: 32 }}
-        >
-          {/* 设置 › 歌词页 › 背景: blurred artwork or a calm flat backdrop. */}
-          <div className={cn(styles.backdrop, lyricsBackground === 'plain' && styles.backdropPlain)} aria-hidden>
-            {lyricsBackground === 'cover' && <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />}
-          </div>
+    <>
+      <AnimatePresence>
+        {lyricsOpen && (
+          <motion.section
+            ref={setDrawer}
+            className={styles.drawer}
+            data-theme="dark"
+            data-player-surface
+            data-lyrics-drawer
+            role="dialog"
+            aria-modal="true"
+            aria-label="歌词"
+            initial={useSharedFlight ? { opacity: 0 } : { y: '100%' }}
+            animate={useSharedFlight ? { opacity: 1 } : { y: 0 }}
+            exit={useSharedFlight ? { opacity: 0 } : { y: '100%' }}
+            transition={useSharedFlight ? { duration: 0.32, ease: [0.22, 1, 0.36, 1] } : { type: 'spring', stiffness: 260, damping: 32 }}
+          >
+            {/* 设置 › 歌词页 › 背景: fluid blobs, blurred artwork, or a calm flat backdrop. */}
+            {lyricsBackground === 'fluid' ? (
+              <FluidBackdrop src={track.cover} seed={track.coverSeed} playing={playing} reduceMotion={reduceMotion} />
+            ) : (
+              <div className={cn(styles.backdrop, lyricsBackground === 'plain' && styles.backdropPlain)} aria-hidden>
+                {lyricsBackground === 'cover' && <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />}
+              </div>
+            )}
 
           {/* Bottom strips sit on the backdrop, under the lyrics and the bar (never covering text). */}
           <motion.div className={styles.strip} style={railBottom !== undefined ? { bottom: railBottom } : undefined} animate={{ y: barHidden ? (railBottom ?? 78) : 0 }} transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }} aria-hidden>
@@ -179,7 +256,7 @@ export function LyricsDrawer() {
           <div ref={element => { viewportRef.current = element; setViewportElement(element); }} className={styles.viewport}>
             <motion.div className={styles.track} style={{ y: snap.y }}>
               <div className={styles.page} inert={onComments}>
-                <Stage progress={progress} flowActive={flowUp} onOpenFlow={onComments ? undefined : openFlow} />
+                <Stage progress={progress} flowActive={flowUp} hideArt={flightHiding || flight?.direction === 'out'} onOpenFlow={onComments ? undefined : openFlow} />
               </div>
               <div className={styles.page} inert={!onComments}>
                 {track.songId && <CommentsPage songId={track.songId} source={track.source} total={stats.commentCount} />}
@@ -211,6 +288,18 @@ export function LyricsDrawer() {
           </motion.div>
         </motion.section>
       )}
-    </AnimatePresence>
+      </AnimatePresence>
+      {flight && (
+        <SharedCoverFlight
+          flight={flight}
+          onDone={id => {
+            if (flightSeq.current === id) {
+              setFlight(null);
+              setFlightHiding(false);
+            }
+          }}
+        />
+      )}
+    </>
   );
 }

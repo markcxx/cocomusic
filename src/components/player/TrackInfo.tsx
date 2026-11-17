@@ -65,7 +65,7 @@ export function TrackInfo() {
           className={styles.trackInfo}
           {...(fluent ? FLUENT_SWAP : SWAP)}
         >
-          <span className={styles.thumb}>
+          <span className={styles.thumb} data-player-thumb data-thumb-radius={radius}>
             <Cover seed={track.coverSeed} src={track.cover} size={size} radius={radius} />
             {/* CSS-driven so the parent's track-change animation cannot leave it visible. */}
             <span className={styles.thumbHint} aria-hidden>
