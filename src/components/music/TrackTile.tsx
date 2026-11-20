@@ -42,7 +42,7 @@ export function TrackTile({ track, queue }: { track: Track; queue: Track[] }) {
         <span data-tooltip={`${track.artist}${track.album ? ` · ${track.album}` : ''}`} data-tooltip-overflow>{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
       </div>
       <div className={styles.actions}>
-        {track.songId && <LikeButton songId={track.songId} source={track.source} />}
+        {track.songId && <LikeButton songId={track.songId} title={track.title} source={track.source} />}
         <TrackMenuButton track={track} />
       </div>
     </motion.div>

@@ -18,7 +18,7 @@ import styles from './LikeButton.module.css';
  * Songs from a platform other than the selected one cannot be liked (the
  * signed-in account belongs to the selected platform).
  */
-export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, className }: { songId: string; source?: CatalogSource; size?: 'sm' | 'md'; iconSize?: number; count?: number; className?: string }) {
+export function LikeButton({ songId, title, source, size = 'sm', iconSize = 16, count, className }: { songId: string; title: string; source?: CatalogSource; size?: 'sm' | 'md'; iconSize?: number; count?: number; className?: string }) {
   const { isLiked, toggleLike } = useAccount();
   const platform = useSettings().catalogSource;
   const foreign = Boolean(source && source !== platform);
@@ -35,7 +35,7 @@ export function LikeButton({ songId, source, size = 'sm', iconSize = 16, count, 
       disabled={foreign}
       tone="muted"
       className={cn(styles.button, liked && styles.liked, count !== undefined && styles.badged, className)}
-      onClick={() => void toggleLike(songId)}
+      onClick={() => void toggleLike(songId, title)}
     >
       {/* Same treatment as 评论: digits tuck into the glyph's corner, strokes cut away beneath them. */}
       <BadgedIcon count={shown}>

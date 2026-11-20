@@ -26,7 +26,7 @@ type AccountState = {
   /** Raw song id (platform id, no source prefix). */
   isLiked: (songId: string) => boolean;
   /** Optimistic toggle; reverts and toasts on failure. Opens login when logged out. */
-  toggleLike: (songId: string) => Promise<void>;
+  toggleLike: (songId: string, title: string) => Promise<void>;
   isSubscribed: (playlistId: string) => boolean;
   isOwnPlaylist: (playlistId: string) => boolean;
   /** Resolves true when the change went through. */
@@ -144,12 +144,12 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       toast.info('已退出登录');
     },
     isLiked: id => liked.has(id),
-    toggleLike: async id => {
+    toggleLike: async (id, title) => {
       if (!requireLogin()) return;
       const next = !liked.has(id);
       setLiked(previous => { const copy = new Set(previous); if (next) copy.add(id); else copy.delete(id); return copy; });
       try {
-        await accountApi.like(id, next);
+        await accountApi.like(id, next, title);
       } catch (error) {
         setLiked(previous => { const copy = new Set(previous); if (next) copy.delete(id); else copy.add(id); return copy; });
         toast.error(error instanceof Error ? error.message : '操作失败');

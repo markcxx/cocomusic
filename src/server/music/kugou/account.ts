@@ -106,11 +106,11 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
 
   const fileKey = (file: Raw) => `${text(file.hash).toLowerCase()}.${text(file.album_id)}.${text(file.mixsongid ?? file.album_audio_id)}`;
 
-  async function addSongs(userid: string, token: string, listid: number, keys: string[]) {
+  async function addSongs(userid: string, token: string, listid: number, songs: { id: string; title?: string }[]) {
     const clienttime = Math.floor(Date.now() / 1000);
-    const data = keys.map(key => {
-      const { hash, albumId, albumAudioId } = splitSongKey(key);
-      return { number: 1, name: '', hash, size: 0, sort: 0, timelen: 0, bitrate: 0, album_id: Number(albumId) || 0, mixsongid: Number(albumAudioId) || 0 };
+    const data = songs.map(({ id, title = '' }) => {
+      const { hash, albumId, albumAudioId } = splitSongKey(id);
+      return { number: 1, name: title, hash, size: 0, sort: 0, timelen: 0, bitrate: 0, album_id: Number(albumId) || 0, mixsongid: Number(albumAudioId) || 0 };
     });
     await kugouRequest({
       method: 'POST', path: '/cloudlist.service/v6/add_song', params: { last_time: clienttime, last_area: 'gztx', userid, token },
@@ -254,11 +254,12 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
       return (await listFiles(userid, token, liked.listid)).map(fileKey);
     },
 
-    async likeSong(id, like) {
+    async likeSong(id, like, title) {
       const { userid, token } = current();
+      if (like && !title?.trim()) throw new KugouError('收藏酷狗歌曲需要歌曲名称', 400);
       const liked = (await allLists(userid, token)).find(item => item.liked);
       if (!liked) throw new KugouError('未找到“我喜欢”歌单', 404);
-      if (like) await addSongs(userid, token, liked.listid, [id]);
+      if (like) await addSongs(userid, token, liked.listid, [{ id, title }]);
       else await deleteSongs(userid, token, liked.listid, [id]);
     },
 
@@ -316,7 +317,7 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
       const { userid, token } = current();
       const list = await listByGid(userid, token, playlistId);
       if (!list.own) throw new KugouError('只能修改自己创建的歌单', 403);
-      if (op === 'add') await addSongs(userid, token, list.listid, trackIds);
+      if (op === 'add') await addSongs(userid, token, list.listid, trackIds.map(id => ({ id })));
       else await deleteSongs(userid, token, list.listid, trackIds);
     },
   };

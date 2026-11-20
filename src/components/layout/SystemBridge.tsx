@@ -62,7 +62,7 @@ export function SystemBridge() {
     if (action === 'toggle') current.togglePlay();
     else if (action === 'next') current.next();
     else if (action === 'previous') current.previous();
-    else if (action === 'like') { if (song.songId) void acc.toggleLike(song.songId); }
+    else if (action === 'like') { if (song.songId) void acc.toggleLike(song.songId, song.title); }
     else if (action === 'settings') { current.closeLyrics(); go({ name: 'settings' }); }
     else if (action === 'account') { current.closeLyrics(); if (acc.profile) go({ name: 'settings' }); else acc.openLogin(); }
     else if (action === 'cycle-mode') current.cycleMode();

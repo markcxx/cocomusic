@@ -148,7 +148,7 @@ test('concept account supports likes, list edits, subscription and encrypted ren
   const account = createKugouAccount(client).kugouAccount;
   assert.equal((await account.userPlaylists())[0].source, 'kugou-lite');
   assert.deepEqual(await account.likedIds(), [key]);
-  await account.likeSong(key, true); await account.likeSong(key, false);
+  await account.likeSong(key, true, '晴天'); await account.likeSong(key, false);
   await account.editPlaylistTracks('collection_3_3', [key], 'add');
   await account.editPlaylistTracks('collection_3_3', [key], 'del');
   await account.subscribePlaylist('collection_9_4', true);
@@ -157,8 +157,9 @@ test('concept account supports likes, list edits, subscription and encrypted ren
   await assert.rejects(account.deletePlaylist('collection_3_3'), /无法解密/);
   assert.ok(seen.some(x => x.path === '/cloudlist.service/v6/add_song'));
   assert.ok(seen.some(x => x.path === '/v4/delete_songs'));
-  const payload = seen.find(x => x.path === '/cloudlist.service/v6/add_song')!.data as { userid: number; token: string };
+  const payload = seen.find(x => x.path === '/cloudlist.service/v6/add_song')!.data as { userid: number; token: string; data: Array<{ name: string }> };
   assert.equal(payload.userid, 202); assert.equal(payload.token, 'concept');
+  assert.equal(payload.data[0].name, '晴天');
   session.clear('kugou-lite');
 });
 

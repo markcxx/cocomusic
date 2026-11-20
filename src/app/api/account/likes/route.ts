@@ -9,14 +9,15 @@ export function GET(request: NextRequest) {
   return respond(async () => ({ ids: await account(request.nextUrl.searchParams.get('source')).likedIds() }));
 }
 
-/** POST /api/account/likes { id, like } — like or unlike a song. */
+/** POST /api/account/likes { id, like, title } — like or unlike a song. */
 export function POST(request: NextRequest) {
   return respond(async () => {
     const source = request.nextUrl.searchParams.get('source');
-    const body = await readJson<{ id?: unknown; like?: unknown }>(request);
+    const body = await readJson<{ id?: unknown; like?: unknown; title?: unknown }>(request);
     const id = String(body.id ?? '');
     if (!validId(isSource(source) ? source : 'netease', 'song', id) || typeof body.like !== 'boolean') throw new CatalogError('参数无效', 400);
-    await account(source).likeSong(id, body.like);
+    const title = typeof body.title === 'string' ? body.title.trim() : undefined;
+    await account(source).likeSong(id, body.like, title);
     // 我喜欢的音乐 is a playlist too; its cached pages are now stale.
     invalidate(`${source || 'netease'}:playlist:`);
     return { ok: true };

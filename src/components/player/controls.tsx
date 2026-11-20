@@ -97,7 +97,7 @@ export function Transport({ likeCount, large = false }: { likeCount?: number; la
   return (
     <div className={cn(styles.buttons, large && styles.buttonsLarge)}>
       {track.songId
-        ? <LikeButton songId={track.songId} source={track.source} size="md" iconSize={18} count={likeCount} />
+        ? <LikeButton songId={track.songId} title={track.title} source={track.source} size="md" iconSize={18} count={likeCount} />
         : <IconButton label="喜欢" disabled><Heart size={18} strokeWidth={1.4} /></IconButton>}
       <SkipButton direction="previous" size={skip} />
       <PlayPauseButton large={large} />

@@ -156,7 +156,7 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
             <strong data-tooltip={track.title} data-tooltip-overflow>{track.title}</strong>
             <small data-tooltip={track.artist} data-tooltip-overflow>{track.artist}</small>
           </span>
-          {track.songId && <LikeButton songId={track.songId} source={track.source} size="md" iconSize={19} count={stats.likeCount} />}
+          {track.songId && <LikeButton songId={track.songId} title={track.title} source={track.source} size="md" iconSize={19} count={stats.likeCount} />}
           <CommentButton count={stats.commentCount} onClick={onComments} disabled={!track.songId} />
         </div>
 

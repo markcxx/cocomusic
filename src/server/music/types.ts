@@ -345,7 +345,7 @@ export interface AccountProvider {
   detail(): Promise<UserDetail>;
   logout(): Promise<void>;
   likedIds(): Promise<string[]>;
-  likeSong(id: string, like: boolean): Promise<void>;
+  likeSong(id: string, like: boolean, title?: string): Promise<void>;
   userPlaylists(): Promise<UserPlaylist[]>;
   subscribePlaylist(id: string, subscribe: boolean): Promise<void>;
   createPlaylist(name: string, privacy: 'public' | 'private'): Promise<UserPlaylist>;

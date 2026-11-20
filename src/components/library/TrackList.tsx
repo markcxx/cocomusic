@@ -70,7 +70,7 @@ export function TrackList({ rows, metaLabel, emptyText = '暂无歌曲' }: { row
               </span>
               <span role="cell" className={styles.duration}>{track.duration ? formatTime(track.duration) : '—'}</span>
               <span role="cell" className={styles.actions}>
-                {track.songId && <LikeButton songId={track.songId} source={track.source} />}
+                {track.songId && <LikeButton songId={track.songId} title={track.title} source={track.source} />}
                 {actions}
                 <TrackMenuButton track={track} />
               </span>
