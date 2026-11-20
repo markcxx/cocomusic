@@ -3,6 +3,7 @@ import type {
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType,
 } from '../types';
 import { createKugouClient, KugouError, type KugouClient } from './client';
+import { cloudListFiles } from './cloud-list';
 import { validId } from '../ids';
 import { createKugouMappers, image, num, record, rows, text, type Raw } from './mappers';
 
@@ -141,28 +142,38 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     };
   }
 
-  async function playlistDetail(id: string, offset: number, limit: number): Promise<CollectionDetail> {
-    if (isRankId(id)) return chartDetail(id, offset, limit);
+  async function loadPlaylist(id: string, offset: number, limit?: number): Promise<CollectionDetail> {
     const { userid, token } = device();
     const info = await kugouRequest<Raw>({ method: 'POST', path: '/v3/get_list_info', router: 'pubsongs.kugou.com', data: { data: [{ global_collection_id: id }], userid: Number(userid) || 0, token } });
     const meta = rows(info.data)[0];
     if (!meta || !text(meta.name)) throw new KugouError('歌单不存在或未公开', 404);
     const collection = /^collection_\d+_(\d+)_(\d+)_/.exec(id);
     const own = Boolean(token && (text(meta.list_create_userid) === userid || collection?.[1] === userid));
-    // Public lists may replace personal tracks with { fileid, shield: 1 }.
-    // The owner's authenticated cloud list returns the actual hashes and metadata.
-    const songs = own
-      ? await kugouRequest<Raw>({
-        method: 'POST', path: '/v4/get_list_all_file_v3', router: 'cloudlist.service.kugou.com',
-        data: { listid: Number(meta.list_create_listid ?? collection?.[2]), userid: Number(userid), token, type: 0, page: Math.floor(offset / limit) + 1, pagesize: limit, area_code: 1, allplatform: 1, show_cover: 1 },
-      })
-      : await kugouRequest<Raw>({
-        path: '/pubsongs/v2/get_other_list_file_nofilt',
-        params: { area_code: 1, begin_idx: offset, plat: 1, type: 1, mode: 1, personal_switch: 1, extend_fields: 'abtags,hot_cmt,popularization', pagesize: limit, global_collection_id: id },
-      });
-    const data = record(songs.data);
-    const tracks = rows(own ? data.info : data.songs).map(mapListSong).filter(track => validId(SOURCE, 'song', track.id));
-    const total = num(data.count ?? meta.count) ?? tracks.length;
+    const listid = Number(meta.list_create_listid ?? collection?.[2]);
+    let files: Raw[];
+    let count: number | undefined;
+    if (limit === undefined) {
+      if (!own) throw new KugouError('仅可按收藏时间查看自己的歌单', 403);
+      files = await cloudListFiles(client, userid, token, listid);
+      // Timestamps are in seconds. Use the latest appended row first on ties.
+      files.reverse().sort((a, b) => (num(b.collecttime) ?? 0) - (num(a.collecttime) ?? 0));
+    } else {
+      // Public lists may replace personal tracks with { fileid, shield: 1 }.
+      const songs = own
+        ? await kugouRequest<Raw>({
+          method: 'POST', path: '/v4/get_list_all_file_v3', router: 'cloudlist.service.kugou.com',
+          data: { listid, userid: Number(userid), token, type: 0, page: Math.floor(offset / limit) + 1, pagesize: limit, area_code: 1, allplatform: 1, show_cover: 1 },
+        })
+        : await kugouRequest<Raw>({
+          path: '/pubsongs/v2/get_other_list_file_nofilt',
+          params: { area_code: 1, begin_idx: offset, plat: 1, type: 1, mode: 1, personal_switch: 1, extend_fields: 'abtags,hot_cmt,popularization', pagesize: limit, global_collection_id: id },
+        });
+      const data = record(songs.data);
+      files = rows(own ? data.info : data.songs);
+      count = num(data.count ?? meta.count);
+    }
+    const tracks = files.map(mapListSong).filter(track => validId(SOURCE, 'song', track.id));
+    const total = count ?? tracks.length;
     return {
       info: {
         kind: 'playlist', id, source: SOURCE, name: text(meta.name),
@@ -178,6 +189,14 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
       },
       tracks, offset, hasMore: offset + tracks.length < total,
     };
+  }
+
+  function playlistDetail(id: string, offset: number, limit: number) {
+    return isRankId(id) ? chartDetail(id, offset, limit) : loadPlaylist(id, offset, limit);
+  }
+
+  function playlistByCollectionTime(id: string) {
+    return loadPlaylist(id, 0);
   }
 
   /** Pages through album songs (the service caps page size). */
@@ -335,6 +354,6 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     return { hot: hot.slice(0, 20) };
   }
 
-  return { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums };
+  return { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, playlistByCollectionTime, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums };
 }
 export const { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums } = createKugouCatalog();

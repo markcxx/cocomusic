@@ -10,7 +10,7 @@ import styles from './LikedView.module.css';
 
 /** 我喜欢: the account's 我喜欢的音乐 playlist, or a login prompt. */
 export function LikedView() {
-  const { profile, likedPlaylist, openLogin } = useAccount();
+  const { profile, likedPlaylist, likesRevision, openLogin } = useAccount();
 
   if (profile === undefined || (profile && !likedPlaylist)) {
     return <Page><div className={styles.gate}><Spinner size={22} /></div></Page>;
@@ -29,5 +29,15 @@ export function LikedView() {
       </Page>
     );
   }
-  return <CollectionView kind="playlist" id={likedPlaylist.id} title="我喜欢的音乐" />;
+  const concept = likedPlaylist.source === 'kugou-lite';
+  return (
+    <CollectionView
+      kind="playlist"
+      id={likedPlaylist.id}
+      source={likedPlaylist.source}
+      title="我喜欢的音乐"
+      order={concept ? 'collected-desc' : undefined}
+      revision={concept ? likesRevision : undefined}
+    />
+  );
 }

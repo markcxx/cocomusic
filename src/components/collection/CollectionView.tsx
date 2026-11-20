@@ -9,7 +9,7 @@ import { usePlayer } from '@/components/player/player-store';
 import { Page } from '@/components/scroll';
 import { ListFooter, toast } from '@/components/ui';
 import { downloads } from '@/components/downloads/download-store';
-import { catalogApi, type CatalogSource, type CollectionInfo } from '@/lib/catalog-client';
+import { catalogApi, type CollectionInfo } from '@/lib/catalog-client';
 import { fetchCollectionTracks, saveCollectionLocally, type CollectionRef } from '@/lib/collection-tracks';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
 import { settings as appSettings } from '@/lib/settings';
@@ -28,18 +28,18 @@ const DOWNLOAD_CAP = 1000;
  * song table. `source` opens a collection of another platform than the
  * selected one (imported links, links from mixed lists).
  */
-export function CollectionView({ kind, id, source, title }: { kind: 'playlist' | 'album'; id: string; source?: CatalogSource; title?: string }) {
+export function CollectionView({ kind, id, source, title, order, revision = 0 }: CollectionRef & { title?: string; revision?: number }) {
   const player = usePlayer();
   const { navigate } = useNavigation();
   const [info, setInfo] = useState<CollectionInfo>();
-  const ref = useMemo<CollectionRef>(() => ({ kind, id, source }), [kind, id, source]);
+  const ref = useMemo<CollectionRef>(() => ({ kind, id, source, order }), [kind, id, source, order]);
 
   const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
-    const detail = kind === 'album' ? await catalogApi.album(id, signal, source) : await catalogApi.playlist(id, offset, PAGE, signal, source);
-    setInfo(detail.info);
+    const detail = kind === 'album' ? await catalogApi.album(id, signal, source) : await catalogApi.playlist(id, offset, PAGE, signal, source, order);
+    if (!signal.aborted) setInfo(detail.info);
     return { items: detail.tracks.map(toTrack), total: detail.info.trackCount, hasMore: detail.hasMore };
-  }, [kind, id, source]);
-  const list = useInfiniteList<Track>(`${kind}:${source ?? ''}:${id}`, loadPage);
+  }, [kind, id, source, order]);
+  const list = useInfiniteList<Track>(`${kind}:${source ?? ''}:${id}:${order ?? ''}:${revision}`, loadPage);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
   const { filter, setFilter, filtering, visible, selection, selectedTracks } = useTrackFilter(list.items);
   const complete = kind === 'album' || !list.hasMore;

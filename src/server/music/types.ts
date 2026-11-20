@@ -237,6 +237,8 @@ export interface CatalogProvider {
   categories(): Promise<CategoryGroup[]>;
   playlists(query: { category: string; order: PlaylistOrder; cursor?: string; limit: number }): Promise<PlaylistPage>;
   playlistDetail(id: string, offset: number, limit: number): Promise<CollectionDetail>;
+  /** Full owned playlist, ordered newest collection first before pagination. */
+  playlistByCollectionTime?(id: string): Promise<CollectionDetail>;
   albumDetail(id: string): Promise<CollectionDetail>;
   search(keyword: string, type: SearchType, offset: number, limit: number): Promise<SearchResult>;
   bestMatch(keyword: string): Promise<BestMatch>;

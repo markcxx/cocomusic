@@ -18,6 +18,7 @@ type AccountState = {
   profile: UserProfile | null | undefined;
   playlists: UserPlaylist[];
   likedPlaylist?: UserPlaylist;
+  likesRevision: number;
   loginOpen: boolean;
   openLogin: () => void;
   closeLogin: () => void;
@@ -43,6 +44,7 @@ const AccountContext = createContext<AccountState | null>(null);
 export function AccountProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<UserProfile | null | undefined>(undefined);
   const [liked, setLiked] = useState<Set<string>>(() => new Set());
+  const [likesRevision, setLikesRevision] = useState(0);
   const [playlists, setPlaylists] = useState<UserPlaylist[]>([]);
   const [loginOpen, setLoginOpen] = useState(false);
   const profileRef = useLatest(profile);
@@ -126,6 +128,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     profile,
     playlists,
     likedPlaylist: playlists.find(item => item.liked),
+    likesRevision,
     loginOpen,
     openLogin: () => setLoginOpen(true),
     closeLogin: () => setLoginOpen(false),
@@ -150,6 +153,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       setLiked(previous => { const copy = new Set(previous); if (next) copy.add(id); else copy.delete(id); return copy; });
       try {
         await accountApi.like(id, next, title);
+        setLikesRevision(value => value + 1);
       } catch (error) {
         setLiked(previous => { const copy = new Set(previous); if (next) copy.delete(id); else copy.add(id); return copy; });
         toast.error(error instanceof Error ? error.message : '操作失败');
@@ -206,7 +210,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const { playlists: next } = await accountApi.playlists();
       setPlaylists(next);
     },
-  }), [profile, playlists, loginOpen, liked, loadLibrary, requireLogin]);
+  }), [profile, playlists, loginOpen, liked, likesRevision, loadLibrary, requireLogin]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

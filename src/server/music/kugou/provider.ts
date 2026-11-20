@@ -7,8 +7,12 @@ import { createKugouPlayback } from './playback';
 
 export function createKugouProvider(source: KugouSource): CatalogProvider {
   const client = createKugouClient(source);
-  const { topArtists: artists, ...catalog } = createKugouCatalog(client);
-  return { source, ...catalog, artists, ...createKugouPlayback(client), account: createKugouAccount(client).kugouAccount };
+  const { topArtists: artists, playlistByCollectionTime, ...catalog } = createKugouCatalog(client);
+  return {
+    source, ...catalog, artists, ...createKugouPlayback(client),
+    account: createKugouAccount(client).kugouAccount,
+    ...(source === 'kugou-lite' ? { playlistByCollectionTime } : {}),
+  };
 }
 export const kugouProvider = createKugouProvider('kugou');
 export const kugouLiteProvider = createKugouProvider('kugou-lite');

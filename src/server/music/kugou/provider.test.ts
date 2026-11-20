@@ -265,6 +265,60 @@ test('personal playlists use authenticated cloud files rather than public shield
   assert.equal(isPlayable({ songId: '..', source: 'kugou-lite' } as import('../../../types/music').Track), false);
 });
 
+test('concept favorites sort across cloud pages and refresh after liking a song', async t => {
+  const { NextRequest } = require('next/server') as typeof import('next/server');
+  const { GET } = require('../../../app/api/music/playlist/route') as typeof import('../../../app/api/music/playlist/route');
+  const { POST } = require('../../../app/api/account/likes/route') as typeof import('../../../app/api/account/likes/route');
+  const { invalidate } = require('../index') as typeof import('../index');
+  const id = 'collection_3_404_2_0';
+  session.set('kugou-lite', { userid: '404', token: 'concept' });
+  t.after(() => { invalidate('kugou-lite:playlist:'); session.clear('kugou-lite'); });
+
+  const files = Array.from({ length: 301 }, (_, index) => ({
+    hash: index.toString(16).padStart(32, '0'),
+    album_id: 12,
+    mixsongid: index + 1,
+    name: `歌曲 ${index}`,
+    collecttime: index === 300 ? '1000' : String(index + 1),
+  }));
+  const pages: number[] = [];
+  t.mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    const { pathname } = new URL(input);
+    if (pathname === '/v3/get_list_info') return Response.json({ status: 1, data: [{ name: '我喜欢的音乐', list_create_userid: 404, list_create_listid: 2 }] });
+    if (pathname === '/v7/get_all_list') return Response.json({ status: 1, data: { info: [{ name: '我喜欢', listid: 2, is_def: 2 }] } });
+    if (pathname === '/cloudlist.service/v6/add_song') {
+      files.push({ hash, album_id: 966846, mixsongid: 32100650, name: '晴天', collecttime: '1000' });
+      return Response.json({ status: 1 });
+    }
+    assert.equal(pathname, '/v4/get_list_all_file_v3');
+    const { page, pagesize } = JSON.parse(String(init.body));
+    pages.push(page);
+    return Response.json({ status: 1, data: { count: files.length, info: files.slice((page - 1) * pagesize, page * pagesize) } });
+  });
+
+  const orderedPage = async (offset: number) => {
+    const response = await GET(new NextRequest(`http://localhost/api/music/playlist?source=kugou-lite&id=${id}&order=collected-desc&limit=2&offset=${offset}`));
+    assert.equal(response.status, 200);
+    return response.json() as Promise<import('../types').CollectionDetail>;
+  };
+  const first = await orderedPage(0);
+  assert.deepEqual(first.tracks.map(track => track.title), ['歌曲 300', '歌曲 299']);
+  assert.equal(first.hasMore, true);
+  assert.equal(first.info.trackCount, 301);
+  const last = await orderedPage(300);
+  assert.deepEqual(last.tracks.map(track => track.title), ['歌曲 0']);
+  assert.equal(last.hasMore, false);
+  assert.deepEqual(pages, [1, 2]);
+
+  const liked = await POST(new NextRequest('http://localhost/api/account/likes?source=kugou-lite', {
+    method: 'POST',
+    body: JSON.stringify({ id: key, like: true, title: '晴天' }),
+  }));
+  assert.equal(liked.status, 200);
+  assert.deepEqual((await orderedPage(0)).tracks.map(track => track.title), ['晴天', '歌曲 300']);
+  assert.deepEqual(pages, [1, 2, 1, 2]);
+});
+
 test('security verification is preserved as 403/code 20028, never retried as a missing song', async t => {
   let calls = 0;
   t.mock.method(globalThis, 'fetch', async () => { calls++; return Response.json({ status: 0, errcode: 20028, error: '本次请求需要验证' }); });

@@ -2,6 +2,7 @@ import { constants, createCipheriv, createDecipheriv, publicEncrypt, randomBytes
 import { session } from '../session';
 import type { AccountProvider, UserDetail, UserPlaylist, UserProfile } from '../types';
 import { createKugouClient, KugouError, md5, type KugouClient } from './client';
+import { cloudListFiles } from './cloud-list';
 import { image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
 import { LITE_PUBLIC_KEY } from './config';
@@ -88,22 +89,6 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
     return list;
   }
 
-  /** Files of one of the user's lists (each carries its per-list `fileid`). */
-  async function listFiles(userid: string, token: string, listid: number) {
-    const files: Raw[] = [];
-    for (let page = 1; page <= 20; page += 1) {
-      const json = await kugouRequest<Raw>({
-        method: 'POST', path: '/v4/get_list_all_file_v3', router: 'cloudlist.service.kugou.com',
-        data: { listid, userid: Number(userid), area_code: 1, show_relate_goods: 0, pagesize: 300, allplatform: 1, show_cover: 1, type: 0, token, page },
-      });
-      const data = record(json.data);
-      const info = rows(data.info);
-      files.push(...info);
-      if (info.length < 300 || files.length >= (num(data.count) ?? 0)) break;
-    }
-    return files;
-  }
-
   const fileKey = (file: Raw) => `${text(file.hash).toLowerCase()}.${text(file.album_id)}.${text(file.mixsongid ?? file.album_audio_id)}`;
 
   async function addSongs(userid: string, token: string, listid: number, songs: { id: string; title?: string }[]) {
@@ -120,7 +105,7 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
 
   async function deleteSongs(userid: string, token: string, listid: number, keys: string[]) {
     const wanted = new Set(keys.map(key => splitSongKey(key).hash));
-    const files = (await listFiles(userid, token, listid)).filter(file => wanted.has(text(file.hash).toLowerCase()));
+    const files = (await cloudListFiles(client, userid, token, listid, 20)).filter(file => wanted.has(text(file.hash).toLowerCase()));
     if (!files.length) return;
     await kugouRequest({
       method: 'POST', path: '/v4/delete_songs', router: 'cloudlist.service.kugou.com',
@@ -251,7 +236,7 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
       const { userid, token } = current();
       const liked = (await allLists(userid, token)).find(item => item.liked);
       if (!liked) return [];
-      return (await listFiles(userid, token, liked.listid)).map(fileKey);
+      return (await cloudListFiles(client, userid, token, liked.listid, 20)).map(fileKey);
     },
 
     async likeSong(id, like, title) {
