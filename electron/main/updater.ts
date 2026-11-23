@@ -79,7 +79,6 @@ let state: UpdateState;
 let releases: ReleaseInfo[] = [];
 let etag = '';
 let fetchedAt = 0;
-let retryAt = 0;
 let fetching: Promise<ReleaseInfo[]> | null = null;
 const RELEASE_CACHE_MS = 60_000;
 let checking: Promise<void> | null = null;
@@ -97,12 +96,11 @@ function load() {
     if (raw.channel === 'stable' || raw.channel === 'beta') settings.channel = raw.channel;
     if (isVersion(raw.skipped)) skipped = raw.skipped;
     if (isVersion(raw.lastVersion)) lastVersion = raw.lastVersion;
-    if (typeof raw.retryAt === 'number' && Number.isFinite(raw.retryAt)) retryAt = raw.retryAt;
   } catch { /* defaults */ }
 }
 
 function save() {
-  try { writeFileSync(storeFile(), JSON.stringify({ ...settings, skipped, lastVersion: app.getVersion(), retryAt })); } catch { /* best effort */ }
+  try { writeFileSync(storeFile(), JSON.stringify({ ...settings, skipped, lastVersion: app.getVersion() })); } catch { /* best effort */ }
 }
 
 function broadcast() {
@@ -158,14 +156,9 @@ function message(error: unknown) {
   return text || '更新失败，请稍后重试';
 }
 
-function rateLimitMessage() {
-  return `GitHub 更新接口暂时限流，请在 ${new Date(retryAt).toLocaleTimeString('zh-CN', { hour12: false })} 后重试，或从 GitHub 发布页下载安装包`;
-}
-
 function fetchReleases(): Promise<ReleaseInfo[]> {
   if (fetching) return fetching;
   if (fetchedAt && Date.now() - fetchedAt < RELEASE_CACHE_MS) return Promise.resolve(releases);
-  if (Date.now() < retryAt) return Promise.reject(new Error(rateLimitMessage()));
   fetching = requestReleases().finally(() => { fetching = null; });
   return fetching;
 }
@@ -180,13 +173,7 @@ async function requestReleases() {
   if (response.status === 403 || response.status === 429) {
     const body = await response.text();
     if (response.status === 429 || response.headers.get('x-ratelimit-remaining') === '0' || /rate limit|secondary rate|abuse detection/i.test(body)) {
-      const now = Date.now();
-      const retry = response.headers.get('retry-after');
-      const delay = retry ? (/^\d+$/.test(retry) ? now + Number(retry) * 1000 : Date.parse(retry)) : 0;
-      const reset = Number(response.headers.get('x-ratelimit-reset')) * 1000;
-      retryAt = Math.max(now + 60_000, Number.isFinite(delay) ? delay : 0, Number.isFinite(reset) ? reset : 0);
-      save();
-      throw new Error(rateLimitMessage());
+      throw new Error('GitHub 暂时限制了更新请求，可切换网络后再次检查，或从 GitHub 发布页下载安装包');
     }
     throw new Error('GitHub 拒绝访问更新接口（403），请检查网络或代理设置');
   }
@@ -195,8 +182,6 @@ async function requestReleases() {
   if (!Array.isArray(raw)) throw new Error('GitHub 更新信息格式异常，请稍后重试');
   releases = parseReleases(raw, REPO);
   fetchedAt = Date.now();
-  retryAt = 0;
-  save();
   etag = response.headers.get('etag') ?? '';
   return releases;
 }

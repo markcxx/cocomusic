@@ -36,7 +36,6 @@ export function LikedView() {
       id={likedPlaylist.id}
       source={likedPlaylist.source}
       title="我喜欢的音乐"
-      order={concept ? 'collected-desc' : undefined}
       revision={concept ? likesRevision : undefined}
     />
   );

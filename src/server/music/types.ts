@@ -237,7 +237,7 @@ export interface CatalogProvider {
   categories(): Promise<CategoryGroup[]>;
   playlists(query: { category: string; order: PlaylistOrder; cursor?: string; limit: number }): Promise<PlaylistPage>;
   playlistDetail(id: string, offset: number, limit: number): Promise<CollectionDetail>;
-  /** Full owned playlist, ordered newest collection first before pagination. */
+  /** Full playlist, ordered by collection time before pagination (excludes numeric chart IDs on Kugou). */
   playlistByCollectionTime?(id: string): Promise<CollectionDetail>;
   albumDetail(id: string): Promise<CollectionDetail>;
   search(keyword: string, type: SearchType, offset: number, limit: number): Promise<SearchResult>;

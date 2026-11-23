@@ -60,7 +60,7 @@ export const catalogApi = {
   categories: (signal?: AbortSignal) => get<{ groups: CategoryGroup[] }>('categories', {}, signal),
   playlists: (query: { category: string; order: PlaylistOrder; cursor?: string; limit?: number }, signal?: AbortSignal) =>
     get<PlaylistPage>('playlists', { ...query, limit: query.limit ?? 24 }, signal),
-  playlist: (id: string, offset = 0, limit = 50, signal?: AbortSignal, from?: CatalogSource, order?: 'collected-desc') => get<CollectionDetail>('playlist', { id, offset, limit, order }, signal, from),
+  playlist: (id: string, offset = 0, limit = 50, signal?: AbortSignal, from?: CatalogSource, reverse?: boolean) => get<CollectionDetail>('playlist', { id, offset, limit, reverse: reverse ? 1 : undefined }, signal, from),
   album: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<CollectionDetail>('album', { id }, signal, from),
   search: (keyword: string, type: SearchType, offset = 0, limit = 30, signal?: AbortSignal) => get<SearchResult>('search', { keyword, type, offset, limit }, signal),
   suggest: (keyword: string, signal?: AbortSignal) => get<SearchSuggestion>('search/suggest', { keyword }, signal),

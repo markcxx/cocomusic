@@ -12,7 +12,7 @@ import { downloads } from '@/components/downloads/download-store';
 import { catalogApi, type CollectionInfo } from '@/lib/catalog-client';
 import { fetchCollectionTracks, saveCollectionLocally, type CollectionRef } from '@/lib/collection-tracks';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
-import { settings as appSettings } from '@/lib/settings';
+import { settings as appSettings, useSettings } from '@/lib/settings';
 import { catalogTracks, toTrack } from '@/lib/to-track';
 import type { Track } from '@/types/music';
 import { CollectionHeader } from './CollectionHeader';
@@ -28,18 +28,21 @@ const DOWNLOAD_CAP = 1000;
  * song table. `source` opens a collection of another platform than the
  * selected one (imported links, links from mixed lists).
  */
-export function CollectionView({ kind, id, source, title, order, revision = 0 }: CollectionRef & { title?: string; revision?: number }) {
+export function CollectionView({ kind, id, source, title, revision = 0 }: CollectionRef & { title?: string; revision?: number }) {
   const player = usePlayer();
   const { navigate } = useNavigation();
   const [info, setInfo] = useState<CollectionInfo>();
-  const ref = useMemo<CollectionRef>(() => ({ kind, id, source, order }), [kind, id, source, order]);
+  const [reverse, setReverse] = useState(false);
+  const selectedSource = useSettings().catalogSource;
+  const newestFirst = (source ?? selectedSource) === 'kugou-lite' && !/^\d+$/.test(id);
+  const ref = useMemo<CollectionRef>(() => ({ kind, id, source, reverse }), [kind, id, source, reverse]);
 
   const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
-    const detail = kind === 'album' ? await catalogApi.album(id, signal, source) : await catalogApi.playlist(id, offset, PAGE, signal, source, order);
+    const detail = kind === 'album' ? await catalogApi.album(id, signal, source) : await catalogApi.playlist(id, offset, PAGE, signal, source, reverse);
     if (!signal.aborted) setInfo(detail.info);
     return { items: detail.tracks.map(toTrack), total: detail.info.trackCount, hasMore: detail.hasMore };
-  }, [kind, id, source, order]);
-  const list = useInfiniteList<Track>(`${kind}:${source ?? ''}:${id}:${order ?? ''}:${revision}`, loadPage);
+  }, [kind, id, source, reverse]);
+  const list = useInfiniteList<Track>(`${kind}:${source ?? ''}:${id}:${reverse}:${revision}`, loadPage);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore]);
   const { filter, setFilter, filtering, visible, selection, selectedTracks } = useTrackFilter(list.items);
   const complete = kind === 'album' || !list.hasMore;
@@ -81,7 +84,7 @@ export function CollectionView({ kind, id, source, title, order, revision = 0 }:
     }
   };
 
-  if (list.error && !list.items.length) return <Page><ErrorState message={list.error} onRetry={list.retry} /></Page>;
+  const failed = Boolean(list.error && !list.items.length);
 
   const playlistRef = kind === 'playlist' ? { kind: 'platform' as const, id } : undefined;
   return (
@@ -94,21 +97,25 @@ export function CollectionView({ kind, id, source, title, order, revision = 0 }:
         onFilter={setFilter}
         visibleCount={visible.length}
         selection={selection}
+        sortLabel={newestFirst ? (reverse ? '最早在前' : '最新在前') : (reverse ? '倒序' : '正序')}
+        onToggleSort={kind === 'playlist' ? () => { selection.exit(); setReverse(value => !value); } : undefined}
         onPlayAll={() => playCollection(undefined, 'play')}
       />
-      <SongTable
-        tracks={visible}
-        loading={list.loading}
-        showAlbum={kind === 'playlist'}
-        selection={selection}
-        playlist={playlistRef}
-        onRemoved={trackId => list.removeWhere(track => track.id === trackId)}
-        onPlayTrack={playCollection}
-        animateFrom={filtering ? 0 : Math.max(0, list.items.length - PAGE)}
-        emptyText={filtering ? '没有匹配的歌曲' : '暂无公开歌曲'}
-      />
-      <div ref={sentinel}>
-        <ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} loadingText="正在加载更多歌曲" done={!list.loading && !list.hasMore && list.items.length > PAGE && !filtering} doneText={`已显示全部 ${list.items.length} 首`} />
+      {failed ? <ErrorState message={list.error} onRetry={list.retry} /> : (
+        <SongTable
+          tracks={visible}
+          loading={list.loading}
+          showAlbum={kind === 'playlist'}
+          selection={selection}
+          playlist={playlistRef}
+          onRemoved={trackId => list.removeWhere(track => track.id === trackId)}
+          onPlayTrack={playCollection}
+          animateFrom={filtering ? 0 : Math.max(0, list.items.length - PAGE)}
+          emptyText={filtering ? '没有匹配的歌曲' : '暂无公开歌曲'}
+        />
+      )}
+      <div ref={sentinel} hidden={failed}>
+        {!failed && <ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} loadingText="正在加载更多歌曲" done={!list.loading && !list.hasMore && list.items.length > PAGE && !filtering} doneText={`已显示全部 ${list.items.length} 首`} />}
       </div>
       <SelectionBar
         selection={selection}

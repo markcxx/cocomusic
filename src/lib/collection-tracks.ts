@@ -7,7 +7,7 @@ import { toTrack } from './to-track';
 import type { Track } from '@/types/music';
 
 /** A platform playlist or album, on its own platform (undefined = the selected one). */
-export type CollectionRef = { kind: 'playlist' | 'album'; id: string; source?: CatalogSource; order?: 'collected-desc' };
+export type CollectionRef = { kind: 'playlist' | 'album'; id: string; source?: CatalogSource; reverse?: boolean };
 
 const BATCH = 200;
 
@@ -22,7 +22,7 @@ export async function fetchCollectionTracks(ref: CollectionRef, have: Track[] = 
   while (all.length < cap) {
     let page;
     try {
-      page = await catalogApi.playlist(ref.id, all.length, BATCH, undefined, ref.source, ref.order);
+      page = await catalogApi.playlist(ref.id, all.length, BATCH, undefined, ref.source, ref.reverse);
     } catch (error) {
       if (!all.length) throw error;
       break;

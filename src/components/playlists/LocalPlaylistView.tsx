@@ -39,7 +39,9 @@ export function LocalPlaylistView({ id, title }: { id: string; title?: string })
   const { navigate } = useNavigation();
   const entry = useLocalPlaylist(id);
   const playlist = entry?.playlist;
-  const tracks = playlist?.tracks ?? NO_TRACKS;
+  const [reverse, setReverse] = useState(false);
+  const original = playlist?.tracks ?? NO_TRACKS;
+  const tracks = useMemo(() => reverse ? [...original].reverse() : original, [original, reverse]);
   const { filter, setFilter, filtering, visible, selection, selectedTracks } = useTrackFilter(tracks);
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -106,6 +108,8 @@ export function LocalPlaylistView({ id, title }: { id: string; title?: string })
         onFilter={setFilter}
         visibleCount={visible.length}
         selection={selection}
+        sortLabel={reverse ? '倒序' : '正序'}
+        onToggleSort={() => setReverse(value => !value)}
         onPlayAll={() => play()}
       />
       <SongTable

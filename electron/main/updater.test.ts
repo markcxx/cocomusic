@@ -171,22 +171,34 @@ test('checks and changelog share an in-flight request and a short-lived cache', 
   } finally { context.dispose(); }
 });
 
-test('rate limits persist their cooldown across restarts without more requests', async () => {
-  const context = host({ releaseResponse: () => new Response('API rate limit exceeded', {
-    status: 403, headers: { 'x-ratelimit-remaining': '0', 'retry-after': '120' },
-  }) });
+for (const status of [403, 429]) {
+  test(`a rate-limited check (HTTP ${status}) can be retried immediately`, async () => {
+    let limited = true;
+    const context = host({ releaseResponse: () => limited
+      ? new Response('API rate limit exceeded', { status, headers: { 'retry-after': '120', 'x-ratelimit-remaining': '0' } })
+      : Response.json([]) });
+    try {
+      await context.updater.checkForUpdates();
+      assert.equal(context.updater.getUpdateState().status, 'error');
+      assert.match(context.updater.getUpdateState().error, /再次检查/);
+      limited = false;
+      await context.updater.checkForUpdates();
+      assert.equal(context.urls.length, 2);
+      assert.equal(context.updater.getUpdateState().status, 'latest');
+      assert.equal(context.updater.getUpdateState().error, '');
+    } finally { context.dispose(); }
+  });
+}
+
+test('a cooldown saved by an older version does not block the first check after upgrading', async () => {
+  const context = host({ persisted: { retryAt: Date.now() + 3_600_000, autoCheck: false } });
   try {
     await context.updater.checkForUpdates();
-    assert.match(context.updater.getUpdateState().error, /限流.*后重试/);
-    await context.updater.checkForUpdates();
-    await context.updater.changelog();
     assert.equal(context.urls.length, 1);
-    const restarted = host({ persisted: JSON.parse(readFileSync(path.join(context.directory, 'updater.json'), 'utf8')) });
-    try {
-      await restarted.updater.checkForUpdates();
-      assert.equal(restarted.urls.length, 0);
-      assert.match(restarted.updater.getUpdateState().error, /限流/);
-    } finally { restarted.dispose(); }
+    assert.equal(context.updater.getUpdateState().status, 'available');
+    const saved = JSON.parse(readFileSync(path.join(context.directory, 'updater.json'), 'utf8'));
+    assert.equal(Object.hasOwn(saved, 'retryAt'), false);
+    assert.equal(saved.autoCheck, false);
   } finally { context.dispose(); }
 });
 
@@ -195,6 +207,6 @@ test('permission failures are not mislabeled as rate limits', async () => {
   try {
     await context.updater.checkForUpdates();
     assert.match(context.updater.getUpdateState().error, /拒绝访问/);
-    assert.doesNotMatch(context.updater.getUpdateState().error, /限流/);
+    assert.doesNotMatch(context.updater.getUpdateState().error, /限制了更新请求/);
   } finally { context.dispose(); }
 });

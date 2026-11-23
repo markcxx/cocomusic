@@ -142,6 +142,15 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     };
   }
 
+  async function publicFilesPage(id: string, offset: number, limit: number) {
+    const songs = await kugouRequest<Raw>({
+      path: '/pubsongs/v2/get_other_list_file_nofilt',
+      params: { area_code: 1, begin_idx: offset, plat: 1, type: 1, mode: 1, personal_switch: 1, extend_fields: 'abtags,hot_cmt,popularization', pagesize: limit, global_collection_id: id },
+    });
+    const data = record(songs.data);
+    return { files: rows(data.songs), count: num(data.count) };
+  }
+
   async function loadPlaylist(id: string, offset: number, limit?: number): Promise<CollectionDetail> {
     const { userid, token } = device();
     const info = await kugouRequest<Raw>({ method: 'POST', path: '/v3/get_list_info', router: 'pubsongs.kugou.com', data: { data: [{ global_collection_id: id }], userid: Number(userid) || 0, token } });
@@ -153,24 +162,33 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     let files: Raw[];
     let count: number | undefined;
     if (limit === undefined) {
-      if (!own) throw new KugouError('仅可按收藏时间查看自己的歌单', 403);
-      files = await cloudListFiles(client, userid, token, listid);
-      // Timestamps are in seconds. Use the latest appended row first on ties.
+      if (own) {
+        files = await cloudListFiles(client, userid, token, listid);
+      } else {
+        files = [];
+        const pageSize = 300;
+        do {
+          const page = await publicFilesPage(id, files.length, pageSize);
+          files.push(...page.files);
+          count = page.count ?? num(meta.count);
+          // Advance by raw rows: a shielded song still occupies an upstream slot.
+          if (!page.files.length || (count === undefined && page.files.length < pageSize)) break;
+        } while (count === undefined || files.length < count);
+      }
+      // The source records seconds. On ties, use the same reverse list order as favorites.
       files.reverse().sort((a, b) => (num(b.collecttime) ?? 0) - (num(a.collecttime) ?? 0));
-    } else {
-      // Public lists may replace personal tracks with { fileid, shield: 1 }.
-      const songs = own
-        ? await kugouRequest<Raw>({
-          method: 'POST', path: '/v4/get_list_all_file_v3', router: 'cloudlist.service.kugou.com',
-          data: { listid, userid: Number(userid), token, type: 0, page: Math.floor(offset / limit) + 1, pagesize: limit, area_code: 1, allplatform: 1, show_cover: 1 },
-        })
-        : await kugouRequest<Raw>({
-          path: '/pubsongs/v2/get_other_list_file_nofilt',
-          params: { area_code: 1, begin_idx: offset, plat: 1, type: 1, mode: 1, personal_switch: 1, extend_fields: 'abtags,hot_cmt,popularization', pagesize: limit, global_collection_id: id },
-        });
+    } else if (own) {
+      const songs = await kugouRequest<Raw>({
+        method: 'POST', path: '/v4/get_list_all_file_v3', router: 'cloudlist.service.kugou.com',
+        data: { listid, userid: Number(userid), token, type: 0, page: Math.floor(offset / limit) + 1, pagesize: limit, area_code: 1, allplatform: 1, show_cover: 1 },
+      });
       const data = record(songs.data);
-      files = rows(own ? data.info : data.songs);
+      files = rows(data.info);
       count = num(data.count ?? meta.count);
+    } else {
+      const page = await publicFilesPage(id, offset, limit);
+      files = page.files;
+      count = page.count ?? num(meta.count);
     }
     const tracks = files.map(mapListSong).filter(track => validId(SOURCE, 'song', track.id));
     const total = count ?? tracks.length;

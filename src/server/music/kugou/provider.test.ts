@@ -297,7 +297,7 @@ test('concept favorites sort across cloud pages and refresh after liking a song'
   });
 
   const orderedPage = async (offset: number) => {
-    const response = await GET(new NextRequest(`http://localhost/api/music/playlist?source=kugou-lite&id=${id}&order=collected-desc&limit=2&offset=${offset}`));
+    const response = await GET(new NextRequest(`http://localhost/api/music/playlist?source=kugou-lite&id=${id}&limit=2&offset=${offset}`));
     assert.equal(response.status, 200);
     return response.json() as Promise<import('../types').CollectionDetail>;
   };
@@ -317,6 +317,35 @@ test('concept favorites sort across cloud pages and refresh after liking a song'
   assert.equal(liked.status, 200);
   assert.deepEqual((await orderedPage(0)).tracks.map(track => track.title), ['晴天', '歌曲 300']);
   assert.deepEqual(pages, [1, 2, 1, 2]);
+});
+
+test('public concept playlists use collection time by default and reverse the entire list on request', async t => {
+  const { NextRequest } = require('next/server') as typeof import('next/server');
+  const { GET } = require('../../../app/api/music/playlist/route') as typeof import('../../../app/api/music/playlist/route');
+  const id = 'collection_3_990_7_0';
+  const files = Array.from({ length: 303 }, (_, i) => ({
+    hash: i === 0 ? '' : hash, name: `song ${i}`, mixsongid: i + 1, collecttime: i % 2, album_id: 12,
+  }));
+  const offsets: number[] = [];
+  t.mock.method(globalThis, 'fetch', async (input: string) => {
+    const url = new URL(input);
+    if (url.pathname === '/v3/get_list_info') return Response.json({ status: 1, data: [{ name: '公开歌单', count: files.length }] });
+    assert.equal(url.pathname, '/pubsongs/v2/get_other_list_file_nofilt');
+    const start = Number(url.searchParams.get('begin_idx'));
+    offsets.push(start);
+    return Response.json({ status: 1, data: { songs: files.slice(start, start + Number(url.searchParams.get('pagesize'))), count: files.length } });
+  });
+  async function titles(offset: number, reverse = false) {
+    const response = await GET(new NextRequest(`http://localhost/api/music/playlist?source=kugou-lite&id=${id}&offset=${offset}&limit=2&reverse=${Number(reverse)}`));
+    assert.equal(response.status, 200);
+    const page = await response.json() as import('../types').CollectionDetail;
+    return { titles: page.tracks.map(t => t.title), more: page.hasMore };
+  }
+  assert.deepEqual(await titles(0), { titles: ['song 301', 'song 299'], more: true });
+  assert.deepEqual(await titles(300), { titles: ['song 4', 'song 2'], more: false });
+  assert.deepEqual(await titles(0, true), { titles: ['song 2', 'song 4'], more: true });
+  assert.deepEqual(await titles(300, true), { titles: ['song 299', 'song 301'], more: false });
+  assert.deepEqual(offsets, [0, 300]);
 });
 
 test('security verification is preserved as 403/code 20028, never retried as a missing song', async t => {

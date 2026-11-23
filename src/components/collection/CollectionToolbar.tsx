@@ -1,7 +1,7 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { ListChecks, Play } from 'lucide-react';
+import { ArrowUpDown, ListChecks, Play } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { SearchField } from '@/components/common/SearchField';
 import { StickyBar } from '@/components/scroll';
@@ -24,7 +24,7 @@ export function useTrackFilter(tracks: Track[]) {
 }
 
 /** Sticky bar of a song list page: count, play all, 批量操作, in-list search. */
-export function CollectionToolbar({ title, total, filter, onFilter, visibleCount, selection, onPlayAll }: {
+export function CollectionToolbar({ title, total, filter, onFilter, visibleCount, selection, onPlayAll, sortLabel, onToggleSort }: {
   /** Compact title shown once the hero scrolls away. */
   title?: string;
   /** Songs in the collection (may exceed the rows loaded so far). */
@@ -35,6 +35,8 @@ export function CollectionToolbar({ title, total, filter, onFilter, visibleCount
   visibleCount: number;
   selection: Selection;
   onPlayAll: () => void;
+  sortLabel?: string;
+  onToggleSort?: () => void;
 }) {
   const empty = !visibleCount;
   return (
@@ -47,6 +49,7 @@ export function CollectionToolbar({ title, total, filter, onFilter, visibleCount
         <IconButton label="播放全部" onClick={onPlayAll} disabled={empty}>
           <Play size={16} strokeWidth={0} fill="currentColor" />
         </IconButton>
+        {onToggleSort && <Button variant="ghost" icon={<ArrowUpDown size={15} strokeWidth={1.5} />} title="切换歌单顺序" onClick={onToggleSort}>{sortLabel}</Button>}
         <AnimatePresence initial={false} mode="wait">
           {selection.active ? (
             <motion.span key="selecting" className={styles.selectHint} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -6 }}>
