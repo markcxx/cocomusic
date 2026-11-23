@@ -1,18 +1,16 @@
 'use client';
 
-import { motion } from 'framer-motion';
-import { Play } from 'lucide-react';
+import { MoreHorizontal, Play } from 'lucide-react';
 import { LikeButton } from '@/components/account/LikeButton';
-import { TrackMenuButton, useTrackMenu } from '@/components/account/TrackMenuButton';
+import { useTrackMenu } from '@/components/account/TrackMenuButton';
 import { useState, type MouseEvent } from 'react';
 import { SkeletonBlock } from '@/components/common/AsyncState';
 import { Cover } from '@/components/common/Cover';
-import { riseItem, staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
 import { formatTime, usePlayer } from '@/components/player/player-store';
 import { DownloadButton } from '@/components/downloads/DownloadButton';
 import type { PlaylistRef } from '@/components/playlists/add-to-playlist';
-import { Checkbox, Menu } from '@/components/ui';
+import { Checkbox, IconButton, Menu } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
 import type { Selection } from '@/lib/selection';
@@ -20,9 +18,10 @@ import { toCatalogTrack } from '@/lib/to-track';
 import { SOURCE_TAGS } from '@/server/music/ids';
 import type { Track } from '@/types/music';
 import { Equalizer } from './Equalizer';
+import { useSongWindow } from './use-song-window';
 import styles from './SongTable.module.css';
 
-const stillItem = { hidden: { opacity: 1, y: 0 }, show: { opacity: 1, y: 0 } };
+type RowMenu = { track: Track; anchor?: HTMLButtonElement; point?: { x: number; y: number } };
 
 /**
  * Track list for collections and search: index (play on hover), cover + title,
@@ -60,8 +59,11 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
   const { navigate } = useNavigation();
   const showVip = useSettings().showVipBadge;
   const selecting = Boolean(selection?.active);
-  const { itemsFor, dialogs } = useTrackMenu(playlist, onRemoved, track => (onPlayTrack ? onPlayTrack(track, 'play') : player.play(track, tracks)));
-  const [contextMenu, setContextMenu] = useState<{ track: Track; point: { x: number; y: number } } | null>(null);
+  const [menu, setMenu] = useState<RowMenu | null>(null);
+  const playInList = (track: Track) => onPlayTrack ? onPlayTrack(track, 'play') : player.play(track, tracks);
+  // The right-click play command uses the collection queue. The button menu plays a single song.
+  const { itemsFor, dialogs } = useTrackMenu(playlist, onRemoved, menu?.point ? playInList : undefined);
+  const { body, virtual, start, end } = useSongWindow(loading ? 0 : tracks.length);
 
   if (loading) {
     return (
@@ -79,8 +81,8 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
   };
 
   return (
-    <div className={cn(styles.table, selecting && styles.selecting)} role="table" aria-label={selecting ? '歌曲列表（多选中）' : '歌曲列表'}>
-      <div className={cn(styles.row, styles.head)} role="row">
+    <div className={cn(styles.table, selecting && styles.selecting)} role="table" aria-rowcount={tracks.length + 1} aria-label={selecting ? '歌曲列表（多选中）' : '歌曲列表'}>
+      <div className={cn(styles.row, styles.head)} role="row" aria-rowindex={1}>
         <span role="columnheader" className={styles.index}>
           {selecting && selection
             ? <Checkbox checked={selection.allSelected} mixed={selection.someSelected} onChange={selection.toggleAll} label="全选" />
@@ -91,25 +93,34 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
         <span role="columnheader">{showAlbum ? '专辑' : ''}</span>
         <span role="columnheader" className={styles.duration}>时长</span>
       </div>
-      <motion.div variants={staggerList} initial="hidden" animate="show">
-        {tracks.map((track, index) => {
+      <div
+        ref={body}
+        role="rowgroup"
+        style={virtual ? {
+          height: `calc(var(--song-row-height) * ${tracks.length})`,
+          paddingTop: `calc(var(--song-row-height) * ${start})`,
+        } : undefined}
+      >
+        {tracks.slice(start, end).map((track, offset) => {
+          const index = start + offset;
+          const enter = !virtual && index >= animateFrom && index < animateFrom + 8;
           const catalog = toCatalogTrack(track);
           const current = player.track.id === track.id;
           const checked = Boolean(selection?.isSelected(track.id));
           return (
-            <motion.div
+            <div
               key={`${track.id}:${index}`}
               role="row"
+              aria-rowindex={index + 2}
               aria-selected={selecting ? checked : undefined}
-              className={cn(styles.row, styles.song, current && styles.current, checked && styles.checked)}
-              // Earlier pages are already visible: show them instantly instead of replaying the entrance.
-              variants={index >= animateFrom ? riseItem : stillItem}
+              className={cn(styles.row, styles.song, index % 2 === 1 && styles.even, enter && styles.enter, current && styles.current, checked && styles.checked)}
+              style={enter ? { animationDelay: `${(index - animateFrom) * 35}ms` } : undefined}
               onClick={event => onRowClick(event, track.id)}
               onDoubleClick={() => { if (selecting) return; if (onPlayTrack) onPlayTrack(track, 'list'); else player.playFromList(track, tracks); }}
               onContextMenu={event => {
                 if (selecting) return;
                 event.preventDefault();
-                setContextMenu({ track, point: { x: event.clientX, y: event.clientY } });
+                setMenu({ track, point: { x: event.clientX, y: event.clientY } });
               }}
             >
               <span role="cell" className={styles.index}>
@@ -151,7 +162,12 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
                   <>
                     {track.songId && <LikeButton songId={track.songId} title={track.title} source={track.source} />}
                     {catalog && <DownloadButton track={catalog} />}
-                    <TrackMenuButton track={track} playlist={playlist} onRemoved={onRemoved} />
+                    <IconButton label="更多操作" size="sm" tone="muted" onClick={event => {
+                      const anchor = event.currentTarget;
+                      setMenu(previous => previous?.anchor === anchor ? null : { track, anchor });
+                    }}>
+                      <MoreHorizontal size={16} strokeWidth={1.4} />
+                    </IconButton>
                   </>
                 )}
               </span>
@@ -163,17 +179,18 @@ export function SongTable({ tracks, startIndex = 0, showAlbum = true, showCover 
                 )}
               </span>
               <span role="cell" className={styles.duration}>{track.duration ? formatTime(track.duration) : '—'}</span>
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
       {!tracks.length && <p className={styles.empty}>{emptyText}</p>}
       <Menu
-        open={Boolean(contextMenu)}
-        anchor={null}
-        point={contextMenu?.point}
-        items={contextMenu ? itemsFor(contextMenu.track) : []}
-        onClose={() => setContextMenu(null)}
+        open={Boolean(menu)}
+        anchor={menu?.anchor ?? null}
+        point={menu?.point}
+        align={menu?.anchor ? 'end' : 'start'}
+        items={menu ? itemsFor(menu.track) : []}
+        onClose={() => setMenu(null)}
       />
       {dialogs}
     </div>

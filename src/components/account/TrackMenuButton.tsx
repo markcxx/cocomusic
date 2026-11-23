@@ -83,7 +83,7 @@ export function TrackMenuButton({ track, playlist, onRemoved }: { track: Track; 
           <MoreHorizontal size={16} strokeWidth={1.4} />
         </IconButton>
       </span>
-      <Menu open={open} anchor={button} items={itemsFor(track)} onClose={() => setOpen(false)} align="end" />
+      <Menu open={open} anchor={button} items={open ? itemsFor(track) : []} onClose={() => setOpen(false)} align="end" />
       {dialogs}
     </>
   );

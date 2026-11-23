@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, type TargetAndTransition } from 'framer-motion';
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import styles from './IconButton.module.css';
 
@@ -19,7 +19,7 @@ export function IconButton({ label, tooltip, tooltipPlacement, shortcut, onClick
   tooltipPlacement?: TooltipPlacement;
   /** Key hint shown in the tooltip. */
   shortcut?: string;
-  onClick?: () => void;
+  onClick?: MouseEventHandler<HTMLButtonElement>;
   disabled?: boolean;
   /** Accent-coloured "on" state (e.g. comments page open). */
   active?: boolean;
