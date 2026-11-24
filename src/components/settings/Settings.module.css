@@ -928,3 +928,8 @@
   display: grid;
   gap: var(--space-0_5);
 }
+
+:global(html[data-ui-style='scenic']) .card {
+  background: color-mix(in srgb, var(--card) 20%, transparent);
+  box-shadow: none;
+}

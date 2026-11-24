@@ -216,3 +216,17 @@
 .dark.fluent .sheet {
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
+
+.scenic {
+  --desk: linear-gradient(#fffc, #fff8), url('/images/golden-gate.jpg') center / cover;
+  --sheet: transparent;
+  --bar: #fffa;
+  --edge: transparent;
+}
+.scenic.dark {
+  --desk: linear-gradient(#12141a80, #12141a80), url('/images/golden-gate.jpg') center / cover;
+  --bar: #22252b99;
+  --line: #fffc;
+}
+.scenic .sidebar { background: var(--bar); }
+.scenic .bar { backdrop-filter: blur(3px); }

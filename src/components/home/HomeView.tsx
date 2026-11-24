@@ -3,6 +3,8 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Import } from 'lucide-react';
 import { useState } from 'react';
+import { useAccount } from '@/components/account/account-store';
+import { useSettings } from '@/lib/settings';
 import { fadeSwap } from '@/components/common/motion';
 import { Tabs } from '@/components/common/Tabs';
 import { CollapsingHeader, Page, StickyBar, useScrollArea } from '@/components/scroll';
@@ -25,6 +27,10 @@ export function HomeView() {
   const [importing, setImporting] = useState(false);
   const { scrollY, scrollTo } = useScrollArea();
   const Panel = panels[tab];
+  const { profile } = useAccount();
+  const source = useSettings().catalogSource;
+  const personal = tab === '精选' && (source === 'qq' || source === 'netease') && profile?.source === source;
+  const title = personal ? (profile.nickname ? `Hi ${profile.nickname}，今日为你推荐` : '今日为你推荐') : '发现好音乐';
 
   // Switching tab while scrolled returns to just under the header, so the new panel starts in view.
   const changeTab = (next: HomeTab) => {
@@ -34,8 +40,8 @@ export function HomeView() {
 
   return (
     <Page>
-      <CollapsingHeader title="发现好音乐" actions={<Button icon={<Import size={15} strokeWidth={1.4} />} onClick={() => setImporting(true)}>导入歌单</Button>} />
-      <StickyBar compactTitle="发现好音乐" className={styles.tabsBar}>
+      <CollapsingHeader title={title} actions={<Button icon={<Import size={15} strokeWidth={1.4} />} onClick={() => setImporting(true)}>导入歌单</Button>} />
+      <StickyBar compactTitle={personal ? '今日为你推荐' : title} className={styles.tabsBar}>
         <Tabs items={homeTabs} value={tab} onChange={changeTab} label="首页内容" />
       </StickyBar>
       <AnimatePresence mode="wait" initial={false}>

@@ -33,7 +33,7 @@ export type PlayerState = {
   lyricsOpen: boolean;
   queueOpen: boolean;
   togglePlay: () => void;
-  play: (track: Track, queue?: Track[]) => void;
+  play: (track: Track, queue?: Track[], ifCurrent?: 'toggle' | 'restart') => void;
   /**
    * Double-click on a list row, per 设置 › 播放 › 双击歌曲: replace the queue with
    * the list (default), or only insert this song after the current one.

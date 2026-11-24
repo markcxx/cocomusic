@@ -23,13 +23,13 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 /** 'transparent': see-through window like the desktop lyrics (applies after a restart). */
 /** 'minimal' (简约): opaque window with flat neutral surfaces instead of tinted glass. */
 /** 'fluent': Windows 11 look (Mica-like layers, small radii, tinted player bar); opaque, no OS material. */
-export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'minimal' | 'fluent' | 'none';
+export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'minimal' | 'fluent' | 'scenic' | 'none';
 /** Window effects the page paints itself (opaque, no OS material behind). */
 export const FLAT_STYLES = ['minimal', 'fluent'] as const;
 export type FlatStyle = (typeof FLAT_STYLES)[number];
 export const isFlatStyle = (effect: WindowEffect): effect is FlatStyle => (FLAT_STYLES as readonly string[]).includes(effect);
 /** Custom wallpaper belongs to the glass materials, independently of window transparency. */
-export const supportsBackdropImage = (effect: WindowEffect) => effect === 'acrylic' || effect === 'mica' || effect === 'vibrancy';
+export const supportsBackdropImage = (effect: WindowEffect) => effect === 'acrylic' || effect === 'mica' || effect === 'vibrancy' || effect === 'scenic';
 export type LyricColorId = 'lavender' | 'sunset' | 'mint' | 'sky' | 'white' | 'gold';
 /** A preset id, or 'custom' for 设置 › 桌面歌词 › 自定义颜色 (desktopCustomColor). */
 export type DesktopColor = LyricColorId | 'custom';
@@ -294,7 +294,7 @@ const oneOf = (...values: readonly unknown[]): Rule => ({ type: 'enum', values }
 const RULES: Record<keyof Settings, Rule> = {
   catalogSource: oneOf('netease', 'qq', 'kugou', 'kugou-lite'),
   conceptAutoCheckIn: bool,
-  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'none'), windowOpacity: num(0, 100),
+  themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'scenic', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, coverQuality: oneOf('standard', 'high', 'original'), zoom: num(80, 130),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),

@@ -1,6 +1,6 @@
 import type { CatalogProvider } from '../types';
 import { qqAccount } from './account';
-import { albumDetail, artistAlbums, artistInfo, artistSongs, bestMatch, categories, charts, featured, newReleases, playlistDetail, playlists, search, searchDiscovery, suggest, topArtists } from './catalog';
+import { albumDetail, artistAlbums, artistInfo, artistSongs, bestMatch, categories, charts, dailySongs, featured, newReleases, playlistDetail, playlists, search, searchDiscovery, suggest, topArtists } from './catalog';
 import { SOURCE } from './mappers';
 import { comments, lyrics, songSource, songStats } from './playback';
 
@@ -11,6 +11,7 @@ export const qqProvider: CatalogProvider = {
   songStats,
   comments,
   featured,
+  dailySongs,
   newReleases,
   artists: topArtists,
   charts,

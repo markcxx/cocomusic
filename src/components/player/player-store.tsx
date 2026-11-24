@@ -463,14 +463,14 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (status === 'error') { select(track, { remember: false }); return; }
         setPlaying(current => !current);
       },
-      play: (next, nextQueue) => {
+      play: (next, nextQueue, ifCurrent = 'toggle') => {
         if (nextQueue) setQueue(nextQueue.slice(0, QUEUE_LIMIT));
         else if (!queue.some(item => item.id === next.id)) {
           // A single song (search result, opened file) joins the queue after the current one.
           const at = currentIndex() + 1;
           setQueue([...queue.slice(0, at), next, ...queue.slice(at)]);
         }
-        if (next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
+        if (ifCurrent === 'toggle' && next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
         failures.current = 0;
         select(next);
       },

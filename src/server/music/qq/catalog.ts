@@ -1,9 +1,10 @@
 import type {
-  ArtistInfo, BestMatch, CatalogAlbum, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, HomeFeatured, PlaylistOrder, PlaylistPage,
+  ArtistInfo, BestMatch, CatalogAlbum, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, HomeFeatured, PlaylistOrder, PlaylistPage, HomeRecommendationCard,
   SearchDiscovery, SearchResult, SearchSuggestion, SearchType,
 } from '../types';
 import { sampleUnique } from '../sample-unique';
-import { QQError, qqBatch, qqLegacy, qqRequest } from './client';
+import { validId } from '../ids';
+import { auth, QQError, qqBatch, qqLegacy, qqRequest } from './client';
 import { albumCover, https, mapAlbum, mapArtist, mapPlaylistBasic, mapTrack, num, record, rows, singerAvatar, SOURCE, text, type Raw } from './mappers';
 
 /* ───────── Discovery ───────── */
@@ -32,11 +33,62 @@ export async function charts(limit: number): Promise<CatalogChart[]> {
   }));
 }
 
+async function desktopShelf() {
+  if (!auth()) throw new QQError('请先登录 QQ 音乐账号', 401);
+  const feed = await qqRequest('music.recommend.RecommendFeed', 'get_recommend_feed', {
+    direction: 0, page: 1, v_cache: [], v_uniq: [], s_num: 0,
+  }, { desktopFeed: true });
+  const shelves = rows(feed.v_shelf).map(shelf => rows(shelf.v_niche).flatMap(niche => rows(niche.v_card)));
+  return shelves.find(cards => cards.some(card => card.title === '每日30首' || (card.type === 700 && text(card.id) === '99'))) ?? [];
+}
+
+async function topCards(): Promise<HomeRecommendationCard[]> {
+  const cards = await desktopShelf();
+  const result: HomeRecommendationCard[] = [];
+  for (const card of cards) {
+    const id = text(card.id);
+    const title = text(card.title);
+    if (!title) continue;
+    const display = { title, cover: https(card.cover), subtitle: text(card.subtitle) || undefined };
+    if (card.type === 500 && validId(SOURCE, 'playlist', id)) {
+      result.push({ ...display, kind: 'playlist', id });
+    } else if (card.type === 900 && id === '20000') {
+      result.push({ ...display, kind: 'companion' });
+    } else if (card.type === 700 && id === '99') {
+      // The radio supplies the album cover and the queue for the wide card.
+      const radio = await qqRequest('music.radioProxy.MbTrackRadioSvr', 'get_radio_track', { id: 99, firstplay: 0, num: 5 }).catch(() => null);
+      const tracks = rows(radio?.tracks).map(mapTrack).filter(track => validId(SOURCE, 'song', track.id));
+      if (tracks.length) result.push({ ...display, kind: 'radio', tracks });
+    }
+  }
+  return result;
+}
+
+export async function dailySongs() {
+  const id = text((await desktopShelf()).find(card => card.title === '每日30首')?.id);
+  if (!validId(SOURCE, 'playlist', id)) throw new QQError('QQ 音乐未返回「每日30首」歌单');
+  const { tracks } = await playlistDetail(id, 0, 30);
+  return { tracks: tracks.filter(track => validId(SOURCE, 'song', track.id)) };
+}
+
+async function publicFeaturedSongs() {
+  const songs = await qqRequest('newsong.NewSongServer', 'get_new_song_info', { type: 5 });
+  return rows(songs.songlist).slice(0, 9).map(mapTrack);
+}
+
+async function featuredSongs(): Promise<Pick<HomeFeatured, 'tracks' | 'recommendationCards'>> {
+  if (auth()) {
+    const cards = await topCards();
+    if (cards.length) return { recommendationCards: cards, tracks: [] };
+  }
+  return { tracks: await publicFeaturedSongs() };
+}
+
 export async function featured(): Promise<HomeFeatured> {
-  const [hot, square, songs, chartList] = await Promise.all([
+  const [hot, square, recommendations, chartList] = await Promise.all([
     qqRequest<Raw>('playlist.HotRecommendServer', 'get_hot_recommend', { async: 1, cmd: 2 }).catch(() => ({} as Raw)),
     qqRequest<Raw>('music.playlist.PlayListCategory', 'get_category_content', { caller: '0', category_id: 3317, size: 30, page: 0, use_page: 1 }),
-    qqRequest<Raw>('newsong.NewSongServer', 'get_new_song_info', { type: 5 }),
+    featuredSongs(),
     charts(2),
   ]);
   const hotItems = rows(hot.v_hot).map(item => ({
@@ -51,7 +103,7 @@ export async function featured(): Promise<HomeFeatured> {
   const officialPool = rows(record(square.content).v_item).map(item => mapPlaylistBasic(item, '官方歌单'));
   return {
     playlists: sampleUnique([], [...hotItems, ...officialPool], 12),
-    tracks: rows(songs.songlist).slice(0, 9).map(mapTrack),
+    ...recommendations,
     charts: chartList,
   };
 }

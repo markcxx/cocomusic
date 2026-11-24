@@ -236,3 +236,9 @@
 .trackButton[data-empty]:hover .meta strong {
   color: var(--text-secondary);
 }
+
+:global(html[data-ui-style='scenic']) .player {
+  background: var(--player);
+  backdrop-filter: var(--glass-blur);
+  box-shadow: none;
+}

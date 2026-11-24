@@ -31,9 +31,11 @@ export function GET(request: NextRequest) {
     const loadOrdered = provider.playlistByCollectionTime;
     const byTime = loadOrdered && !/^\d+$/.test(id);
     const reverse = params.get('reverse') === '1';
+    // Some NetEase radar playlists keep the same id but return different tracks for each listener.
+    const login = session.get(provider.source);
+    const viewer = `${login?.profile?.id ?? login?.cookie.userid ?? 'guest'}:${login?.savedAt ?? 0}`;
     if (byTime || reverse) {
-      const login = session.get(provider.source);
-      const key = `${provider.source}:playlist:${id}:full:${login?.cookie.userid ?? 'guest'}:${login?.savedAt ?? 0}`;
+      const key = `${provider.source}:playlist:${id}:full:${viewer}`;
       const detail = await cached(key, () => byTime ? loadOrdered(id) : fullPlaylist(provider, id));
       const total = detail.tracks.length;
       const end = offset + limit;
@@ -42,6 +44,6 @@ export function GET(request: NextRequest) {
         : detail.tracks.slice(offset, end);
       return { ...detail, tracks, offset, hasMore: end < total };
     }
-    return cached(`${provider.source}:playlist:${id}:${offset}:${limit}`, () => provider.playlistDetail(id, offset, limit));
+    return cached(`${provider.source}:playlist:${id}:${offset}:${limit}:${viewer}`, () => provider.playlistDetail(id, offset, limit));
   });
 }

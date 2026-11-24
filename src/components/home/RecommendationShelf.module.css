@@ -1,0 +1,78 @@
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(112px, 1fr));
+  grid-auto-columns: minmax(112px, 1fr);
+  grid-auto-flow: column;
+  gap: var(--space-1) var(--space-4);
+  overflow-x: auto;
+  padding: 3px 2px;
+}
+.card, .radioCard {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  align-items: start;
+}
+.radioCard { grid-column: span 2; }
+.hero, button.caption {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+.hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: stretch;
+  min-height: 110px;
+  overflow: hidden;
+  border-radius: var(--radius-cover);
+  padding: 5% 10% 5% 7%;
+  background: linear-gradient(110deg, var(--accent-tint), var(--card-hover) 60%, var(--accent-soft));
+  color: var(--text-strong);
+}
+.heroText { display: grid; gap: var(--space-1); font-size: var(--fs-sm); }
+.heroText strong { font-size: clamp(18px, 1.55vw, 26px); }
+.radioPlay {
+  display: grid;
+  place-items: center;
+  border-radius: 100px;
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
+}
+.radioPlay { width: 38px; height: 28px; margin-top: var(--space-1); }
+.record { position: relative; width: 43%; }
+.record::before {
+  content: '';
+  position: absolute;
+  inset: 4% -14% 4% 16%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(#222 0 2px, #363638 3px 4px);
+}
+.album { display: block; width: 100%; box-shadow: 0 4px 12px #29202d40; }
+.art { display: block; width: 100%; aspect-ratio: 1; }
+.ribbon {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  padding: 2px 8px;
+  border-radius: 0 10px 0 0;
+  background: #166c9c;
+  color: white;
+  font-size: var(--fs-sm);
+}
+.ribbon[data-name='百万收藏'] { background: #a3530c; }
+.ribbon[data-name='新歌推荐'] { background: #7d43a2; }
+.caption, .meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--fs-md);
+  color: var(--text-strong);
+}
+.meta { color: var(--text-secondary); font-size: var(--fs-sm); }

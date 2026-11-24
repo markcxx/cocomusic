@@ -9,9 +9,12 @@ import { usePlayer } from '@/components/player/player-store';
 import { CollapsingHeader, Page } from '@/components/scroll';
 import { Button } from '@/components/ui';
 import { catalogApi, useCatalog } from '@/lib/catalog-client';
+import { useSettings } from '@/lib/settings';
 import { toTrack } from '@/lib/to-track';
+import { SOURCE_NAMES } from '@/server/music/ids';
+import type { CatalogSource } from '@/server/music/types';
 
-const title = '每日推荐歌曲';
+export const dailySongsTitle = (source: CatalogSource) => source === 'qq' ? '每日30首' : '每日推荐歌曲';
 
 export function useRecommendationDay() {
   const [day, setDay] = useState(() => new Date().toDateString());
@@ -29,19 +32,20 @@ export function useRecommendationDay() {
 export function DailySongs() {
   const { profile, openLogin } = useAccount();
   const player = usePlayer();
-  const accountId = profile?.source === 'netease' ? profile.id : undefined;
+  const source = useSettings().catalogSource;
+  const accountId = profile?.source === source ? profile.id : undefined;
   const day = useRecommendationDay();
   const result = useCatalog(signal => accountId ? catalogApi.dailySongs(signal) : Promise.resolve({ tracks: [] }), `daily-songs:${accountId ?? ''}:${day}`);
   const tracks = useMemo(() => (result.data?.tracks ?? []).map(toTrack), [result.data]);
   const loading = profile === undefined || (Boolean(accountId) && result.loading);
-  const subtitle = loading ? '正在加载…' : !accountId ? '登录网易云音乐后查看' : result.error ? '每日推荐加载失败' : `今日推荐 · ${tracks.length} 首`;
+  const subtitle = loading ? '正在加载…' : !accountId ? `登录${SOURCE_NAMES[source]}后查看` : result.error ? '每日推荐加载失败' : `今日推荐 · ${tracks.length} 首`;
   const action = accountId || loading
     ? <Button variant="primary" icon={<Play size={14} fill="currentColor" />} disabled={!tracks.length} onClick={() => player.play(tracks[0], tracks)}>播放全部</Button>
-    : <Button onClick={openLogin}>登录网易云音乐</Button>;
+    : <Button onClick={openLogin}>登录{SOURCE_NAMES[source]}</Button>;
 
   return (
     <Page>
-      <CollapsingHeader title={title} subtitle={subtitle} actions={action} />
+      <CollapsingHeader title={dailySongsTitle(source)} subtitle={subtitle} actions={action} />
       {result.error ? <ErrorState message={result.error} onRetry={result.retry} />
         : (loading || accountId) && <SongTable tracks={tracks} loading={loading} emptyText="今天暂无推荐歌曲" />}
     </Page>

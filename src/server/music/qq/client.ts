@@ -56,16 +56,19 @@ function gtk(key: string) {
 }
 
 type Raw = Record<string, unknown>;
+type RequestOptions = { auth?: boolean; desktopFeed?: boolean };
 
 /**
  * One call to the encrypted unified gateway (musics.fcg, ag-1). Several
  * module/method pairs can be batched; each result comes back under its key.
  */
-export async function qqBatch(requests: Record<string, { module: string; method: string; param: Raw }>, options: { auth?: boolean } = {}) {
+export async function qqBatch(requests: Record<string, { module: string; method: string; param: Raw }>, options: RequestOptions = {}) {
   const login = options.auth === false ? null : auth();
   const body: Raw = {
     comm: {
       cv: 4747474, ct: 24, format: 'json', inCharset: 'utf-8', outCharset: 'utf-8', notice: 0, platform: 'yqq.json', needNewCode: 1,
+      // The desktop feed includes the radio, companion and themed playlists in one shelf.
+      ...(options.desktopFeed ? { ct: 20, cv: 111005, platform: 'mac' } : {}),
       uin: login ? Number(login.uin) : 0,
       g_tk_new_20200303: login ? gtk(login.key) : 5381,
       g_tk: login ? gtk(login.key) : 5381,
@@ -104,7 +107,7 @@ export async function qqBatch(requests: Record<string, { module: string; method:
 }
 
 /** Single module/method call; returns `data`, throwing on a non-zero sub-code. */
-export async function qqRequest<T = Raw>(module: string, method: string, param: Raw, options: { auth?: boolean; okCodes?: number[] } = {}): Promise<T> {
+export async function qqRequest<T = Raw>(module: string, method: string, param: Raw, options: RequestOptions & { okCodes?: number[] } = {}): Promise<T> {
   const parsed = await qqBatch({ req_0: { module, method, param } }, options);
   const result = (parsed.req_0 ?? {}) as Raw;
   const code = Number(result.code ?? 0);

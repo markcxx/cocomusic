@@ -4,7 +4,7 @@ import type {
 } from '../types';
 import { createKugouClient, KugouError, type KugouClient } from './client';
 import { cloudListFiles } from './cloud-list';
-import { validId } from '../ids';
+import { SOURCE_NAMES, validId } from '../ids';
 import { createKugouMappers, image, num, record, rows, text, type Raw } from './mappers';
 
 /* ───────── Charts ───────── */
@@ -12,7 +12,7 @@ import { createKugouMappers, image, num, record, rows, text, type Raw } from './
 export function createKugouCatalog(client: KugouClient = createKugouClient()) {
   const { APPID, CLIENTVER, device, kugouRequest, paramsKey } = client;
   const SOURCE = client.source;
-  const { mapAlbum, mapArtist, mapListSong, mapPlaylist, mapRichSong, mapSearchSong } = createKugouMappers(SOURCE);
+  const { track, mapAlbum, mapArtist, mapListSong, mapPlaylist, mapRichSong, mapSearchSong } = createKugouMappers(SOURCE);
   async function rankSongs(rankId: string, page: number, pagesize: number) {
     const json = await kugouRequest<Raw>({
       method: 'POST', path: '/openapi/kmr/v2/rank/audio', headers: { 'kg-tid': '369' },
@@ -65,11 +65,40 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     return rows(json.data).map(mapRichSong);
   }
 
+  function dailyListener() {
+    const { userid, token } = device();
+    return token && userid !== '0' ? userid : undefined;
+  }
+
+  async function dailySongs() {
+    const userid = dailyListener();
+    if (!userid) throw new KugouError(`请先登录${SOURCE_NAMES[SOURCE]}账号`, 401);
+    const json = await kugouRequest<Raw>({
+      method: 'POST', path: '/everyday_song_recommend', router: 'everydayrec.service.kugou.com',
+      data: { platform: 'android', userid },
+    });
+    const songs = record(json.data).song_list;
+    if (!Array.isArray(songs)) throw new KugouError(`${SOURCE_NAMES[SOURCE]}未返回每日推荐歌曲列表`);
+    const tracks = rows(songs).map(song => {
+      const singers = rows(song.singerinfo);
+      return track({
+        hash: song.hash || song.hash_128, albumId: song.album_id, albumAudioId: song.album_audio_id ?? song.mixsongid,
+        title: song.songname || song.filename, artists: singers.length ? singers.map(s => ({ id: s.id, name: s.name })) : [{ id: '', name: song.author_name }],
+        album: song.album_name, cover: song.sizable_cover || record(song.trans_param).union_cover,
+        durationSec: song.time_length, vip: Number(song.pay_type) > 0,
+      });
+    });
+    return { tracks: tracks.filter(song => validId(SOURCE, 'song', song.id)) };
+  }
+
   async function featured(): Promise<HomeFeatured> {
-    const [special, tracks, chartList] = await Promise.all([specialRecommend(0, 1, 30), newSongs(9), charts(2)]);
+    const loggedIn = Boolean(dailyListener());
+    const [special, tracks, chartList] = await Promise.all([
+      specialRecommend(0, 1, 30), loggedIn ? dailySongs().then(result => result.tracks) : newSongs(9), charts(2),
+    ]);
     const pool = special.items.map(item => mapPlaylist(item, text(item.show) || '推荐歌单'));
     const offset = pool.length > 12 ? Math.floor(Math.random() * Math.min(pool.length - 11, 18)) : 0;
-    return { playlists: pool.slice(offset, offset + 12), tracks, charts: chartList };
+    return { playlists: pool.slice(offset, offset + 12), tracks, charts: chartList, dailySongs: loggedIn };
   }
 
   async function newReleases() {
@@ -372,6 +401,6 @@ export function createKugouCatalog(client: KugouClient = createKugouClient()) {
     return { hot: hot.slice(0, 20) };
   }
 
-  return { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, playlistByCollectionTime, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums };
+  return { featured, dailySongs, newReleases, topArtists, charts, categories, playlists, playlistDetail, playlistByCollectionTime, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums };
 }
 export const { featured, newReleases, topArtists, charts, categories, playlists, playlistDetail, albumDetail, search, bestMatch, suggest, searchDiscovery, artistInfo, artistSongs, artistAlbums } = createKugouCatalog();

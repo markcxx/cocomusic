@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   outputFileTracingExcludes: {
     '*': [
       './.git/**', './.github/**', './src/**', './electron/**', './scripts/**', './build/**',
-      './dist-electron/**', './release/**', './README.md', './LICENSE', './*.log',
+      './dist-electron/**', './release/**', './docs/**', './README.md', './LICENSE', './*.log',
       './eslint.config.mjs', './next.config.ts', './tsconfig.json', './tsconfig.tsbuildinfo',
       './electron-builder.yml', './package-lock.json',
       // Traced by Next but unused at runtime: TypeScript (config loading only) and

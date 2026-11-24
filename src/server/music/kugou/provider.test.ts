@@ -478,3 +478,54 @@ test('a delayed authentication failure cannot clear or replace a newer QR login'
   assert.equal(session.get('kugou-lite')?.cookie.token, 'new-token');
   assert.equal(session.takeExpired('kugou-lite'), false);
 });
+
+test('daily feeds use each Kugou edition’s own listener and preserve playable tracks in recommendation order', async t => {
+  const editions = ['kugou', 'kugou-lite'] as const;
+  t.after(() => { for (const source of editions) session.clear(source); });
+  const alternate = 'c'.repeat(32);
+  const upstream = t.mock.method(globalThis, 'fetch', async (input: string, init: RequestInit) => {
+    const url = new URL(input);
+    const userid = url.searchParams.get('appid') === '3116' ? '202' : '101';
+    switch (url.pathname) {
+      case '/everyday_song_recommend':
+        assert.equal(new Headers(init.headers).get('x-router'), 'everydayrec.service.kugou.com');
+        assert.equal(url.searchParams.get('userid'), userid);
+        assert.equal(url.searchParams.get('token'), 'token-' + userid);
+        assert.deepEqual(JSON.parse(String(init.body)), { platform: 'android', userid });
+        return Response.json({ status: 1, data: { song_list: [
+          { hash: alternate, mixsongid: userid, songname: '日推', singerinfo: [{ id: '33', name: '歌手' }], time_length: 173, sizable_cover: 'http://img.test/{size}.jpg' },
+          { hash, album_id: '966846', album_audio_id: '32100650' }, { songname: '缺失播放标识' },
+        ] } });
+      case '/musicadservice/container/v1/newsong_publish':
+        assert.equal(url.searchParams.has('token'), false);
+        return Response.json({ status: 1, data: [{ hash, songname: '游客推荐' }] });
+      case '/v2/special_recommend':
+      case '/ocean/v6/rank/list':
+        return Response.json({ status: 1, data: {} });
+      default: throw new Error('Unexpected upstream path ' + url.pathname);
+    }
+  });
+  for (const source of editions) {
+    const provider = createKugouProvider(source);
+    await assert.rejects(provider.dailySongs(), { status: 401 });
+    const guest = await provider.featured();
+    assert.equal(guest.dailySongs, false);
+    assert.equal(guest.tracks[0].title, '游客推荐');
+    const userid = source === 'kugou' ? '101' : '202';
+    session.set(source, { userid, token: 'token-' + userid });
+  }
+  await Promise.all(editions.map(async source => {
+    const provider = createKugouProvider(source);
+    const userid = source === 'kugou' ? '101' : '202';
+    const home = await provider.featured();
+    assert.equal(home.dailySongs, true);
+    assert.ok(!home.dailyPlaylists);
+    assert.deepEqual(home.tracks.map(item => [item.source, item.id]), [[source, alternate + '..' + userid], [source, key]]);
+    assert.equal(home.tracks[0].artist, '歌手');
+    assert.equal(home.tracks[0].cover, 'https://img.test/240.jpg');
+    assert.equal(home.tracks[0].duration, 173);
+    assert.deepEqual((await provider.dailySongs()).tracks, home.tracks);
+  }));
+  upstream.mock.mockImplementation(async () => Response.json({ status: 1, data: {} }));
+  await assert.rejects(createKugouProvider('kugou-lite').dailySongs(), /未返回每日推荐歌曲列表/);
+});

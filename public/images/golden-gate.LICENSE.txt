@@ -1,0 +1,4 @@
+Golden Gate Bridge photograph
+Source: https://images.unsplash.com/photo-1501594907352-04cda38ebc29
+License: Unsplash License, https://unsplash.com/license
+Distributed at 1920 pixels wide as the built-in wallpaper for CoCo Music.

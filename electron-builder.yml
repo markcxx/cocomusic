@@ -30,7 +30,12 @@ extraResources:
   - from: .next
     to: next
     filter:
-      - standalone/**/*
+      # Only ship server inputs, even if Next traces other files from the checkout.
+      - standalone/server.js
+      - standalone/package.json
+      - standalone/.next/**/*
+      - standalone/node_modules/**/*
+      - standalone/public/**/*
       - "!standalone/**/.DS_Store"
 
 asar: true
@@ -102,6 +107,8 @@ dmg:
 
 win:
   icon: build/icon.ico
+  # The app UI is Chinese. Keep both Chinese locales and the Chromium English fallback.
+  electronLanguages: [zh-CN, zh-TW, en-US]
   # DWM artwork bridge: load the FFI module from a real directory outside asar.
   extraResources:
     - from: build/windows/taskbar-layout.ps1

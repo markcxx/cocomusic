@@ -1,5 +1,6 @@
-import type { CatalogChart, CatalogTrack, CategoryGroup, HomeFeatured, PlaylistOrder, PlaylistPage } from '../types';
+import type { CatalogChart, CatalogTrack, CategoryGroup, HomeFeatured, HomeRecommendationCard, PlaylistOrder, PlaylistPage } from '../types';
 import { sampleUnique } from '../sample-unique';
+import { validId } from '../ids';
 import { session } from '../session';
 import { NeteaseError, neteaseRequest } from './client';
 import { image, mapAlbum, mapArtist, mapPlaylist, mapTrack, num, record, rows, SOURCE, text, type Raw } from './mappers';
@@ -55,14 +56,51 @@ async function publicSongs() {
   });
 }
 
+async function personalFm() {
+  const response = await neteaseRequest('/v1/radio/get', {});
+  return rows(response.data).map(song => mapTrack(song)).filter(track => validId(SOURCE, 'song', track.id));
+}
+
+async function discoveryCards(): Promise<HomeRecommendationCard[]> {
+  const response = await neteaseRequest('/homepage/block/page', { refresh: false }, { os: 'ios' });
+  const blocks = rows(record(response.data).blocks);
+  const cards: HomeRecommendationCard[] = [];
+  const seen = new Set<string>();
+  for (const [code, label, limit] of [
+    ['HOMEPAGE_BLOCK_MGC_PLAYLIST', '雷达歌单', 2],
+    ['HOMEPAGE_BLOCK_OFFICIAL_PLAYLIST', '专属场景歌单', 1],
+  ] as const) {
+    const block = blocks.find(item => item.blockCode === code);
+    const resources = rows(block?.creatives).flatMap(creative => rows(creative.resources));
+    let added = 0;
+    for (const resource of resources) {
+      const id = text(resource.resourceId);
+      const ui = record(resource.uiElement);
+      const name = text(record(ui.mainTitle).title);
+      if (resource.resourceType !== 'list' || !name || !validId(SOURCE, 'playlist', id) || seen.has(id)) continue;
+      cards.push({ kind: 'playlist', id, title: name, subtitle: label, cover: image(record(ui.image).imageUrl) });
+      seen.add(id);
+      if (++added === limit) break;
+    }
+  }
+  return cards;
+}
+
 export async function featured(): Promise<HomeFeatured> {
   const loggedIn = Boolean(session.get('netease')?.cookie.MUSIC_U);
-  const [playlists, tracks, chartList] = await Promise.all([
+  const [playlists, tracks, chartList, fm, discovery] = await Promise.all([
     recommendedPlaylists(loggedIn),
     loggedIn ? dailySongs().then(result => result.tracks) : publicSongs(),
     charts(2),
+    loggedIn ? personalFm().catch(() => []) : [],
+    loggedIn ? discoveryCards().catch(() => []) : [],
   ]);
-  return { playlists, tracks, charts: chartList, dailyRecommendations: loggedIn };
+  const recommendationCards: HomeRecommendationCard[] = [];
+  if (loggedIn) {
+    if (fm.length) recommendationCards.push({ kind: 'radio', title: '私人 FM', tracks: fm });
+    recommendationCards.push({ kind: 'daily', title: '每日推荐歌曲', cover: tracks[0]?.cover, subtitle: `今日推荐 · ${tracks.length} 首` }, ...discovery);
+  }
+  return { playlists, tracks, charts: chartList, dailySongs: loggedIn, dailyPlaylists: loggedIn, recommendationCards };
 }
 
 export async function newReleases() {

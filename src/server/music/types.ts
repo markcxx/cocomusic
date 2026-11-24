@@ -81,9 +81,17 @@ export interface PlaylistPage {
   cursor?: string;
 }
 
+export type HomeRecommendationCard = { title: string; cover?: string; subtitle?: string } & (
+  | { kind: 'radio'; tracks: CatalogTrack[] }
+  | { kind: 'playlist'; id: string }
+  | { kind: 'daily' }
+  | { kind: 'companion' }
+);
+
 export interface HomeFeatured {
-  /** The tracks and playlists are the signed-in listener’s daily recommendations. */
-  dailyRecommendations?: boolean;
+  recommendationCards?: HomeRecommendationCard[];
+  dailySongs?: boolean;
+  dailyPlaylists?: boolean;
   playlists: CatalogPlaylist[];
   tracks: CatalogTrack[];
   charts: CatalogChart[];
@@ -233,6 +241,7 @@ export interface CatalogProvider {
   songStats(id: string): Promise<SongStats>;
   comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage>;
   featured(): Promise<HomeFeatured>;
+  dailySongs(): Promise<{ tracks: CatalogTrack[] }>;
   newReleases(): Promise<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>;
   artists(limit: number): Promise<CatalogArtist[]>;
   charts(limit: number): Promise<CatalogChart[]>;

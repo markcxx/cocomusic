@@ -108,3 +108,15 @@
   :global(html[data-ui-style='fluent']) .topBar { padding-left: 52px; }
   :global(html[data-ui-style='fluent'][data-platform='darwin']) .topBar { padding-top: 24px; }
 }
+
+:global(html[data-ui-style='scenic']) .sheet {
+  background: color-mix(in srgb, var(--sheet) 18%, transparent);
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+:global(html[data-ui-style='scenic']) .sidebar {
+  background: color-mix(in srgb, var(--player) 55%, transparent);
+  backdrop-filter: blur(var(--scenic-rail-blur, 4px));
+}

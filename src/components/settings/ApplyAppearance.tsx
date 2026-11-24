@@ -153,7 +153,7 @@ export function supportedEffect(effect: WindowEffect): WindowEffect {
   const bridge = typeof window !== 'undefined' ? window.coco : undefined;
   // Native transparency is fixed when the window is created, until the next restart.
   if (bridge?.material === 'transparent') return 'transparent';
-  if (isFlatStyle(effect)) return effect;
+  if (effect === 'scenic' || isFlatStyle(effect)) return effect;
   if (effect === 'none' || effect === 'transparent') return 'none';
   if (bridge?.platform === 'darwin') return 'vibrancy';
   if (bridge?.platform === 'win32') return effect === 'vibrancy' ? 'acrylic' : effect;
@@ -237,13 +237,15 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
   const effect = supportedEffect(s.windowEffect);
   // Only update the native backing when the material changes.
   useEffect(() => {
-    if (effect !== 'transparent') window.coco?.app?.setMaterial(isFlatStyle(effect) ? 'none' : effect);
+    if (effect !== 'transparent') window.coco?.app?.setMaterial(isFlatStyle(effect) || effect === 'scenic' ? 'none' : effect);
   }, [effect]);
 
   useEffect(() => {
     const html = document.documentElement;
-    html.dataset.material = isFlatStyle(effect) ? 'none' : effect;
-    html.dataset.uiStyle = isFlatStyle(effect) ? effect : 'glass';
+    html.dataset.material = isFlatStyle(effect) || effect === 'scenic' ? 'none' : effect;
+    html.dataset.uiStyle = effect === 'scenic' || isFlatStyle(effect) ? effect : 'glass';
+    if (effect === 'scenic') html.style.setProperty('--scenic-rail-blur', `${s.glassBlur / 8}px`);
+    else html.style.removeProperty('--scenic-rail-blur');
     if (isFlatStyle(effect)) {
       html.style.setProperty('--window-opacity', '1');
       for (const [name, value] of Object.entries(FLAT_PALETTES[effect][scheme])) html.style.setProperty(name, value);
@@ -253,7 +255,7 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
     // Back from a flat style: restore the theme-tinted tones it overwrote.
     for (const [name, value] of Object.entries(surfacePalette(accent, scheme))) html.style.setProperty(name, value);
     // Without a material there is nothing behind the window to reveal; stay opaque.
-    const opacity = effect === 'none' ? 1 : s.windowOpacity / 100;
+    const opacity = effect === 'none' || effect === 'scenic' ? 1 : s.windowOpacity / 100;
     html.style.setProperty('--window-opacity', String(opacity));
     for (const [name, rgbVar, alpha] of SURFACES) {
       html.style.setProperty(name, `rgba(var(${rgbVar}), ${(scale(alpha, s.glassOpacity) * opacity).toFixed(3)})`);
@@ -262,15 +264,16 @@ export function ApplyAppearance({ children }: { children: ReactNode }) {
   }, [scheme, accent, effect, s.windowOpacity, s.glassOpacity, s.glassBlur]);
 
   // A saved photo is rendered only over glass, including while a material switch awaits restart.
-  const showImage = Boolean(image) && supportsBackdropImage(s.windowEffect) && effect !== 'transparent';
+  const wallpaper = image || (effect === 'scenic' ? '/images/golden-gate.jpg' : null);
+  const showImage = Boolean(wallpaper) && supportsBackdropImage(s.windowEffect) && effect !== 'transparent';
   useEffect(() => {
     const html = document.documentElement;
     html.dataset.backdropImage = showImage ? 'true' : 'false';
-    if (showImage) html.style.setProperty('--backdrop-image', `url("${image}")`);
+    if (showImage) html.style.setProperty('--backdrop-image', `url("${wallpaper}")`);
     else html.style.removeProperty('--backdrop-image');
     html.style.setProperty('--backdrop-image-blur', `${s.backdropBlur}px`);
     html.style.setProperty('--backdrop-image-dim', String(s.backdropDim / 100));
-  }, [showImage, image, s.backdropBlur, s.backdropDim]);
+  }, [showImage, wallpaper, s.backdropBlur, s.backdropDim]);
 
   useEffect(() => {
     document.documentElement.dataset.reduceMotion = s.reduceMotion ? 'true' : 'false';

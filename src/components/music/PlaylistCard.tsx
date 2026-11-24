@@ -1,11 +1,50 @@
 'use client';
 
+import type { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { Headphones, Play } from 'lucide-react';
 import { Cover } from '@/components/common/Cover';
 import { riseItem } from '@/components/common/motion';
 import { formatCount, type CatalogPlaylist } from '@/lib/catalog-client';
 import styles from './PlaylistCard.module.css';
+
+export function PlaylistCover({ name, seed, cover, playCount, onOpen, onPlay, playDisabled, children }: {
+  name: string;
+  seed: string;
+  cover?: string;
+  playCount?: number;
+  onOpen: () => void;
+  onPlay: () => void;
+  playDisabled?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <div className={styles.coverFrame}>
+      <button type="button" className={styles.coverButton} onClick={onOpen} aria-label={`打开：${name}`}>
+        <Cover seed={seed} src={cover} className={styles.cover} />
+        {children}
+        <span className={styles.scrim} aria-hidden />
+        {playCount ? (
+          <span className={styles.plays} aria-hidden>
+            <Headphones size={12} strokeWidth={1.6} />
+            {formatCount(playCount)}
+          </span>
+        ) : null}
+      </button>
+      <motion.button
+        type="button"
+        className={styles.play}
+        onClick={onPlay}
+        disabled={playDisabled}
+        aria-label={`播放：${name}`}
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+      >
+        <Play size={20} strokeWidth={0} fill="currentColor" />
+      </motion.button>
+    </div>
+  );
+}
 
 /** Square cover; hover lays a scrim over it with a centered play button. */
 export function PlaylistCard({ playlist, subtitle, onOpen, onPlay }: {
@@ -18,28 +57,8 @@ export function PlaylistCard({ playlist, subtitle, onOpen, onPlay }: {
   const meta = subtitle ?? [playlist.trackCount ? `${playlist.trackCount}首` : '', playlist.tag].filter(Boolean).join(' · ');
   return (
     <motion.div className={styles.card} variants={riseItem}>
-      <div className={styles.coverFrame}>
-        <button type="button" className={styles.coverButton} onClick={() => onOpen?.(playlist)} aria-label={`打开：${playlist.name}`}>
-          <Cover seed={`${playlist.source}:${playlist.id}`} src={playlist.cover} className={styles.cover} />
-          <span className={styles.scrim} aria-hidden />
-          {playlist.playCount ? (
-            <span className={styles.plays} aria-hidden>
-              <Headphones size={12} strokeWidth={1.6} />
-              {formatCount(playlist.playCount)}
-            </span>
-          ) : null}
-        </button>
-        <motion.button
-          type="button"
-          className={styles.play}
-          onClick={() => onPlay?.(playlist)}
-          aria-label={`播放：${playlist.name}`}
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.9 }}
-        >
-          <Play size={20} strokeWidth={0} fill="currentColor" />
-        </motion.button>
-      </div>
+      <PlaylistCover name={playlist.name} seed={`${playlist.source}:${playlist.id}`} cover={playlist.cover} playCount={playlist.playCount}
+        onOpen={() => onOpen?.(playlist)} onPlay={() => onPlay?.(playlist)} />
       <button type="button" className={styles.title} onClick={() => onOpen?.(playlist)} tabIndex={-1} data-tooltip={playlist.name} data-tooltip-overflow>{playlist.name}</button>
       {meta && <span className={styles.meta}>{meta}</span>}
     </motion.div>

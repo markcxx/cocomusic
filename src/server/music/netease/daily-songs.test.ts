@@ -28,7 +28,7 @@ test('daily songs require a NetEase session and preserve each listener’s recom
     return Response.json({ code: 200, data: { dailySongs: ids.map(id => ({ id, name: `歌曲 ${id}`, ar: [{ name: '歌手' }], dt: 170000 })) } });
   });
   assert.equal((await request()).status, 401);
-  assert.equal((await request('qq')).status, 400);
+  for (const source of ['qq', 'kugou', 'kugou-lite']) assert.equal((await request(source)).status, 401);
   assert.equal(calls, 0);
   session.set('netease', { MUSIC_U: 'first-listener' });
   const first = await (await request()).json();
@@ -43,6 +43,8 @@ test('daily songs require a NetEase session and preserve each listener’s recom
 
   await t.test('featured selects both feeds by listener and keeps guest and account caches separate', async () => {
     session.clear('netease');
+    const fmListeners: string[] = [];
+    const shelfListeners: string[] = [];
     const featured = () => GET(new NextRequest('http://localhost/api/music/home?section=featured&source=netease'));
     upstream.mock.mockImplementation(async (url: string, init: RequestInit) => {
       const cookie = new Headers(init.headers).get('Cookie') ?? '';
@@ -58,6 +60,21 @@ test('daily songs require a NetEase session and preserve each listener’s recom
         case '/weapi/v1/discovery/recommend/resource':
           assert.ok(listener);
           return Response.json({ code: 200, recommend: [{ id: listener + '-list', playcount: 25 }] });
+        case '/weapi/v1/radio/get':
+          fmListeners.push(listener ?? 'guest');
+          if (listener === 'bob') return Response.json({ code: 503 });
+          return Response.json({ code: 200, data: [{ id: 123, name: 'FM 单曲' }, { name: '缺少 ID' }] });
+        case '/weapi/homepage/block/page': {
+          shelfListeners.push(listener ?? 'guest');
+          if (listener === 'bob') return Response.json({ code: 503 });
+          const list = (resourceId: string, resourceType = 'list') => ({ resourceType, resourceId, uiElement: {
+            mainTitle: { title: '推荐 ' + resourceId }, image: { imageUrl: 'https://img.test/list.jpg' },
+          } });
+          return Response.json({ code: 200, data: { blocks: [
+            { blockCode: 'HOMEPAGE_BLOCK_MGC_PLAYLIST', creatives: [{ resources: [list('1', 'song'), list('12'), list('13'), list('16')] }] },
+            { blockCode: 'HOMEPAGE_BLOCK_OFFICIAL_PLAYLIST', creatives: [{ resources: [list('12'), list('bad'), list('14')] }] },
+          ] } });
+        }
         case '/weapi/v3/discovery/recommend/songs':
           assert.ok(listener);
           return Response.json({ code: 200, data: { dailySongs: [{ id: listener + '-song' }] } });
@@ -70,13 +87,27 @@ test('daily songs require a NetEase session and preserve each listener’s recom
       const response = await featured();
       assert.equal(response.status, 200);
       const home = await response.json();
-      assert.equal(home.dailyRecommendations, listener !== 'guest');
+      assert.equal(home.dailyPlaylists, listener !== 'guest');
+      assert.equal(home.dailySongs, listener !== 'guest');
       assert.deepEqual(home.tracks.map((song: { id: string }) => song.id), [listener + '-song']);
       assert.deepEqual(home.playlists.map((list: { id: string }) => list.id), [listener + '-list']);
+      const cards = home.recommendationCards;
+      if (listener === 'alice') {
+        assert.deepEqual(cards.map((card: {kind: string}) => card.kind), ['radio', 'daily', 'playlist', 'playlist', 'playlist']);
+        assert.deepEqual(cards[0].tracks.map((track: {id: string}) => track.id), ['123']);
+        assert.equal(cards[1].subtitle, '今日推荐 · 1 首');
+        assert.deepEqual(cards.slice(2).map((card: {id: string}) => card.id), ['12', '13', '14']);
+      } else if (listener === 'bob') {
+        assert.deepEqual(cards.map((card: {kind: string}) => card.kind), ['daily']);
+      } else {
+        assert.deepEqual(cards, []);
+      }
       if (listener !== 'guest') {
         assert.equal(home.playlists[0].playCount, 25);
         assert.deepEqual((await (await request()).json()).tracks, home.tracks);
       }
     }
+    assert.deepEqual(fmListeners, ['alice', 'bob']);
+    assert.deepEqual(shelfListeners, ['alice', 'bob']);
   });
 });
