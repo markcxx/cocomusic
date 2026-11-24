@@ -70,11 +70,11 @@ function check<T>(body: (Raw & { code?: number; message?: string; msg?: string }
  * POST to music.163.com. `crypto: 'weapi'` encrypts like the web client;
  * `'api'` sends a plain form. Paths are given without the /weapi or /api prefix.
  */
-export async function neteaseRequest<T = Raw>(path: string, data: Raw = {}, options: Options & { crypto?: 'weapi' | 'api' } = {}): Promise<T> {
+export async function neteaseRequest<T = Raw>(path: string, data: Raw = {}, options: Options & { crypto?: 'weapi' | 'api'; os?: 'ios' } = {}): Promise<T> {
   const mode = options.crypto ?? 'weapi';
   const form = mode === 'weapi' ? weapi({ ...data, csrf_token: '' }) : Object.fromEntries(Object.entries(data).map(([key, value]) => [key, String(value)]));
   const token = musicU(options);
-  const cookie = ['__remember_me=true', 'os=pc', 'appver=3.1.19.204510', ...visitor, ...(token ? [`MUSIC_U=${token}`] : [])].join('; ');
+  const cookie = ['__remember_me=true', `os=${options.os ?? 'pc'}`, 'appver=3.1.19.204510', ...visitor, ...(token ? [`MUSIC_U=${token}`] : [])].join('; ');
   const response = await send(`${BASE}/${mode}${path}`, form, { 'User-Agent': WEB_UA, Referer: `${BASE}/`, Origin: BASE, Cookie: cookie });
   if (!response.ok) throw new NeteaseError(`网易云音乐返回异常状态（${response.status}）`);
   options.onCookies?.(parseSetCookie(response));

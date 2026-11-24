@@ -14,6 +14,7 @@ import { RecentView } from '@/components/library/RecentView';
 import { easeOut } from '@/components/common/motion';
 import { CollectionView } from '@/components/collection/CollectionView';
 import { DiscoverView } from '@/components/discover/DiscoverView';
+import { DailySongs } from '@/components/home/DailySongs';
 import { HomeView } from '@/components/home/HomeView';
 import { AppShell } from '@/components/layout/AppShell';
 import { useNavigation, type Route } from '@/components/layout/navigation';
@@ -32,6 +33,7 @@ function View({ route }: { route: Route }) {
     case 'album': return <CollectionView kind="album" id={route.id} source={route.source} title={route.title} />;
     case 'artist': return <ArtistView id={route.id} source={route.source} title={route.title} />;
     case 'local-playlist': return <LocalPlaylistView id={route.id} title={route.title} />;
+    case 'daily-songs': return <DailySongs />;
     case 'liked': return <LikedView />;
     case 'recent': return <RecentView />;
     case 'local': return <LocalView />;

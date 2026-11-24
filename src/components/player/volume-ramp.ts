@@ -1,19 +1,29 @@
-/**
- * Ramp the element's volume over `ms` (ease-in-out), cancelling a previous ramp.
- * Returns the cancel function; `done` runs when the ramp completes.
- */
-export function rampVolume(audio: HTMLAudioElement, from: number, to: number, ms: number, previous: (() => void) | null, done?: () => void) {
-  previous?.();
-  let frame = 0;
+/** Finish immediately in the background, where animation frames may be suspended. */
+export function rampVolume(audio: Pick<HTMLAudioElement, 'volume'>, from: number, to: number, ms: number, done: () => void) {
+  const finish = () => { audio.volume = to; done(); };
+  if (!ms || document.hidden) {
+    finish();
+    return null;
+  }
+
   const started = performance.now();
-  audio.volume = Math.max(0, Math.min(1, from));
+  let frame: number;
+  const cancel = () => {
+    cancelAnimationFrame(frame);
+    document.removeEventListener('visibilitychange', onVisibility);
+  };
+  const onVisibility = () => {
+    if (document.hidden) { cancel(); finish(); }
+  };
   const tick = (now: number) => {
     const t = Math.min(1, (now - started) / ms);
+    if (t >= 1) { cancel(); finish(); return; }
     const eased = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-    audio.volume = Math.max(0, Math.min(1, from + (to - from) * eased));
-    if (t < 1) frame = requestAnimationFrame(tick);
-    else done?.();
+    audio.volume = from + (to - from) * eased;
+    frame = requestAnimationFrame(tick);
   };
+  audio.volume = from;
   frame = requestAnimationFrame(tick);
-  return () => cancelAnimationFrame(frame);
+  document.addEventListener('visibilitychange', onVisibility);
+  return cancel;
 }

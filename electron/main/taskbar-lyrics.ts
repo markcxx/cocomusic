@@ -101,7 +101,10 @@ export function setupTaskbarLyrics(main: BrowserWindow, origin: string, preload:
       title: 'CoCo Music 任务栏歌词', width: 340, height: 40,
       frame: false, thickFrame: false, transparent: true, backgroundColor: '#00000000',
       show: false, skipTaskbar: true, resizable: false, movable: false, hasShadow: false,
-      minimizable: false, maximizable: false, fullscreenable: false, focusable: false,
+      minimizable: false, maximizable: false, fullscreenable: false,
+      // showInactive avoids stealing focus on display. Allow activation on an actual
+      // click so Windows delivers the first mouse press to the lyric buttons.
+      focusable: true,
       webPreferences: { preload, sandbox: true, contextIsolation: true, nodeIntegration: false, backgroundThrottling: false },
     });
     window = candidate;

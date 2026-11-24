@@ -3,6 +3,9 @@
 import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { useAccount } from '@/components/account/account-store';
+import { useSettings } from '@/lib/settings';
+import { useRecommendationDay } from './DailySongs';
 import { ErrorState } from '@/components/common/AsyncState';
 import { staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
@@ -11,46 +14,71 @@ import { PlaylistCard } from '@/components/music/PlaylistCard';
 import { SectionHeader } from '@/components/music/SectionHeader';
 import { TrackTile } from '@/components/music/TrackTile';
 import { usePlayer } from '@/components/player/player-store';
-import { Button } from '@/components/ui';
-import { catalogApi, useCatalog } from '@/lib/catalog-client';
+import { Button, toast } from '@/components/ui';
+import { catalogApi, useCatalog, type CatalogPlaylist } from '@/lib/catalog-client';
+import { fetchCollectionTracks } from '@/lib/collection-tracks';
+import { QUEUE_LIMIT } from '@/lib/me-client';
 import { toTrack } from '@/lib/to-track';
 import { ChartSkeleton, PlaylistSkeleton, TrackSkeleton } from './skeletons';
 import styles from './Home.module.css';
 
 export function FeaturedTab() {
+  const { profile } = useAccount();
+  const netease = useSettings().catalogSource === 'netease';
+  const viewer = profile?.source === 'netease' ? profile.id : 'guest';
+  const day = useRecommendationDay();
   const { navigate } = useNavigation();
   const player = usePlayer();
   const [batch, setBatch] = useState(0);
-  const { data, loading, error, retry } = useCatalog(signal => catalogApi.featured(signal, batch > 0), `featured:${batch}`);
+  const recommendationKey = netease && viewer !== 'guest' ? `${viewer}:${day}` : 'public';
+  const { data, loading, error, retry } = useCatalog(signal => catalogApi.featured(signal, batch > 0), `featured:${recommendationKey}:${batch}`);
   const tracks = useMemo(() => (data?.tracks ?? []).map(toTrack), [data]);
 
   if (error) return <ErrorState message={error} onRetry={retry} />;
 
+  const playPlaylist = async (playlist: CatalogPlaylist) => {
+    try {
+      const queue = await fetchCollectionTracks({ kind: 'playlist', id: playlist.id, source: playlist.source }, [], QUEUE_LIMIT);
+      if (queue.length) player.play(queue[0], queue);
+      else toast.info('这个歌单暂无歌曲');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '歌单加载失败');
+    }
+  };
+
+  const songs = (
+    <section className={styles.section}>
+      <SectionHeader title={data?.dailyRecommendations ? '每日推荐歌曲' : '推荐歌曲'} actionLabel={data?.dailyRecommendations ? '查看全部' : '播放全部'}
+        onAction={() => data?.dailyRecommendations ? navigate({ name: 'daily-songs' }) : tracks[0] && player.play(tracks[0], tracks)}>
+        {data?.dailyRecommendations && <Button variant="ghost" disabled={!tracks.length} onClick={() => player.play(tracks[0], tracks)}>播放全部</Button>}
+      </SectionHeader>
+      {loading || !data ? <TrackSkeleton count={9} /> : !tracks.length ? <span>暂无推荐歌曲</span> : (
+        <motion.div className={styles.trackGrid} variants={staggerList} initial="hidden" animate="show">
+          {(data.dailyRecommendations ? tracks.slice(0, 9) : tracks).map(track => <TrackTile key={track.id} track={track} queue={tracks} />)}
+        </motion.div>
+      )}
+    </section>
+  );
+
   return (
     <>
+      {netease && songs}
       <section className={styles.section}>
-        <SectionHeader title="推荐歌单" actionLabel="歌单广场" onAction={() => navigate({ name: 'discover' })}>
-          <Button variant="ghost" icon={<RefreshCw size={13} strokeWidth={1.6} />} disabled={loading} onClick={() => setBatch(value => value + 1)}>
+        <SectionHeader title={data?.dailyRecommendations ? '每日推荐歌单' : '推荐歌单'} actionLabel="歌单广场" onAction={() => navigate({ name: 'discover' })}>
+          {!data?.dailyRecommendations && <Button variant="ghost" icon={<RefreshCw size={13} strokeWidth={1.6} />} disabled={loading} onClick={() => setBatch(value => value + 1)}>
             换一批
-          </Button>
+          </Button>}
         </SectionHeader>
-        {loading || !data ? <PlaylistSkeleton count={12} /> : (
+        {loading || !data ? <PlaylistSkeleton count={12} /> : !data.playlists.length ? <span>暂无推荐歌单</span> : (
           <motion.div className={styles.playlistGrid} variants={staggerList} initial="hidden" animate="show">
             {data.playlists.map(playlist => (
-              <PlaylistCard key={playlist.id} playlist={playlist} onOpen={() => navigate({ name: 'playlist', id: playlist.id, title: playlist.name })} onPlay={() => tracks[0] && player.play(tracks[0], tracks)} />
+              <PlaylistCard key={playlist.id} playlist={playlist} onOpen={() => navigate({ name: 'playlist', id: playlist.id, source: playlist.source, title: playlist.name })} onPlay={playPlaylist} />
             ))}
           </motion.div>
         )}
       </section>
 
-      <section className={styles.section}>
-        <SectionHeader title="推荐歌曲" actionLabel="播放全部" onAction={() => tracks[0] && player.play(tracks[0], tracks)} />
-        {loading || !data ? <TrackSkeleton count={9} /> : (
-          <motion.div className={styles.trackGrid} variants={staggerList} initial="hidden" animate="show">
-            {tracks.map(track => <TrackTile key={track.id} track={track} queue={tracks} />)}
-          </motion.div>
-        )}
-      </section>
+      {!netease && songs}
 
       <section className={styles.section}>
         <SectionHeader title="热门榜单" actionLabel="查看全部" onAction={() => navigate({ name: 'charts' })} />

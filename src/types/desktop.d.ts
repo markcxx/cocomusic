@@ -87,6 +87,8 @@ interface CocoDesktopBridge {
 }
 
 interface CocoTrayState extends CocoSystemPlayerState {
+  /** Present with the fresh state sent when the tray panel opens. */
+  opened?: number;
   desktopLyrics: boolean;
   desktopLyricsLocked: boolean;
   mini: boolean;

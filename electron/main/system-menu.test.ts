@@ -69,12 +69,16 @@ test('jump list actions are parsed strictly; renderer state is sanitised', () =>
   assert.equal(parsed.liked, null);
 });
 
-test('menu-bar strip buttons hit-test to the slot under the cursor', () => {
-  // Slots: previous 0–30, toggle 30–60, next 60–90, like 90–120, glyph 120–142.
-  assert.equal(stripHit(-1), 'none');
-  assert.equal(stripHit(10), 'previous');
-  assert.equal(stripHit(45), 'toggle');
-  assert.equal(stripHit(75), 'next');
-  assert.equal(stripHit(105), 'like');
-  assert.equal(stripHit(130), 'icon');
+test('menu-bar clicks use the clicked display and current strip width, even without a hover event', () => {
+  for (const bounds of [{ x: 0, width: 142 }, { x: -1920, width: 168 }, { x: 1920, width: 150 }]) {
+    const hit = (offset: number) => stripHit(bounds.x + offset / 142 * bounds.width, bounds, true);
+    assert.equal(hit(-1), 'none');
+    assert.equal(hit(10), 'previous');
+    assert.equal(hit(45), 'toggle');
+    assert.equal(hit(75), 'next');
+    assert.equal(hit(105), 'like');
+    assert.equal(hit(130), 'icon');
+    assert.equal(hit(143), 'none');
+    assert.equal(stripHit(bounds.x + 10, bounds, false), 'icon');
+  }
 });

@@ -30,7 +30,10 @@ export function TrayPanel() {
   const [dragVolume, setDragVolume] = useState<number | null>(null);
 
   useEffect(() => window.coco?.tray?.onState(next => {
-    if (typeof (next as { opened?: number }).opened === 'number' && !('hasTrack' in next)) { setOpened((next as { opened: number }).opened); return; }
+    if (next.opened !== undefined) {
+      setOpened(next.opened);
+      setDragVolume(null);
+    }
     setState(next);
   }), []);
 

@@ -1,6 +1,6 @@
 import { BrowserWindow, nativeImage, nativeTheme, screen, type NativeImage, type Rectangle } from 'electron';
 import { IPC } from '../shared/ipc';
-import { STRIP_HEIGHT, STRIP_WIDTH } from './system-menu';
+import { STRIP_HEIGHT, STRIP_WIDTH, type TrayPanelState } from './system-menu';
 
 /**
  * Two small windows behind the tray icon:
@@ -68,11 +68,11 @@ export function resizePanel(height: number) {
 }
 
 /** Show next to the tray icon (`anchor` = icon bounds), flipping to stay on screen. */
-export function togglePanel(anchor: Rectangle, point?: { x: number; y: number }) {
+export function togglePanel(anchor: Rectangle, state: TrayPanelState) {
   if (!panel || panel.isDestroyed()) return;
   // The click that blurred (hid) the panel is the same one that would reopen it.
   if (panel.isVisible() || Date.now() - hiddenAt < 250) { hidePanel(); return; }
-  const center = point ?? { x: anchor.x + anchor.width / 2, y: anchor.y + anchor.height / 2 };
+  const center = { x: anchor.x + anchor.width / 2, y: anchor.y + anchor.height / 2 };
   const area = screen.getDisplayNearestPoint(center).workArea;
   const margin = 8;
   const x = Math.round(Math.min(area.x + area.width - PANEL_WIDTH - margin, Math.max(area.x + margin, center.x - PANEL_WIDTH / 2)));
@@ -81,7 +81,7 @@ export function togglePanel(anchor: Rectangle, point?: { x: number; y: number })
   openedAbove = !below;
   const y = Math.round(below ? Math.max(area.y + margin, anchor.y + anchor.height + 4) : Math.min(area.y + area.height - panelHeight - margin, anchor.y - panelHeight - 4));
   panel.setBounds({ x, y, width: PANEL_WIDTH, height: panelHeight });
-  panel.webContents.send(IPC.trayState, { opened: Date.now() });
+  panel.webContents.send(IPC.trayState, { ...state, opened: Date.now() });
   panel.show();
   panel.focus();
 }
@@ -93,7 +93,7 @@ export function hidePanel() {
 }
 
 export function sendToPanel(state: unknown) {
-  if (panel && !panel.isDestroyed()) panel.webContents.send(IPC.trayState, state);
+  if (panel && !panel.isDestroyed() && panel.isVisible()) panel.webContents.send(IPC.trayState, state);
 }
 
 /* ───────── macOS menu-bar lyric strip ───────── */

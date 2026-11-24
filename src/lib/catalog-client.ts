@@ -53,6 +53,7 @@ async function get<T>(path: string, params: Record<string, string | number | und
 
 export const catalogApi = {
   artistDirectory: (query: ArtistDirectoryQuery, signal?: AbortSignal) => get<ArtistDirectoryPage>('artists', { ...query }, signal),
+  dailySongs: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[] }>('home', { section: 'daily-songs' }, signal, 'netease'),
   featured: (signal?: AbortSignal, refresh = false) => get<HomeFeatured>('home', { section: 'featured', ...(refresh ? { refresh: '1' } : {}) }, signal),
   newReleases: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>('home', { section: 'new' }, signal),
   artists: (signal?: AbortSignal) => get<{ artists: CatalogArtist[] }>('home', { section: 'artists' }, signal),

@@ -169,7 +169,7 @@ export function TooltipLayer() {
 
   if (!isClient) return null;
   const placed = position && tip ? position : null;
-  // Tooltips inside the dark lyrics page use the light variant for contrast.
+  // Use the theme’s popover palette over the lyrics page.
   const inverted = Boolean(tip?.target.closest('[data-theme="dark"]'));
 
   return createPortal(

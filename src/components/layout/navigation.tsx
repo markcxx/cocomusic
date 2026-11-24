@@ -16,6 +16,7 @@ export type Route =
   | { name: 'artists' }
   | { name: 'charts' }
   | { name: 'liked' }
+  | { name: 'daily-songs' }
   | { name: 'recent' }
   | { name: 'local' }
   | { name: 'downloads' }
@@ -39,6 +40,7 @@ export const routeTitles: Record<RouteName, string> = {
   artists: '歌手',
   charts: '排行榜',
   liked: '我喜欢',
+  'daily-songs': '每日推荐歌曲',
   recent: '最近播放',
   local: '本地音乐',
   downloads: '下载管理',
@@ -67,7 +69,7 @@ type Entry = { id: number; route: Route; scrollTop: number };
 type History = { stack: Entry[]; index: number; source: string };
 
 /** Routes whose ids belong to one platform; they are dropped when the user switches platform. */
-const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked']);
+const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked', 'daily-songs']);
 /** Song pages carry their own source, but the stack still drops them on a platform switch. */
 const SONG_ROUTES = new Set<RouteName>(['comments', 'mv']);
 

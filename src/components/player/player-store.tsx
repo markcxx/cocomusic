@@ -326,18 +326,30 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const audio = audioRef.current;
     if (!audio || !audio.getAttribute('src')) return;
     const fadeMs = appSettings.get().fadeMs;
+    let active = true;
+    const restoreVolume = () => { audio.volume = latest.current.volume; };
     if (playing && audio.paused) {
       // Fade in to the current volume; the handle clears when done so the slider owns volume again.
-      if (fadeMs) fade.current = rampVolume(audio, 0, latest.current.volume, fadeMs, fade.current, () => { fade.current = null; });
+      fade.current = rampVolume(audio, 0, latest.current.volume, fadeMs, () => { fade.current = null; });
       audio.play().catch(error => {
         // AbortError: a newer load/pause interrupted this play() call, not a failure.
-        if (error instanceof DOMException && error.name === 'AbortError') return;
+        if (!active || (error instanceof DOMException && error.name === 'AbortError')) return;
         setPlaying(false);
       });
     } else if (!playing && !audio.paused) {
-      if (!fadeMs) { audio.pause(); return; }
-      fade.current = rampVolume(audio, audio.volume, 0, fadeMs, fade.current, () => { fade.current = null; audio.pause(); audio.volume = latest.current.volume; });
+      fade.current = rampVolume(audio, audio.volume, 0, fadeMs, () => {
+        fade.current = null;
+        audio.pause();
+        restoreVolume();
+      });
     }
+    return () => {
+      active = false;
+      // A newer play request or track must never inherit a pending pause.
+      fade.current?.();
+      fade.current = null;
+      restoreVolume();
+    };
   }, [playing, loadKey, latest]);
 
   // Element events → state.

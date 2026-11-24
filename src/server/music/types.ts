@@ -82,6 +82,8 @@ export interface PlaylistPage {
 }
 
 export interface HomeFeatured {
+  /** The tracks and playlists are the signed-in listener’s daily recommendations. */
+  dailyRecommendations?: boolean;
   playlists: CatalogPlaylist[];
   tracks: CatalogTrack[];
   charts: CatalogChart[];

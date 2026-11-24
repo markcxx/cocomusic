@@ -26,10 +26,10 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
 }
 
-/* Over the dark lyrics page: frosted light bubble. */
+/* The portaled bubble uses the active theme’s popover and matching text. */
 .inverted {
   --bg: var(--popover);
-  --fg: #25294a;
+  --fg: var(--text-strong);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
 

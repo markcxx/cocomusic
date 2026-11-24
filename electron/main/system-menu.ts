@@ -192,9 +192,11 @@ export const STRIP_ICON = 22;
 export const STRIP_WIDTH = STRIP_BUTTONS_WIDTH + STRIP_ICON;
 export const STRIP_HEIGHT = 22;
 
-/** Which strip control a click at `x` points from the strip's left edge hit (while hovered). */
-export function stripHit(x: number): 'previous' | 'toggle' | 'next' | 'like' | 'icon' | 'none' {
-  if (x < 0) return 'none';
+/** Resolve a native click against the menu-bar item on the screen that received it. */
+export function stripHit(cursorX: number, bounds: { x: number; width: number }, stripDisplayed: boolean): 'previous' | 'toggle' | 'next' | 'like' | 'icon' | 'none' {
+  if (bounds.width <= 0 || cursorX < bounds.x || cursorX >= bounds.x + bounds.width) return 'none';
+  if (!stripDisplayed) return 'icon';
+  const x = (cursorX - bounds.x) / bounds.width * STRIP_WIDTH;
   if (x >= STRIP_BUTTONS_WIDTH) return 'icon';
   const slot = STRIP_BUTTONS_WIDTH / 4;
   return (['previous', 'toggle', 'next', 'like'] as const)[Math.min(3, Math.floor(x / slot))];

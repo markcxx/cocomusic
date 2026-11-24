@@ -1,7 +1,7 @@
 import type { CatalogChart, CatalogTrack, CategoryGroup, HomeFeatured, PlaylistOrder, PlaylistPage } from '../types';
 import { sampleUnique } from '../sample-unique';
 import { session } from '../session';
-import { neteaseRequest } from './client';
+import { NeteaseError, neteaseRequest } from './client';
 import { image, mapAlbum, mapArtist, mapPlaylist, mapTrack, num, record, rows, SOURCE, text, type Raw } from './mappers';
 
 async function playlistTop(id: string, count: number) {
@@ -27,25 +27,42 @@ export async function charts(limit: number): Promise<CatalogChart[]> {
   return result.filter(chart => chart.entries.length);
 }
 
+/** The signed-in listener's daily songs, in NetEase's recommendation order. */
+export async function dailySongs() {
+  if (!session.get('netease')?.cookie.MUSIC_U) throw new NeteaseError('请先登录网易云音乐账号', 401);
+  const response = await neteaseRequest<Raw>('/v3/discovery/recommend/songs', {}, { os: 'ios' });
+  const songs = record(response.data).dailySongs;
+  if (!Array.isArray(songs)) throw new NeteaseError('网易云未返回每日推荐歌曲列表');
+  return { tracks: rows(songs).filter(song => text(song.id)).map(song => mapTrack(song)) };
+}
+
+async function recommendedPlaylists(loggedIn: boolean) {
+  if (loggedIn) {
+    const data = await neteaseRequest<Raw>('/v1/discovery/recommend/resource');
+    if (!Array.isArray(data.recommend)) throw new NeteaseError('网易云未返回每日推荐歌单');
+    return rows(data.recommend).filter(item => text(item.id)).map(item =>
+      mapPlaylist({ ...item, playCount: item.playcount ?? item.playCount }, '每日推荐'));
+  }
+  const data = await neteaseRequest<Raw>('/personalized/playlist', { limit: 36, total: true, n: 1000 }, { auth: false });
+  return sampleUnique([], rows(data.result).map(item => mapPlaylist(item)), 12);
+}
+
+async function publicSongs() {
+  const data = await neteaseRequest<Raw>('/personalized/newsong', { type: 'recommend', limit: 9, areaId: 0 }, { auth: false });
+  return rows(data.result).map(item => {
+    const track = mapTrack(record(item.song));
+    return { ...track, cover: track.cover ?? image(item.picUrl, 200) };
+  });
+}
+
 export async function featured(): Promise<HomeFeatured> {
   const loggedIn = Boolean(session.get('netease')?.cookie.MUSIC_U);
-  const [dailyData, playlistData, songs, chartList] = await Promise.all([
-    loggedIn ? neteaseRequest<Raw>('/recommend/resource').catch(() => ({} as Raw)) : Promise.resolve({} as Raw),
-    neteaseRequest<Raw>('/personalized/playlist', { limit: 36, total: true, n: 1000 }),
-    neteaseRequest<Raw>('/personalized/newsong', { type: 'recommend', limit: 9, areaId: 0 }),
+  const [playlists, tracks, chartList] = await Promise.all([
+    recommendedPlaylists(loggedIn),
+    loggedIn ? dailySongs().then(result => result.tracks) : publicSongs(),
     charts(2),
   ]);
-  const daily = rows(dailyData.recommend).map(item => mapPlaylist({ ...item, playCount: item.playcount ?? item.playCount }, '每日推荐'));
-  const pool = rows(playlistData.result).map(item => mapPlaylist(item));
-  return {
-    playlists: sampleUnique(daily, pool, 12),
-    tracks: rows(songs.result).map(item => {
-      const track = mapTrack(record(item.song));
-      // personalized/newsong puts the cover on the wrapper.
-      return { ...track, cover: track.cover ?? image(item.picUrl, 200) };
-    }),
-    charts: chartList,
-  };
+  return { playlists, tracks, charts: chartList, dailyRecommendations: loggedIn };
 }
 
 export async function newReleases() {

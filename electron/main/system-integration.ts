@@ -3,7 +3,7 @@ import { app, Menu, nativeImage, nativeTheme, screen, systemPreferences, Tray, t
 import { IPC } from '../shared/ipc';
 import type { DesktopLyrics } from './desktop-lyrics';
 import {
-  ACTION_SWITCH, buildPlayerMenu, EMPTY_STATE, JUMP_LIST_TASKS, STRIP_WIDTH, stripHit, trayTooltip,
+  ACTION_SWITCH, buildPlayerMenu, EMPTY_STATE, JUMP_LIST_TASKS, stripHit, trayTooltip,
   type MenuAction, type MenuContext, type MenuNode, type PlayerState, type Surface, type TrayPanelState,
 } from './system-menu';
 import { createPanel, createStrip, destroyStrip, destroyTrayWindows, hidePanel, isPanel, isStrip, sendToPanel, sendToStrip, stripAlive, togglePanel } from './tray-windows';
@@ -32,6 +32,7 @@ let onAppMenu: ((items: MenuItemConstructorOptions[]) => void) | undefined;
 let origin = '';
 let preload = '';
 let hovering = false;
+let stripDisplayed = false;
 let taskbarArtwork: ReturnType<typeof setupTaskbarArtwork>;
 let taskbarLyrics: ReturnType<typeof setupTaskbarLyrics>;
 const images = new Map<string, NativeImage>();
@@ -123,42 +124,43 @@ function panelState(): TrayPanelState {
 const wantsStrip = () => isMac && state.showTray && state.trayLyrics && state.hasTrack;
 
 function ensureTray() {
-  if (!state.showTray) { tray?.destroy(); tray = null; destroyStrip(); return; }
+  if (!state.showTray) { tray?.destroy(); tray = null; stripDisplayed = false; hovering = false; destroyStrip(); return; }
   if (!tray || tray.isDestroyed()) {
     tray = new Tray(isMac ? asset('trayTemplate.png') : asset('tray-color.png'));
     tray.setIgnoreDoubleClickEvents(isMac);
-    tray.on('click', (_event, bounds, position) => {
+    tray.on('click', (_event, bounds) => {
       if (isWindows) { showWindow(); return; }
       if (!isMac) return;
-      // Hovered strip: the four buttons; the app glyph (or a plain icon) opens the panel.
-      if (stripAlive() && hovering) {
-        // Hit-test with the live cursor against the item's real on-screen width: the
-        // event position and the image's point size are not reliable across displays,
-        // which made 暂停 land on the 下一首 slot.
-        const item = tray && !tray.isDestroyed() ? tray.getBounds() : bounds;
-        const cursor = screen.getCursorScreenPoint();
-        const hit = stripHit(((cursor.x - item.x) / Math.max(1, item.width)) * STRIP_WIDTH);
-        if (hit === 'none') return;
-        if (hit !== 'icon') { runAction(hit); return; }
-      }
-      togglePanel(bounds, position);
+      // Hover events only choose the artwork. A missed enter must not redirect
+      // the button click, and a second display has its own status item bounds.
+      const hit = stripHit(screen.getCursorScreenPoint().x, bounds, stripDisplayed);
+      if (hit === 'icon') togglePanel(bounds, panelState());
+      else if (hit !== 'none' && (hit !== 'like' || state.liked !== null)) runAction(hit);
     });
-    tray.on('right-click', (_event, bounds) => togglePanel(bounds));
+    tray.on('right-click', (_event, bounds) => togglePanel(bounds, panelState()));
     tray.on('double-click', showWindow);
     if (isMac) {
       tray.on('mouse-enter', () => setHover(true));
+      tray.on('mouse-move', () => setHover(true));
       tray.on('mouse-leave', () => setHover(false));
     }
   }
   if (wantsStrip() && !stripAlive()) {
-    createStrip(origin, preload, image => { if (tray && !tray.isDestroyed() && wantsStrip()) tray.setImage(image); });
+    createStrip(origin, preload, image => {
+      if (tray && !tray.isDestroyed() && wantsStrip()) {
+        tray.setImage(image);
+        stripDisplayed = true;
+      }
+    });
   } else if (!wantsStrip() && stripAlive()) {
+    stripDisplayed = false;
     destroyStrip();
     tray.setImage(asset('trayTemplate.png'));
   }
 }
 
 function setHover(value: boolean) {
+  if (value === hovering) return;
   hovering = value;
   sendToStrip({ ...panelState(), hover: value });
 }
