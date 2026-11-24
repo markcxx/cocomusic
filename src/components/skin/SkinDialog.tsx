@@ -27,8 +27,8 @@ export function SkinDialog() {
 
   // 毛玻璃 is whichever OS material this platform offers; a browser has none, so it stays opaque.
   const glass: Settings['windowEffect'] = !desktop ? 'none' : isMac() ? 'vibrancy' : 'acrylic';
-  const flat = isFlatStyle(s.windowEffect);
   const wallpaperAvailable = supportsBackdropImage(s.windowEffect) && (typeof window === 'undefined' || window.coco?.material !== 'transparent');
+  const presetsAvailable = wallpaperAvailable || (desktop && s.windowEffect === 'scenic');
   const style: Style = s.windowEffect === 'scenic' || isFlatStyle(s.windowEffect) ? s.windowEffect : 'glass';
   const pickStyle = (next: Style) => { void chooseWindowEffect(next === 'glass' ? glass : next); };
   const pickSkin = (skin: Skin) => {
@@ -45,14 +45,14 @@ export function SkinDialog() {
       <Dialog open={open} onClose={() => setOpen(false)} title="换肤" width={560} className={styles.dialog} clearBackdrop>
         <div className={styles.content} data-scroll-native>
           <section>
-            <h3>预设主题{!wallpaperAvailable && <small>毛玻璃或玻璃质感风格下可用</small>}</h3>
-            <SkinGallery active={activeSkin(s.accent, scheme)} disabled={!wallpaperAvailable} onPick={pickSkin} />
+            <h3>预设主题{!presetsAvailable && <small>毛玻璃或玻璃质感风格下可用</small>}</h3>
+            <SkinGallery active={activeSkin(s.accent, scheme)} disabled={!presetsAvailable} onPick={pickSkin} />
           </section>
           {wallpaperAvailable && <section>
             <h3>背景图</h3>
             <BackdropPicker />
           </section>}
-          {!flat && <section>
+          {style === 'glass' && <section>
             <h3>窗口与面板</h3>
             <GlassControls />
           </section>}
@@ -63,7 +63,7 @@ export function SkinDialog() {
               onChange={pickStyle}
               label="界面风格"
               options={([['minimal', '简约'], ['fluent', 'Fluent'], ['glass', '毛玻璃'], ['scenic', '玻璃质感']] as const).map(([value, label]) => ({
-                value, label, preview: <WindowSketch effect={value === 'glass' ? glass : value} scheme={scheme} />,
+                value, label, disabled: value === 'scenic' && !desktop, preview: <WindowSketch effect={value === 'glass' ? glass : value} scheme={scheme} />,
               }))}
             />
           </section>

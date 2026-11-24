@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { preferenceStore } from './preferences-store';
+import type { preferenceStore } from './preferences-store';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { app, BrowserWindow, dialog, ipcMain, shell, type IpcMainEvent, type IpcMainInvokeEvent } from 'electron';
@@ -11,7 +11,7 @@ import { isMenuAction, parsePlayerState } from './system-menu';
 import { isTrayPage, refreshSystemMenus, runAction, sendTrayState, updatePlayerState } from './system-integration';
 import { isPanel, resizePanel } from './tray-windows';
 import { cancelDownload, changelog, checkForUpdates, dismiss, downloadUpdate, getUpdateState, installUpdate, setUpdateSettings, skipVersion } from './updater';
-import { setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
+import { updateScenicRegions, setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
 
 /** Paths the user picked through a system dialog; only these (or opened files) may be revealed. */
 const picked = new Set<string>();
@@ -22,14 +22,13 @@ const picked = new Set<string>();
  * reach the file system. File paths only ever come from system dialogs or the OS
  * "open with" flow, never from the renderer.
  */
-export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () => DesktopLyrics | undefined) {
+export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () => DesktopLyrics | undefined, preferences: ReturnType<typeof preferenceStore>) {
   const trusted = (event: IpcMainEvent | IpcMainInvokeEvent) => {
     const origin = trustedOrigin();
     const url = event.senderFrame?.url;
     try { return Boolean(origin && url && new URL(url).origin === origin); } catch { return false; }
   };
   // Coalesced: sliders and rapid toggles become one disk write; quitting writes what is pending.
-  const preferences = preferenceStore(app.getPath('userData'), { flushDelayMs: 400 });
   app.on('will-quit', () => preferences.flush());
   ipcMain.on('preferences:get', (event, key: unknown) => {
     event.returnValue = trusted(event) && typeof key === 'string' ? preferences.get(key) : null;
@@ -111,6 +110,11 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
 
   invoke(IPC.appGetSettings, () => getAppSettings());
   invoke(IPC.appSetSettings, (_window, patch) => (patch && typeof patch === 'object' ? setAppSettings(patch as Record<string, unknown>) : getAppSettings()));
+  handle(IPC.appScenicRegions, (window, rail, footer, strength) => {
+    if (typeof rail === 'number' && typeof footer === 'number' && typeof strength === 'number') {
+      updateScenicRegions(window, rail, footer, strength);
+    }
+  });
   handle(IPC.appSetMaterial, (window, effect) => {
     const effects: WindowEffect[] = ['acrylic', 'mica', 'vibrancy', 'none'];
     if (effects.includes(effect as WindowEffect) && !lyrics()?.isLyricsWindow(window) && !isTrayPage(window)) setWindowMaterial(window, effect as WindowEffect);

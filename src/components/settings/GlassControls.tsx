@@ -17,19 +17,19 @@ const opacityHints = {
 export function GlassControls() {
   const s = useSettings();
   const effect = supportedEffect(s.windowEffect);
-  if (isFlatStyle(effect)) return null;
+  if (s.windowEffect === 'scenic' || effect === 'scenic' || isFlatStyle(effect)) return null;
   return (
     <>
-      {effect !== 'scenic' && <Row title="窗口不透明度" description={opacityHints[effect]} disabled={effect === 'none'}>
+      <Row title="窗口不透明度" description={opacityHints[effect]} disabled={effect === 'none'}>
         <div inert={effect === 'none'}>
           <Range value={s.windowOpacity} max={100} step={5} onChange={setter('windowOpacity')} label="窗口不透明度" format={value => `${value}%`} />
         </div>
-      </Row>}
+      </Row>
       <div className={styles.groupLabel}>面板毛玻璃</div>
       <Row title="面板不透明度" description="内容区、播放栏和卡片的底色浓度">
         <Range value={s.glassOpacity} max={100} onChange={setter('glassOpacity')} label="面板不透明度" format={value => `${value}%`} />
       </Row>
-      <Row title="面板模糊" description={effect === 'scenic' ? '调整侧栏与播放栏下方风景的磨砂强度' : '模糊面板下方的应用背景，设为 0 可看清背景图'}>
+      <Row title="面板模糊" description="模糊面板下方的应用背景，设为 0 可看清背景图">
         <Range value={s.glassBlur} max={60} step={2} onChange={setter('glassBlur')} label="面板模糊" format={value => `${value}px`} />
       </Row>
     </>

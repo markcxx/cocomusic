@@ -16,7 +16,7 @@ const WINDOW_EFFECT_HINTS: Record<string, string> = {
   acrylic: '系统亚克力：背后的桌面被强模糊并带细微噪点，模糊强度由系统决定',
   mica: '云母：取桌面壁纸的柔和色调（Windows 11），不透出其他窗口',
   transparent: '和桌面歌词一样的真透明窗口：背后的桌面和窗口清晰可见，不做模糊',
-  scenic: '风景背景透过内容区，侧栏和播放栏呈现局部磨砂效果',
+  scenic: '真实桌面透过烟灰色侧栏、深色内容区和更浓的播放栏，macOS 支持分区磨砂',
   minimal: '简约：浅灰导航栏与播放栏，白色内容卡片，不透明、无毛玻璃',
   fluent: 'Fluent：Windows 11 风格的分层与小圆角，播放栏跟随封面主色，不透明、无毛玻璃',
   none: '不透明窗口',
@@ -75,7 +75,7 @@ export function AppearanceSection() {
             ['none', '不透明'],
           ] as Array<[Settings['windowEffect'], string]>).map(([value, label]) => ({
             value, label,
-            disabled: !desktop && !isFlatStyle(value) && value !== 'none' && value !== 'scenic',
+            disabled: !desktop && !isFlatStyle(value) && value !== 'none',
             preview: <WindowSketch effect={value} scheme={scheme} />,
           }))}
         />

@@ -217,16 +217,13 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07);
 }
 
-.scenic {
-  --desk: linear-gradient(#fffc, #fff8), url('/images/golden-gate.jpg') center / cover;
-  --sheet: transparent;
-  --bar: #fffa;
+.scenic, .scenic.dark {
+  --desk: repeating-conic-gradient(#a99b90 0 25%, #887f87 0 50%) 0 0 / 16px 16px;
+  --sheet: var(--scenic-content);
+  --bar: var(--scenic-player);
+  --line: #fffc;
   --edge: transparent;
 }
-.scenic.dark {
-  --desk: linear-gradient(#12141a80, #12141a80), url('/images/golden-gate.jpg') center / cover;
-  --bar: #22252b99;
-  --line: #fffc;
-}
-.scenic .sidebar { background: var(--bar); }
-.scenic .bar { backdrop-filter: blur(3px); }
+.scenic .sheet { margin: 0; border-radius: 0; }
+.scenic .sidebar { background: var(--scenic-nav); backdrop-filter: blur(1px); }
+.scenic .bar { backdrop-filter: blur(4px); }

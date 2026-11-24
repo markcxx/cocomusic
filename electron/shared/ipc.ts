@@ -44,6 +44,7 @@ export const IPC = {
   appSetSettings: 'app:set-settings',
   /** renderer → main: window effect 'acrylic' | 'mica' | 'vibrancy' | 'none'. */
   appSetMaterial: 'app:set-material',
+  appScenicRegions: 'app:scenic-regions',
   /** renderer → main: colour scheme 'system' | 'light' | 'dark' (tints OS material and native UI). */
   appSetColorScheme: 'app:set-color-scheme',
   /** renderer → main: open the app's data folder in Finder / Explorer. */

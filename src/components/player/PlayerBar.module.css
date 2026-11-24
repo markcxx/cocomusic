@@ -238,7 +238,7 @@
 }
 
 :global(html[data-ui-style='scenic']) .player {
-  background: var(--player);
-  backdrop-filter: var(--glass-blur);
+  background: var(--scenic-player);
+  backdrop-filter: none;
   box-shadow: none;
 }

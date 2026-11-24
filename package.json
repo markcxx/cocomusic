@@ -12,7 +12,7 @@
     "predev": "node scripts/ensure-deps.mjs && npm run build:electron",
     "dev": "node scripts/dev.mjs",
     "dev:web": "next dev --port 3457 --hostname 127.0.0.1",
-    "build:electron": "tsc -p electron/tsconfig.json",
+    "build:electron": "tsc -p electron/tsconfig.json && node scripts/build-scenic-glass.mjs",
     "build:next": "next build && node scripts/prepare-standalone.mjs",
     "prebuild": "node scripts/ensure-deps.mjs",
     "build": "npm run build:electron && npm run build:next",

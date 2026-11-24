@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { AccountProvider } from '@/components/account/account-store';
 import { LoginDialog } from '@/components/account/LoginDialog';
 import { ConceptAutoCheckIn } from '@/components/account/ConceptAutoCheckIn';
 import { ApplyAppearance, useFluentStyle } from '@/components/settings/ApplyAppearance';
 import { WindowEffectRestartDialog } from '@/components/settings/WindowEffectRestartDialog';
 import { MiniPlayer } from '@/components/mini/MiniPlayer';
+import { useSettings } from '@/lib/settings';
 import { useMiniMode } from '@/components/mini/use-mini-mode';
 import { LyricsDrawer } from '@/components/player/LyricsDrawer';
 import { PlayerBar } from '@/components/player/PlayerBar';
@@ -48,6 +49,25 @@ export function AppShell({ children }: { children: ReactNode }) {
   const collapsed = useSidebarCollapsed();
   const fluent = useFluentStyle();
   const mini = useMiniMode();
+  const { windowEffect } = useSettings();
+  const rail = useRef<HTMLDivElement>(null);
+  const footer = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const bridge = window.coco;
+    const sidebar = rail.current, bar = footer.current;
+    const shell = bar?.parentElement;
+    if (mini || windowEffect !== 'scenic' || bridge?.material !== 'transparent' || bridge.platform !== 'darwin' || !sidebar || !bar || !shell) return;
+    const update = () => {
+      const bounds = shell.getBoundingClientRect();
+      if (!bounds.width || !bounds.height) return;
+      bridge.app.setScenicRegions(sidebar.getBoundingClientRect().width / bounds.width,
+        bar.getBoundingClientRect().height / bounds.height, 1);
+    };
+    const observer = new ResizeObserver(update);
+    for (const element of [shell, sidebar, bar]) observer.observe(element);
+    update();
+    return () => { observer.disconnect(); bridge.app.setScenicRegions(0, 0, 0); };
+  }, [mini, windowEffect]);
   // Lets global CSS drop the window backdrop so the capsule's corners are see-through.
   useEffect(() => { document.documentElement.dataset.mini = mini ? 'true' : 'false'; }, [mini]);
   return (
@@ -63,7 +83,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               {/* The window's top edge (padding above the toolbar) drags the window too. */}
               <div className={styles.dragStrip} aria-hidden />
               {fluent ? <FluentNavigation /> : (
-                <div className={styles.sidebar}>
+                <div className={styles.sidebar} ref={rail}>
                   <Sidebar collapsed={collapsed} onToggle={() => setSidebarCollapsed(!collapsed)} />
                 </div>
               )}
@@ -73,7 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 </div>
                 <ContentSheet>{children}</ContentSheet>
               </div>
-              <div className={styles.player}>
+              <div className={styles.player} ref={footer}>
                 <PlayerBar />
               </div>
             </div>

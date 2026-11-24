@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { needsTransparentWindow } from '../../../electron/shared/window-effect';
 import { ConfirmDialog, toast } from '@/components/ui';
 import { settings, useSettings, type WindowEffect } from '@/lib/settings';
 
@@ -21,9 +22,9 @@ export function WindowEffectRestartDialog() {
       const before = previous;
       previous = next;
       const request = ++revision;
-      void bridge.app.setSettings({ transparentWindow: next === 'transparent' }).then(() => {
+      void bridge.app.setSettings({ transparentWindow: needsTransparentWindow(next) }).then(() => {
         if (!active || request !== revision) return;
-        const needsRestart = (next === 'transparent') !== (bridge.material === 'transparent');
+        const needsRestart = needsTransparentWindow(next) !== (bridge.material === 'transparent');
         setPending(needsRestart ? next : null);
       }).catch(() => {
         if (!active || request !== revision) return;

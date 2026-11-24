@@ -1,3 +1,5 @@
+import { launchWithTransparency } from '../shared/window-effect';
+import { preferenceStore } from './preferences-store';
 import path from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
 import { applyBranding, onOpenSettings, setControlMenu } from './branding';
@@ -61,11 +63,12 @@ app.whenReady().then(async () => {
   applyBranding();
   // Before IPC: the renderer asks for the update state as soon as it loads.
   setupUpdater();
-  registerIpc(() => server?.origin, () => lyrics);
+  const preferences = preferenceStore(app.getPath('userData'), { flushDelayMs: 400 });
+  registerIpc(() => server?.origin, () => lyrics, preferences);
   try {
     server = await startNextServer();
-    // 设置 › 外观 › 窗口效果 = 透明 is a construction option: read it before creating the window.
-    const transparent = loadAppSettings().transparentWindow;
+    // Existing 玻璃质感 users previously had an opaque window and a false native flag.
+    const transparent = launchWithTransparency(preferences.get('coco:settings'), loadAppSettings().transparentWindow);
     markLaunch(transparent);
     mainWindow = await createMainWindow(server.origin, server.token, { transparent });
     attachOpenFilesWindow(mainWindow);

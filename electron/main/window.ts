@@ -1,3 +1,4 @@
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import { BrowserWindow, nativeTheme, screen, session, shell } from 'electron';
 import { IPC, MATERIAL_SWITCH } from '../shared/ipc';
@@ -77,7 +78,10 @@ export async function createMainWindow(origin: string, token: string, options: {
     openExternal(url);
   });
 
-  if (transparent) transparentWindows.add(window);
+  if (transparent) {
+    transparentWindows.add(window);
+    window.webContents.on('render-process-gone', () => updateScenicRegions(window, 0, 0, 0));
+  }
   trackWindowState(window, () => isMini(window));
   // Custom Windows/Linux controls swap the maximize ⇄ restore icon from this.
   window.on('maximize', () => window.webContents.send(IPC.maximizedChanged, true));
@@ -101,6 +105,28 @@ export type WindowEffect = 'acrylic' | 'mica' | 'vibrancy' | 'none';
 const windowEffect = new WeakMap<BrowserWindow, WindowEffect>();
 /** Windows created see-through: no OS material, the page paints everything. */
 const transparentWindows = new WeakSet<BrowserWindow>();
+
+type GlassAddon = { update: (handle: Buffer, rail: number, footer: number, strength: number) => void };
+let glassAddon: GlassAddon | null | undefined;
+const glassWindows = new WeakSet<BrowserWindow>();
+
+export function updateScenicRegions(window: BrowserWindow, rail: number, footer: number, strength: number) {
+  if (!isMac || window.isDestroyed() || !transparentWindows.has(window)) return;
+  if (![rail, footer, strength].every(value => Number.isFinite(value) && value >= 0 && value <= 1)) return;
+  if (strength && isMini(window)) return;
+  if (!strength && !glassWindows.has(window)) return;
+  if (glassAddon === undefined) {
+    try { glassAddon = createRequire(__filename)('../native/scenic-glass.node') as GlassAddon; }
+    catch (error) {
+      console.error('[scenic-glass] Native desktop materials unavailable', error);
+      glassAddon = null;
+    }
+  }
+  if (!glassAddon) return;
+  glassAddon.update(window.getNativeWindowHandle(), rail, footer, strength);
+  if (strength) glassWindows.add(window);
+  else glassWindows.delete(window);
+}
 
 /** What this OS can actually do; unsupported picks fall back sensibly. */
 function supported(effect: WindowEffect): WindowEffect {
@@ -185,6 +211,7 @@ export function toggleMini(window: BrowserWindow) {
     return;
   }
 
+  updateScenicRegions(window, 0, 0, 0);
   miniState.set(window, { bounds: window.getNormalBounds(), maximized: window.isMaximized() });
   if (window.isMaximized()) window.unmaximize();
   // Tell the renderer first so the mini layout is painted before the window shrinks.

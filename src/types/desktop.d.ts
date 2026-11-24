@@ -38,6 +38,7 @@ interface CocoDesktopBridge {
     getSettings(): Promise<CocoAppSettingsResult>;
     setSettings(patch: Partial<CocoAppSettings>): Promise<CocoAppSettingsResult>;
     /** OS material behind the main window (unsupported values fall back per platform). */
+    setScenicRegions(railFraction: number, footerFraction: number, strength: number): void;
     setMaterial(effect: 'acrylic' | 'mica' | 'vibrancy' | 'transparent' | 'none'): void;
     /** Light/dark for native chrome and the OS material tint. */
     setColorScheme(mode: 'system' | 'light' | 'dark'): void;

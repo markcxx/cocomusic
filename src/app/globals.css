@@ -547,23 +547,14 @@ html[data-desktop-lyrics='true'] body {
   background: transparent;
 }
 
-/* The photo stays in focus behind the reading area. Only the surrounding chrome frosts it. */
+/* The native window supplies the backdrop for 玻璃质感. */
+:root {
+  --scenic-content: rgba(20, 18, 24, .58);
+  --scenic-nav: rgba(55, 49, 48, .68);
+  --scenic-player: rgba(25, 22, 27, .84);
+}
 html[data-ui-style='scenic'] {
   --glass-edge: transparent;
   --shadow-soft: none;
-  --scenic-veil: calc(0.58 + 0.42 * var(--backdrop-image-dim, 0.2));
 }
-html[data-ui-style='scenic'][data-color-scheme='dark'] {
-  --scenic-veil: calc(0.37 + 0.63 * var(--backdrop-image-dim, 0.2));
-}
-html[data-ui-style='scenic'] .backdrop,
-html[data-ui-style='scenic'][data-backdrop-image='true'] .backdrop::before {
-  inset: 0;
-}
-html[data-ui-style='scenic'][data-backdrop-image='true'] .backdrop::before {
-  background:
-    linear-gradient(rgba(var(--backdrop-veil-rgb), var(--scenic-veil)), rgba(var(--backdrop-veil-rgb), var(--scenic-veil))),
-    var(--backdrop-image) center / cover no-repeat;
-  filter: none;
-}
-html[data-ui-style='scenic'] .backdrop::after { display: none; }
+html[data-ui-style='scenic'] .backdrop { display: none; }

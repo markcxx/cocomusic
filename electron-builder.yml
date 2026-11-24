@@ -39,6 +39,8 @@ extraResources:
       - "!standalone/**/.DS_Store"
 
 asar: true
+asarUnpack:
+  - dist-electron/native/*.node
 npmRebuild: false
 
 # "Open with CoCo Music": registers the app for these audio types on install.
