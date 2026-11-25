@@ -14,12 +14,14 @@ import { SongTable } from '@/components/music/SongTable';
 import { usePlayer } from '@/components/player/player-store';
 import { Page, StickyBar, useScrollArea } from '@/components/scroll';
 import { Button, ListFooter, toast } from '@/components/ui';
-import { catalogApi, useCatalog, type CatalogAlbum, type CatalogSource, type CatalogTrack } from '@/lib/catalog-client';
+import { MvList } from '@/components/mv/MvGrid';
+import { catalogApi, mvApi, useCatalog, type CatalogAlbum, type CatalogSource, type CatalogTrack } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
 import { toTrack } from '@/lib/to-track';
 import styles from './ArtistView.module.css';
 
-const tabs = ['热门歌曲', '专辑', '歌手简介'] as const;
+const tabs = ['热门歌曲', '专辑', 'MV', '歌手简介'] as const;
+const MV_PAGE = 24;
 type Tab = (typeof tabs)[number];
 
 function Songs({ id, source }: { id: string; source?: CatalogSource }) {
@@ -59,6 +61,11 @@ function Albums({ id, source }: { id: string; source?: CatalogSource }) {
       <div ref={sentinel}><ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText={`共 ${list.items.length} 张专辑`} /></div>
     </>
   );
+}
+
+function Videos({ id, source, artist }: { id: string; source?: CatalogSource; artist?: string }) {
+  const load = useCallback((offset: number, signal: AbortSignal) => mvApi.artist(id, offset, MV_PAGE, signal, source), [id, source]);
+  return <MvList listKey={`artist-mvs:${source ?? ''}:${id}`} load={load} pageSize={MV_PAGE} artist={artist} emptyText="平台暂未提供这位歌手的 MV" />;
 }
 
 function Biography({ id, source }: { id: string; source?: CatalogSource }) {
@@ -133,7 +140,10 @@ export function ArtistView({ id, source, title }: { id: string; source?: Catalog
 
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={tab} {...fadeSwap}>
-          {tab === '热门歌曲' ? <Songs id={id} source={source} /> : tab === '专辑' ? <Albums id={id} source={source} /> : <Biography id={id} source={source} />}
+          {tab === '热门歌曲' ? <Songs id={id} source={source} />
+            : tab === '专辑' ? <Albums id={id} source={source} />
+              : tab === 'MV' ? <Videos id={id} source={source} artist={artist?.name ?? title} />
+                : <Biography id={id} source={source} />}
         </motion.div>
       </AnimatePresence>
     </Page>

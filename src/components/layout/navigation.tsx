@@ -26,14 +26,19 @@ export type Route =
   | { name: 'artist'; id: string; source?: CatalogSource; title?: string }
   /** A playlist kept on this machine (no login, songs from any platform and local files). */
   | { name: 'local-playlist'; id: string; title?: string }
-  | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' }
+  | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' | 'mv' }
   /**
    * Comments of a song (default), playlist or album; `id` is the platform id of that item.
    * Carries display info so the header renders before data loads.
    */
   | { name: 'comments'; id: string; kind?: CommentTarget; source?: CatalogSource; title?: string; artist?: string; cover?: string }
-  /** The song's official MV; same display info as comments. */
-  | { name: 'mv'; songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string };
+  /**
+   * A video: the song's official MV (`songId`) or one picked from an MV list (`mvId`).
+   * Same display info as comments.
+   */
+  | { name: 'mv'; songId?: string; mvId?: string; source?: CatalogSource; title?: string; artist?: string; artistId?: string; cover?: string }
+  /** MV 发现: ranked, hot and latest videos of the selected platform. */
+  | { name: 'mvs' };
 
 export type RouteName = Route['name'];
 
@@ -55,6 +60,7 @@ export const routeTitles: Record<RouteName, string> = {
   search: '搜索',
   comments: '评论',
   mv: 'MV',
+  mvs: 'MV',
 };
 
 export const routeKey = (route: Route) => {
@@ -63,7 +69,7 @@ export const routeKey = (route: Route) => {
     case 'local-playlist': return `${route.name}:${route.id}`;
     case 'search': return `search:${route.keyword}:${route.type ?? 'song'}`;
     case 'comments': return `comments:${route.source ?? 'netease'}:${route.kind ?? 'song'}:${route.id}`;
-    case 'mv': return `mv:${route.source ?? 'netease'}:${route.songId}`;
+    case 'mv': return `mv:${route.source ?? 'netease'}:${route.mvId ? `video:${route.mvId}` : route.songId}`;
     default: return route.name;
   }
 };
@@ -73,7 +79,7 @@ type Entry = { id: number; route: Route; scrollTop: number };
 type History = { stack: Entry[]; index: number; source: string };
 
 /** Routes whose ids belong to one platform; they are dropped when the user switches platform. */
-const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked', 'daily-songs']);
+const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked', 'daily-songs', 'mvs']);
 /** Song pages carry their own source, but the stack still drops them on a platform switch. */
 const SONG_ROUTES = new Set<RouteName>(['comments', 'mv']);
 

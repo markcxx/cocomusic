@@ -8,6 +8,7 @@ import { ArtistView } from '@/components/artist/ArtistView';
 import { ChartsView } from '@/components/charts/ChartsView';
 import { CommentsView } from '@/components/comments/CommentsView';
 import { DownloadsView } from '@/components/downloads/DownloadsView';
+import { MvDiscoverView } from '@/components/mv/MvDiscoverView';
 import { MvView } from '@/components/mv/MvView';
 import { LocalView } from '@/components/library/LocalView';
 import { RecentView } from '@/components/library/RecentView';
@@ -41,7 +42,8 @@ function View({ route }: { route: Route }) {
     case 'settings': return <SettingsView />;
     case 'search': return <SearchResultsView keyword={route.keyword} type={route.type ?? 'song'} />;
     case 'comments': return <CommentsView id={route.id} kind={route.kind} source={route.source} title={route.title} artist={route.artist} cover={route.cover} />;
-    case 'mv': return <MvView songId={route.songId} source={route.source} title={route.title} artist={route.artist} cover={route.cover} />;
+    case 'mv': return <MvView songId={route.songId} mvId={route.mvId} source={route.source} title={route.title} artist={route.artist} artistId={route.artistId} cover={route.cover} />;
+    case 'mvs': return <MvDiscoverView />;
     default: {
       // Every route has a page; this fails to compile if a new route is added without one.
       const unhandled: never = route;

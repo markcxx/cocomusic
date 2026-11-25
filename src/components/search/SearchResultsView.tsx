@@ -10,30 +10,40 @@ import { PlaylistCard } from '@/components/music/PlaylistCard';
 import { SongTable } from '@/components/music/SongTable';
 import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
 import { ListFooter } from '@/components/ui';
-import { catalogApi, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type SearchType } from '@/lib/catalog-client';
+import { MvCardGrid } from '@/components/mv/MvGrid';
+import { catalogApi, mvApi, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type MvSummary, type SearchType } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
+import { useSettings } from '@/lib/settings';
+import { MV_FEATURES } from '@/server/music/mv-features';
 import { toTrack } from '@/lib/to-track';
 import { BestMatch } from './BestMatch';
 import styles from './SearchResultsView.module.css';
 
-const tabs: Array<{ type: SearchType; label: string }> = [
+/** Catalog search types plus MV, which has its own endpoint. */
+export type SearchTab = SearchType | 'mv';
+const allTabs: Array<{ type: SearchTab; label: string }> = [
   { type: 'song', label: '单曲' },
   { type: 'playlist', label: '歌单' },
   { type: 'album', label: '专辑' },
   { type: 'artist', label: '歌手' },
+  { type: 'mv', label: 'MV' },
 ];
-const PAGE: Record<SearchType, number> = { song: 50, playlist: 30, album: 30, artist: 30 };
-type Item = CatalogTrack | CatalogPlaylist | CatalogAlbum | CatalogArtist;
+const PAGE: Record<SearchTab, number> = { song: 50, playlist: 30, album: 30, artist: 30, mv: 24 };
+type Item = CatalogTrack | CatalogPlaylist | CatalogAlbum | CatalogArtist | MvSummary;
 
-export function SearchResultsView({ keyword, type }: { keyword: string; type: SearchType }) {
+export function SearchResultsView({ keyword, type }: { keyword: string; type: SearchTab }) {
   const { replace, navigate } = useNavigation();
+  const platform = useSettings().catalogSource;
+  const tabs = allTabs.filter(tab => tab.type !== 'mv' || MV_FEATURES[platform].search);
   const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
-    const result = await catalogApi.search(keyword, type, offset, PAGE[type], signal);
+    const result = type === 'mv'
+      ? await mvApi.search(keyword, offset, PAGE.mv, signal)
+      : await catalogApi.search(keyword, type, offset, PAGE[type], signal);
     return { items: result.items as Item[], total: result.total, hasMore: result.hasMore };
   }, [keyword, type]);
   const list = useInfiniteList(`${type}:${keyword}`, loadPage);
   const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore, type]);
-  const label = tabs.find(tab => tab.type === type)!.label;
+  const label = allTabs.find(tab => tab.type === type)!.label;
   const songs = useMemo(() => (type === 'song' ? (list.items as CatalogTrack[]).map(toTrack) : []), [list.items, type]);
 
   return (
@@ -72,6 +82,7 @@ export function SearchResultsView({ keyword, type }: { keyword: string; type: Se
               {(list.items as CatalogArtist[]).map(artist => <ArtistCard key={artist.id} artist={artist} />)}
             </CardGrid>
           )}
+          {type === 'mv' && <MvCardGrid items={list.items as MvSummary[]} loading={list.loading} />}
           {!list.loading && !list.items.length && type !== 'song' && <p className={styles.empty}>没有找到与“{keyword}”相关的{label}</p>}
         </>
       )}

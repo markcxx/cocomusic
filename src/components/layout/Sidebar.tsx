@@ -1,16 +1,18 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Compass, Download, HardDrive, Heart, History, House, Menu, Mic2, PanelLeftClose, PanelLeftOpen, Settings, TrendingUp, type LucideIcon } from 'lucide-react';
+import { Clapperboard, Compass, Download, HardDrive, Heart, History, House, Menu, Mic2, PanelLeftClose, PanelLeftOpen, Settings, TrendingUp, type LucideIcon } from 'lucide-react';
 import { SidebarPlaylists } from '@/components/account/SidebarPlaylists';
 import { BrandMark } from '@/components/common/BrandMark';
 import { SidebarLocalPlaylists } from '@/components/playlists/SidebarLocalPlaylists';
 import { cn } from '@/lib/cn';
+import { useSettings } from '@/lib/settings';
+import { MV_FEATURES } from '@/server/music/mv-features';
 import { useNavigation, type Route } from './navigation';
 import styles from './Sidebar.module.css';
 
 /** Sidebar destinations are parameterless routes. Fluent pins settings to the footer. */
-type SimpleRoute = 'home' | 'discover' | 'artists' | 'charts' | 'liked' | 'recent' | 'local' | 'downloads' | 'settings';
+type SimpleRoute = 'home' | 'discover' | 'artists' | 'charts' | 'mvs' | 'liked' | 'recent' | 'local' | 'downloads' | 'settings';
 type NavItem = { id: SimpleRoute; label: string; icon: LucideIcon };
 
 const libraryGroup: NavItem[] = [
@@ -18,6 +20,7 @@ const libraryGroup: NavItem[] = [
   { id: 'discover', label: '发现音乐', icon: Compass },
   { id: 'artists', label: '歌手', icon: Mic2 },
   { id: 'charts', label: '排行榜', icon: TrendingUp },
+  { id: 'mvs', label: 'MV', icon: Clapperboard },
 ];
 
 const mineGroup: NavItem[] = [
@@ -64,6 +67,8 @@ export function Sidebar({ collapsed, onToggle, fluent = false, onSelect }: {
   collapsed: boolean; onToggle: () => void; fluent?: boolean; onSelect?: () => void;
 }) {
   const ToggleIcon = fluent ? Menu : collapsed ? PanelLeftOpen : PanelLeftClose;
+  // Kugou only searches MVs and lists artists' videos; there is nothing to browse.
+  const hasMvLists = MV_FEATURES[useSettings().catalogSource].browse.length > 0;
   return (
     <aside className={cn(styles.sidebar, collapsed && styles.collapsed)} aria-label="主导航" data-collapsed={collapsed || undefined}>
       <div className={styles.brand}>
@@ -85,7 +90,9 @@ export function Sidebar({ collapsed, onToggle, fluent = false, onSelect }: {
       <nav className={styles.scroll}>
         <section className={styles.group}>
           <h2 className={styles.groupLabel}><span>音乐馆</span></h2>
-          <div className={styles.items}>{libraryGroup.map(item => <NavButton key={item.id} item={item} collapsed={collapsed} onSelect={onSelect} />)}</div>
+          <div className={styles.items}>
+            {libraryGroup.filter(item => item.id !== 'mvs' || hasMvLists).map(item => <NavButton key={item.id} item={item} collapsed={collapsed} onSelect={onSelect} />)}
+          </div>
         </section>
 
         <section className={styles.group}>

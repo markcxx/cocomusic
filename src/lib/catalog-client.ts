@@ -6,11 +6,15 @@ import { requestAccountRecheck } from './account-events';
 import type { ArtistDirectoryQuery } from './artist-directory';
 import type { ArtistDirectoryPage } from '@/server/music/artist-directory';
 import { useLatest } from './use-latest';
+import type { MusicVideo } from '@/server/music/mv';
+import type { MvArea, MvBrowseKind } from '@/server/music/mv-features';
+import type { MvPage, MvSummary } from '@/server/music/mv-list';
 import type {
   ArtistBiography, ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, CommentTarget, HomeFeatured, Lyrics,
   PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
 } from '@/server/music/types';
 
+export type { MusicVideo, MvArea, MvBrowseKind, MvPage, MvSummary };
 export type {
   ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogSource, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort, CommentTarget,
   LyricLine, Lyrics, PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
@@ -80,6 +84,16 @@ export const commentsApi = {
     send<{ ok: true }>('comments', { kind: thread.kind, id: thread.id, action: 'delete', commentId }, thread.source ?? currentSource()),
   like: (thread: CommentThread, commentId: string, like: boolean) =>
     send<{ ok: true }>('comments', { kind: thread.kind, id: thread.id, action: 'like', commentId, like }, thread.source ?? currentSource()),
+};
+
+export const mvApi = {
+  /** Browsable lists of the selected platform. */
+  browse: (kind: MvBrowseKind, area: MvArea, offset: number, limit: number, signal?: AbortSignal) => get<MvPage>('mvs', { kind, area, offset, limit }, signal),
+  search: (keyword: string, offset: number, limit: number, signal?: AbortSignal) => get<MvPage>('mvs', { kind: 'search', keyword, offset, limit }, signal),
+  artist: (artistId: string, offset: number, limit: number, signal?: AbortSignal, from?: CatalogSource) => get<MvPage>('mvs', { kind: 'artist', id: artistId, offset, limit }, signal, from),
+  /** Playable video: by song (its official MV) or by an id from an MV list. */
+  video: (target: { songId?: string; mvId?: string }, from: CatalogSource, signal?: AbortSignal) =>
+    get<MusicVideo>('mv', target.mvId ? { mvid: target.mvId } : { id: target.songId }, signal, from),
 };
 
 export const catalogApi = {
