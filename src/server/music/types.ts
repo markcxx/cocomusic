@@ -1,6 +1,6 @@
 /**
  * Platform-neutral catalog shapes returned by /api/music/*. Each provider
- * (netease now; qq/kugou later) maps its own payloads into these.
+ * (netease, qq, kugou, kugou-lite) maps its own payloads into these.
  */
 export type CatalogSource = 'netease' | 'qq' | 'kugou' | 'kugou-lite';
 export type Trend = 'up' | 'down' | 'same' | 'new';

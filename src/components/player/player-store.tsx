@@ -4,21 +4,25 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { toast } from '@/components/ui/toast';
 import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
 import { catalogApi, CatalogRequestError, type SongSource } from '@/lib/catalog-client';
-import { desktop, localAudioUrl } from '@/lib/local-client';
-import { loadPlayerState, meApi, QUEUE_LIMIT } from '@/lib/me-client';
+import { localAudioUrl } from '@/lib/local-client';
+import { loadPlayerState } from '@/lib/me-client';
 import { emptyTrack } from '@/lib/mock-data';
 import { recentPlays } from '@/lib/recent-plays';
-import { needsSamples, settings as appSettings, useSettings } from '@/lib/settings';
+import { settings as appSettings } from '@/lib/settings';
 import { useLatest } from '@/lib/use-latest';
 import { requestKugouVerification } from '@/lib/kugou-verification';
 import { isPlayable, type Track } from '@/types/music';
 import { playModeLabels, playModes, randomOtherIndex, type PlayMode } from './play-mode';
-import { pickNextTrack, rememberPreloadedSource, takePreloadedSource } from './preload-next';
-import { DEFAULT_VOLUME, readMode, readVolume, saveMode, saveVolume } from './player-prefs';
+import { takePreloadedSource } from './preload-next';
+import { DEFAULT_VOLUME, readMode, readVolume, saveVolume } from './player-prefs';
 import type { PlaybackStatus, PlayerState } from './player-types';
+import { appendTracks, capQueue, insertAfterCurrent, moveTrack, playNextTracks } from './queue-ops';
+import { useAudioOutput } from './use-audio-output';
 import { usePlayerIntegrations } from './use-player-integrations';
+import { usePlayerPersistence } from './use-player-persistence';
+import { useWarmNext, visualizerWantsSamples } from './use-warm-next';
 import { rampVolume } from './volume-ramp';
-import { hasGraph, setGraphOutputDevice } from './visualizer/audio-graph';
+import { hasGraph } from './visualizer/audio-graph';
 
 export { playModeLabels, playModes, type PlayMode } from './play-mode';
 export type { PlaybackStatus } from './player-types';
@@ -26,9 +30,6 @@ export type { PlaybackStatus } from './player-types';
 const PlayerContext = createContext<PlayerState | null>(null);
 // Position changes every frame; isolating it keeps the rest of the UI from re-rendering at 60fps.
 const PositionContext = createContext(0);
-
-/** Queue saves are coalesced: a burst of edits (drag reorder, 加入队列 clicks) is one write. */
-const QUEUE_SAVE_DELAY_MS = 600;
 
 /**
  * Playback backed by a single <audio> element. Catalog songs fetch a fresh
@@ -58,7 +59,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [restored, setRestored] = useState(false);
   /** The saved queue was read back; only then may changes overwrite it. */
   const [queueSynced, setQueueSynced] = useState(false);
-  const prefs = useSettings();
 
   const failures = useRef(0);
   /** Resume point after re-fetching an expired stream URL. */
@@ -170,28 +170,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; clearTimeout(timer); };
   }, [latest]);
 
-  useEffect(() => {
-    if (!restored) return;
-    saveMode(mode);
-  }, [mode, restored]);
-
-  useEffect(() => {
-    if (!queueSynced) return;
-    const timer = setTimeout(() => {
-      meApi.saveQueue(queue, track.id).catch(error => console.error('[player] could not save the queue', error));
-    }, QUEUE_SAVE_DELAY_MS);
-    return () => clearTimeout(timer);
-  }, [queue, track.id, queueSynced]);
-
-  // Remember where we are in the song (for 设置 › 播放 › 恢复播放进度), at most every 2s.
-  const positionSaved = useRef(0);
-  useEffect(() => {
-    if (!queueSynced || !isPlayable(track)) return;
-    const now = Date.now();
-    if (now - positionSaved.current < 2000 && position > 0) return;
-    positionSaved.current = now;
-    meApi.savePosition({ id: track.id, t: Math.round(position) }).catch(() => undefined);
-  }, [position, track, queueSynced]);
+  usePlayerPersistence({ queue, track, position, mode, restored, queueSynced });
 
   useEffect(() => {
     // Moving the slider mid-fade wins: cancel the ramp (a fade-out still pauses via `playing`).
@@ -210,12 +189,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.removeAttribute('src');
     audio.load();
     const attach = (url: string) => {
-      // CORS mode lets the visualizer read online streams; only the desktop app
-      // adds the CORS header (a plain browser would fail to load them).
       // Once the element feeds the visualizer graph it must stay in CORS mode:
       // a tainted stream would play silent through Web Audio.
       // Users without a visualizer keep the plain (non-CORS) request.
-      const wantsSamples = (desktop() && needsSamples(appSettings.get().lyricsVisualizer, appSettings.get().lyricsVinylEffect)) || hasGraph(audio);
+      const wantsSamples = visualizerWantsSamples() || hasGraph(audio);
       if (wantsSamples && !track.localId) audio.crossOrigin = 'anonymous';
       else if (!hasGraph(audio)) audio.removeAttribute('crossorigin');
       audio.src = url;
@@ -265,61 +242,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track.id, loadKey, latest]);
 
-  // Pre-resolve and warm the next track once the current song has settled.
-  useEffect(() => {
-    if (status !== 'ready' || !playing) return;
-    const next = pickNextTrack(queue, track.id, mode);
-    if (!next) return;
-    const controller = new AbortController();
-    let warm: HTMLAudioElement | null = null;
-    const timer = setTimeout(() => {
-      const quality = appSettings.get().quality;
-      const wantsSamples = desktop() && needsSamples(appSettings.get().lyricsVisualizer, appSettings.get().lyricsVinylEffect);
-      const warmStream = (url: string, isLocal: boolean) => {
-        warm = new Audio();
-        warm.preload = 'auto';
-        warm.volume = 0;
-        if (wantsSamples && !isLocal) warm.crossOrigin = 'anonymous';
-        warm.src = url;
-      };
-      if (next.localId) {
-        warmStream(localAudioUrl(next.localId), true);
-        return;
-      }
-      if (!next.songId) return;
-      catalogApi.songSource(next.songId, controller.signal, quality, next.source)
-        .then(source => {
-          if (controller.signal.aborted) return;
-          rememberPreloadedSource(next.id, quality, source);
-          warmStream(source.url, false);
-        })
-        .catch(() => undefined);
-    }, 4000);
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-      if (warm) { warm.removeAttribute('src'); warm.load(); warm = null; }
-    };
-  }, [track.id, queue, mode, status, playing]);
-
-  // 设置 › 播放: speed (keeps pitch) and output device.
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    audio.playbackRate = prefs.playbackRate;
-    audio.defaultPlaybackRate = prefs.playbackRate;
-    audio.preservesPitch = true;
-  }, [prefs.playbackRate, loadKey]);
-  useEffect(() => {
-    const audio = audioRef.current as (HTMLAudioElement & { setSinkId?: (id: string) => Promise<void> }) | null;
-    // Routed through the visualizer's AudioContext, the context picks the device.
-    setGraphOutputDevice(audio, prefs.outputDevice);
-    if (!audio?.setSinkId) return;
-    audio.setSinkId(prefs.outputDevice).catch(() => {
-      // Device unplugged or permission denied: fall back to the system default.
-      if (prefs.outputDevice) { toast.error('所选输出设备不可用，已切换到系统默认'); appSettings.set('outputDevice', ''); }
-    });
-  }, [prefs.outputDevice]);
+  useWarmNext(queue, track.id, mode, status, playing);
+  useAudioOutput(audioRef, loadKey);
 
   // Desired play state → element. Skipped while the URL is still loading (no src yet).
   useEffect(() => {
@@ -426,7 +350,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<PlayerState>(() => {
     const audio = () => audioRef.current;
-    const currentIndex = () => queue.findIndex(item => item.id === track.id);
     return {
       track, queue, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
       audioElement: audio,
@@ -464,12 +387,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setPlaying(current => !current);
       },
       play: (next, nextQueue, ifCurrent = 'toggle') => {
-        if (nextQueue) setQueue(nextQueue.slice(0, QUEUE_LIMIT));
-        else if (!queue.some(item => item.id === next.id)) {
-          // A single song (search result, opened file) joins the queue after the current one.
-          const at = currentIndex() + 1;
-          setQueue([...queue.slice(0, at), next, ...queue.slice(at)]);
-        }
+        if (nextQueue) setQueue(capQueue(nextQueue));
+        // A single song (search result, opened file) joins the queue after the current one.
+        else if (!queue.some(item => item.id === next.id)) setQueue(insertAfterCurrent(queue, track.id, next));
         if (ifCurrent === 'toggle' && next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
         failures.current = 0;
         select(next);
@@ -477,30 +397,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       playFromList: (next, list) => {
         if (appSettings.get().doubleClick === 'insert') {
           if (next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
-          const rest = queue.filter(item => item.id !== next.id);
-          const at = rest.findIndex(item => item.id === track.id) + 1;
-          setQueue([...rest.slice(0, at), next, ...rest.slice(at)]);
+          setQueue(insertAfterCurrent(queue, track.id, next));
           failures.current = 0;
           select(next);
           return;
         }
-        if (next.id === track.id && status !== 'error' && status !== 'idle') { setQueue(list.slice(0, QUEUE_LIMIT)); setPlaying(current => !current); return; }
-        setQueue(list.slice(0, QUEUE_LIMIT));
+        if (next.id === track.id && status !== 'error' && status !== 'idle') { setQueue(capQueue(list)); setPlaying(current => !current); return; }
+        setQueue(capQueue(list));
         failures.current = 0;
         select(next);
       },
       queueIds: () => latest.current.queue.map(item => item.id).join('|'),
-      enqueue: tracks => setQueue(previous => {
-        const known = new Set(previous.map(item => item.id));
-        return [...previous, ...tracks.filter(item => !known.has(item.id))].slice(0, QUEUE_LIMIT);
-      }),
+      enqueue: tracks => setQueue(previous => appendTracks(previous, tracks)),
       playNext: tracks => {
-        const ids = new Set(tracks.map(item => item.id));
-        setQueue(previous => {
-          const rest = previous.filter(item => !ids.has(item.id) || item.id === track.id);
-          const at = rest.findIndex(item => item.id === track.id) + 1;
-          return [...rest.slice(0, at), ...tracks.filter(item => item.id !== track.id), ...rest.slice(at)].slice(0, QUEUE_LIMIT);
-        });
+        setQueue(previous => playNextTracks(previous, track.id, tracks));
         if (!isPlayable(track) && tracks[0]) select(tracks[0]);
       },
       removeFromQueue: id => {
@@ -513,14 +423,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (!rest.length) { stop(); return; }
         select(rest[Math.min(index, rest.length - 1)], { autoplay: playing });
       },
-      moveInQueue: (id, toIndex) => setQueue(previous => {
-        const from = previous.findIndex(item => item.id === id);
-        if (from < 0) return previous;
-        const copy = previous.slice();
-        const [item] = copy.splice(from, 1);
-        copy.splice(Math.max(0, Math.min(copy.length, toIndex)), 0, item);
-        return copy;
-      }),
+      moveInQueue: (id, toIndex) => setQueue(previous => moveTrack(previous, id, toIndex)),
       clearQueue: () => { setQueue([]); history.current = []; stop(); },
       previous: () => {
         // Like most players: 上一首 restarts the current song after the first few seconds.

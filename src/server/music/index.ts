@@ -2,7 +2,6 @@ import { CatalogError } from './errors';
 import { SOURCE_NAMES } from './ids';
 import { kugouProvider, kugouLiteProvider } from './kugou/provider';
 import { neteaseProvider } from './netease/provider';
-import { NeteaseError } from './netease/client';
 import { qqProvider } from './qq/provider';
 import type { AccountProvider, CatalogProvider, CatalogSource } from './types';
 
@@ -62,7 +61,7 @@ export async function respond(load: () => Promise<unknown>) {
   try {
     return Response.json(await load(), { headers: { 'Cache-Control': 'no-store' } });
   } catch (error) {
-    const known = error instanceof CatalogError || error instanceof NeteaseError;
+    const known = error instanceof CatalogError;
     const status = known ? error.status : 502;
     const message = known ? error.message : '曲库服务暂时不可用，请稍后重试';
     if (!known) console.error('[catalog]', error);
