@@ -13,6 +13,8 @@ import { useLatest } from '@/lib/use-latest';
 import { requestKugouVerification } from '@/lib/kugou-verification';
 import { isPlayable, type Track } from '@/types/music';
 import { playModeLabels, playModes, randomOtherIndex, type PlayMode } from './play-mode';
+import { QUEUE_LIMIT } from '@/server/user-data/types';
+import { freshTracks, nextRadioBatch } from './radio-queue';
 import { takePreloadedSource } from './preload-next';
 import { DEFAULT_VOLUME, readMode, readVolume, saveVolume } from './player-prefs';
 import type { PlaybackStatus, PlayerState } from './player-types';
@@ -42,6 +44,19 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const mvMedia = useRef<HTMLVideoElement | null>(null);
   const mvSession = useRef<{ id: string; playing: boolean } | null>(null);
   const [queue, setQueue] = useState<Track[]>([]);
+  const [radioSource, setRadioSource] = useState<PlayerState['radioSource']>(null);
+  const pendingRadio = useRef<{ controller: AbortController; advance: boolean } | null>(null);
+  const retryRadio = useRef(false);
+  const cancelRadioRequest = () => {
+    pendingRadio.current?.controller.abort();
+    pendingRadio.current = null;
+    retryRadio.current = false;
+  };
+  useEffect(() => cancelRadioRequest, []);
+  const leaveRadio = () => {
+    cancelRadioRequest();
+    setRadioSource(null);
+  };
   const [track, setTrack] = useState(emptyTrack);
   // Bumped to (re)load the current track, including the same one again.
   const [loadKey, setLoadKey] = useState(0);
@@ -69,6 +84,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const recorded = useRef<string | null>(null);
 
   const select = (next: Track, options: { autoplay?: boolean; remember?: boolean } = {}) => {
+    retryRadio.current = false;
+    if (pendingRadio.current) pendingRadio.current.advance = false;
     if (options.remember !== false && isPlayable(latest.current.track)) history.current = [...history.current.slice(-49), latest.current.track];
     mvMedia.current?.pause();
     mvSession.current = null;
@@ -99,6 +116,36 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setTrial(undefined);
   };
 
+  const refillRadio = (advance: boolean) => {
+    const { radioSource: source, queue: list } = latest.current;
+    if (!source) return;
+    if (pendingRadio.current) {
+      if (advance) pendingRadio.current.advance = true;
+      return;
+    }
+    const request = { controller: new AbortController(), advance };
+    pendingRadio.current = request;
+    void nextRadioBatch(source, list, request.controller.signal).then(batch => {
+      if (pendingRadio.current !== request) return;
+      const live = latest.current.queue;
+      const additions = freshTracks(batch, live);
+      if (!additions.length) throw new Error('电台暂时没有推荐新歌，可点下一首重试');
+      // Keep the newest part of a long-running station when queue storage reaches its limit.
+      setQueue(previous => [...previous, ...freshTracks(additions, previous)].slice(-QUEUE_LIMIT));
+      if (request.advance) {
+        const index = live.findIndex(item => item.id === latest.current.track.id);
+        select(live[index + 1] ?? additions[0]);
+      }
+    }).catch(error => {
+      if (pendingRadio.current !== request || !request.advance) return;
+      retryRadio.current = true;
+      setPlaying(false);
+      toast.error(error instanceof Error ? error.message : '电台推荐加载失败，可点下一首重试');
+    }).finally(() => {
+      if (pendingRadio.current === request) pendingRadio.current = null;
+    });
+  };
+
   /**
    * Move through the queue. `auto` marks a song ending by itself: only then does
    * 顺序播放 stop at the end of the list (manual 下一首 still wraps around).
@@ -106,12 +153,17 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const step = (offset: 1 | -1, auto = false) => {
     const { queue: list, track: current, mode: playMode } = latest.current;
     if (!list.length) return;
+    const index = list.findIndex(item => item.id === current.id);
+    if (latest.current.radioSource) {
+      if (offset === 1 && index === list.length - 1) refillRadio(true);
+      else select(list[Math.max(0, index + offset)]);
+      return;
+    }
     const random = playMode === 'shuffle';
     if (offset === -1 && random && history.current.length) {
       select(history.current.pop()!, { remember: false });
       return;
     }
-    const index = list.findIndex(item => item.id === current.id);
     if (auto && playMode === 'order' && index === list.length - 1) {
       setPlaying(false);
       return;
@@ -133,7 +185,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPlaying(false);
   };
 
-  const latest = useLatest({ queue, track, mode, playing, step, fail, select, volume });
+  const latest = useLatest({ queue, radioSource, refillRadio, track, mode, playing, step, fail, select, volume });
   /** Running volume ramp (fade in/out); cancelled when a new one starts. */
   const fade = useRef<(() => void) | null>(null);
 
@@ -242,7 +294,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track.id, loadKey, latest]);
 
-  useWarmNext(queue, track.id, mode, status, playing);
+  useEffect(() => {
+    if (!radioSource || !playing || status !== 'ready') return;
+    const index = queue.findIndex(item => item.id === track.id);
+    if (index >= 0 && queue.length - index <= 2) latest.current.refillRadio(false);
+  }, [radioSource, queue, track.id, status, playing, latest]);
+  useWarmNext(queue, track.id, radioSource && mode !== 'one' ? 'order' : mode, status, playing);
   useAudioOutput(audioRef, loadKey);
 
   // Desired play state → element. Skipped while the URL is still loading (no src yet).
@@ -351,11 +408,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<PlayerState>(() => {
     const audio = () => audioRef.current;
     return {
-      track, queue, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
+      track, queue, radioSource, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
       audioElement: audio,
       setMvMedia: media => { mvMedia.current = media; if (media) media.volume = volume; },
       openMv: () => {
         if (mvSession.current) return;
+        if (pendingRadio.current) pendingRadio.current.advance = false;
         mvSession.current = { id: track.id, playing };
         fade.current?.(); fade.current = null;
         audio()?.pause();
@@ -374,6 +432,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setLoadKey(value => value + 1);
       },
       duration: mediaDuration ?? (trial ? trial.end - trial.start : track.duration ?? 0),
+      playRadio: tracks => {
+        const list = freshTracks(tracks, []).slice(0, QUEUE_LIMIT);
+        if (!list[0]?.source) return;
+        cancelRadioRequest();
+        setRadioSource(list[0].source);
+        setQueue(list);
+        failures.current = 0;
+        select(list[0]);
+      },
       togglePlay: () => {
         if (mvSession.current) {
           // Music takes over from the MV: pause the video and resume the song.
@@ -383,18 +450,26 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           return;
         }
         if (!isPlayable(track)) { toast.info('从歌单、排行榜、本地音乐或搜索中选一首歌开始播放'); return; }
+        if (retryRadio.current) { refillRadio(true); return; }
+        if (pendingRadio.current && playing) pendingRadio.current.advance = false;
         if (status === 'error') { select(track, { remember: false }); return; }
         setPlaying(current => !current);
       },
       play: (next, nextQueue, ifCurrent = 'toggle') => {
+        if (nextQueue || !queue.some(item => item.id === next.id)) leaveRadio();
         if (nextQueue) setQueue(capQueue(nextQueue));
         // A single song (search result, opened file) joins the queue after the current one.
         else if (!queue.some(item => item.id === next.id)) setQueue(insertAfterCurrent(queue, track.id, next));
-        if (ifCurrent === 'toggle' && next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
+        if (ifCurrent === 'toggle' && next.id === track.id && status !== 'error' && status !== 'idle') {
+          if (pendingRadio.current) pendingRadio.current.advance = false;
+          setPlaying(current => !current);
+          return;
+        }
         failures.current = 0;
         select(next);
       },
       playFromList: (next, list) => {
+        leaveRadio();
         if (appSettings.get().doubleClick === 'insert') {
           if (next.id === track.id && status !== 'error' && status !== 'idle') { setPlaying(current => !current); return; }
           setQueue(insertAfterCurrent(queue, track.id, next));
@@ -420,11 +495,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         setQueue(rest);
         if (id !== track.id) return;
         // Removing the playing song: continue with what was after it.
-        if (!rest.length) { stop(); return; }
+        if (!rest.length) { leaveRadio(); stop(); return; }
         select(rest[Math.min(index, rest.length - 1)], { autoplay: playing });
       },
       moveInQueue: (id, toIndex) => setQueue(previous => moveTrack(previous, id, toIndex)),
-      clearQueue: () => { setQueue([]); history.current = []; stop(); },
+      clearQueue: () => { leaveRadio(); setQueue([]); history.current = []; stop(); },
       previous: () => {
         // Like most players: 上一首 restarts the current song after the first few seconds.
         const element = audio();
@@ -454,7 +529,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     // select/step/stop only read refs and setters; they are recreated each render but behave identically.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, track, playing, status, trial, level, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
+  }, [queue, radioSource, track, playing, status, trial, level, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
   usePlayerIntegrations(value, position, { audioRef, mvMedia, mvSession });
 

@@ -56,7 +56,8 @@ async function publicSongs() {
   });
 }
 
-async function personalFm() {
+export async function personalFm() {
+  if (!session.get('netease')?.cookie.MUSIC_U) throw new NeteaseError('请先登录网易云音乐账号', 401);
   const response = await neteaseRequest('/v1/radio/get', {});
   return rows(response.data).map(song => mapTrack(song)).filter(track => validId(SOURCE, 'song', track.id));
 }

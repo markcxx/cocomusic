@@ -98,6 +98,7 @@ export const mvApi = {
 
 export const catalogApi = {
   artistDirectory: (query: ArtistDirectoryQuery, signal?: AbortSignal) => get<ArtistDirectoryPage>('artists', { ...query }, signal),
+  personalFm: (from: CatalogSource, signal: AbortSignal) => get<{ tracks: CatalogTrack[] }>('home', { section: 'radio' }, signal, from),
   dailySongs: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[] }>('home', { section: 'daily-songs' }, signal),
   featured: (signal?: AbortSignal, refresh = false) => get<HomeFeatured>('home', { section: 'featured', ...(refresh ? { refresh: '1' } : {}) }, signal),
   newReleases: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>('home', { section: 'new' }, signal),

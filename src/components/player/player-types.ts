@@ -1,4 +1,4 @@
-import type { SongSource } from '@/lib/catalog-client';
+import type { CatalogSource, SongSource } from '@/lib/catalog-client';
 import type { Track } from '@/types/music';
 import type { PlayMode } from './play-mode';
 
@@ -32,6 +32,8 @@ export type PlayerState = {
   mode: PlayMode;
   lyricsOpen: boolean;
   queueOpen: boolean;
+  radioSource: CatalogSource | null;
+  playRadio: (tracks: Track[]) => void;
   togglePlay: () => void;
   play: (track: Track, queue?: Track[], ifCurrent?: 'toggle' | 'restart') => void;
   /**

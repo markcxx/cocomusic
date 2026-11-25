@@ -42,6 +42,12 @@ async function desktopShelf() {
   return shelves.find(cards => cards.some(card => card.title === '每日30首' || (card.type === 700 && text(card.id) === '99'))) ?? [];
 }
 
+export async function personalFm() {
+  if (!auth()) throw new QQError('请先登录 QQ 音乐账号', 401);
+  const radio = await qqRequest('music.radioProxy.MbTrackRadioSvr', 'get_radio_track', { id: 99, firstplay: 0, num: 5 });
+  return rows(radio.tracks).map(mapTrack).filter(track => validId(SOURCE, 'song', track.id));
+}
+
 async function topCards(): Promise<HomeRecommendationCard[]> {
   const cards = await desktopShelf();
   const result: HomeRecommendationCard[] = [];
@@ -56,8 +62,7 @@ async function topCards(): Promise<HomeRecommendationCard[]> {
       result.push({ ...display, kind: 'companion' });
     } else if (card.type === 700 && id === '99') {
       // The radio supplies the album cover and the queue for the wide card.
-      const radio = await qqRequest('music.radioProxy.MbTrackRadioSvr', 'get_radio_track', { id: 99, firstplay: 0, num: 5 }).catch(() => null);
-      const tracks = rows(radio?.tracks).map(mapTrack).filter(track => validId(SOURCE, 'song', track.id));
+      const tracks = await personalFm().catch(() => []);
       if (tracks.length) result.push({ ...display, kind: 'radio', tracks });
     }
   }

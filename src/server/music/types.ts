@@ -253,6 +253,7 @@ export interface CatalogProvider {
   /** Writing needs the platform's login; see COMMENT_FEATURES for what each platform offers. */
   commentActions?: CommentActions;
   featured(): Promise<HomeFeatured>;
+  personalFm?(): Promise<CatalogTrack[]>;
   dailySongs(): Promise<{ tracks: CatalogTrack[] }>;
   newReleases(): Promise<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>;
   artists(limit: number): Promise<CatalogArtist[]>;
