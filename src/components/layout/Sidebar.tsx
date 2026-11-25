@@ -66,13 +66,17 @@ function NavButton({ item, collapsed, onSelect }: { item: NavItem; collapsed: bo
 export function Sidebar({ collapsed, onToggle, fluent = false, onSelect }: {
   collapsed: boolean; onToggle: () => void; fluent?: boolean; onSelect?: () => void;
 }) {
+  const { navigate } = useNavigation();
   const ToggleIcon = fluent ? Menu : collapsed ? PanelLeftOpen : PanelLeftClose;
   // Kugou only searches MVs and lists artists' videos; there is nothing to browse.
   const hasMvLists = MV_FEATURES[useSettings().catalogSource].browse.length > 0;
   return (
     <aside className={cn(styles.sidebar, collapsed && styles.collapsed)} aria-label="主导航" data-collapsed={collapsed || undefined}>
       <div className={styles.brand}>
-        <span className={styles.brandMark}><BrandMark /></span>
+        <button type="button" className={styles.brandMark} aria-label="CoCo，返回首页" disabled={collapsed} aria-hidden={collapsed || undefined}
+          onClick={() => { navigate({ name: 'home' }); onSelect?.(); }}>
+          <BrandMark />
+        </button>
         <motion.button
           type="button"
           className={styles.toggle}

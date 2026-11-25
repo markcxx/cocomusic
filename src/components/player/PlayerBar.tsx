@@ -9,6 +9,7 @@ import { useFluentAccent } from '@/components/settings/ApplyAppearance';
 import { deepenTint, playerAccentRgb } from '@/lib/color';
 import { isEmptyTrack } from '@/lib/mock-data';
 import { CommentButton, Transport, VolumeControl } from './controls';
+import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { usePlayer } from './player-store';
 import { ProgressBar } from './ProgressBar';
@@ -62,6 +63,7 @@ export function PlayerBar() {
       <div className={styles.tools}>
         <MvButton />
         <CommentButton count={stats.commentCount} onClick={openComments} disabled={!track.songId} active={viewingComments} />
+        <AddToPlaylistButton />
         <VolumeControl />
         <IconButton
           label={desktopLyrics.available ? (desktopLyrics.visible ? '关闭桌面歌词' : '打开桌面歌词') : '桌面歌词'}

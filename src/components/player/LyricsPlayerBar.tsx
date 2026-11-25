@@ -1,10 +1,8 @@
 'use client';
 
-import { Copy, Download, Link2, ListMusic, ListPlus, MoreHorizontal, Plus, Settings2, SquarePlus } from 'lucide-react';
+import { Copy, Download, Link2, ListMusic, MoreHorizontal, Settings2 } from 'lucide-react';
 import { useRef, useState } from 'react';
-import { CreatePlaylistDialog } from '@/components/account/CreatePlaylistDialog';
 import { LikeButton } from '@/components/account/LikeButton';
-import { useAccount } from '@/components/account/account-store';
 import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics';
 import { downloads } from '@/components/downloads/download-store';
 import { useNavigation } from '@/components/layout/navigation';
@@ -13,6 +11,7 @@ import { settings, useSettings } from '@/lib/settings';
 import { shareUrl } from '@/lib/share-links';
 import type { AudioQuality, CatalogTrack } from '@/server/music/types';
 import { CommentButton, PlayModeButton, PlayPauseButton, SkipButton, VolumeControl } from './controls';
+import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { useSongStats } from './use-song-stats';
@@ -32,7 +31,7 @@ function Progress() {
   );
 }
 
-/** The playing song as a catalog track (for downloads and playlist edits). */
+/** The playing song as a catalog track (for the download action). */
 function useCatalogTrack(): CatalogTrack | null {
   const { track } = usePlayer();
   if (!track.songId) return null;
@@ -66,44 +65,6 @@ function QualityButton() {
         </IconButton>
       </span>
       <Menu open={open} anchor={anchor} items={items} onClose={() => setOpen(false)} align="end" />
-    </>
-  );
-}
-
-/** Add the playing song to one of the user's own playlists. */
-function AddToPlaylistButton() {
-  const { profile, playlists, addToPlaylist, openLogin } = useAccount();
-  const platform = useSettings().catalogSource;
-  const song = useCatalogTrack();
-  const anchor = useRef<HTMLSpanElement>(null);
-  const [open, setOpen] = useState(false);
-  const [creating, setCreating] = useState(false);
-  const foreign = Boolean(song && song.source !== platform);
-  const items: MenuItem[] = [
-    { type: 'section', label: '添加到歌单' },
-    { label: '新建歌单…', icon: <Plus size={15} strokeWidth={1.5} />, onSelect: () => setCreating(true) },
-    ...playlists.filter(item => item.own).map((item): MenuItem => ({
-      label: item.liked ? '我喜欢的音乐' : item.name,
-      icon: <ListPlus size={15} strokeWidth={1.5} />,
-      hint: item.trackCount !== undefined ? `${item.trackCount}` : undefined,
-      onSelect: () => { if (song) void addToPlaylist(item.id, [song.id]); },
-    })),
-  ];
-  return (
-    <>
-      <span ref={anchor} style={{ display: 'inline-flex' }}>
-        <IconButton
-          label={foreign ? '其他平台的歌曲，切换到该平台后可收藏' : '收藏到歌单'}
-          tone="muted"
-          disabled={!song || foreign}
-          active={open}
-          onClick={() => (profile ? setOpen(value => !value) : openLogin())}
-        >
-          <SquarePlus size={19} strokeWidth={1.4} />
-        </IconButton>
-      </span>
-      <Menu open={open} anchor={anchor} items={items} onClose={() => setOpen(false)} align="end" />
-      <CreatePlaylistDialog open={creating} onClose={() => setCreating(false)} onCreated={playlist => { if (song) void addToPlaylist(playlist.id, [song.id]); }} />
     </>
   );
 }

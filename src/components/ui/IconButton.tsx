@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, type TargetAndTransition } from 'framer-motion';
-import type { MouseEventHandler, ReactNode } from 'react';
+import type { AriaAttributes, MouseEventHandler, ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import styles from './IconButton.module.css';
 
@@ -12,7 +12,7 @@ export type TooltipPlacement = 'top' | 'bottom' | 'left' | 'right';
  * animates (`iconHover`), so e.g. a spinning cog never rotates its pill.
  * `label` is the accessible name and, unless `tooltip` overrides it, the tooltip.
  */
-export function IconButton({ label, tooltip, tooltipPlacement, shortcut, onClick, disabled, active, pressed, tone = 'default', size = 'md', iconHover, className, children }: {
+export function IconButton({ label, tooltip, tooltipPlacement, shortcut, onClick, disabled, active, pressed, tone = 'default', size = 'md', iconHover, className, children, ...menuAria }: Pick<AriaAttributes, 'aria-expanded' | 'aria-haspopup'> & {
   label: string;
   /** Tooltip text; defaults to `label`. Pass `false` to disable. */
   tooltip?: string | false;
@@ -40,6 +40,7 @@ export function IconButton({ label, tooltip, tooltipPlacement, shortcut, onClick
       disabled={disabled}
       aria-label={label}
       aria-pressed={pressed}
+      {...menuAria}
       data-tooltip={tip}
       data-tooltip-placement={tooltipPlacement}
       data-tooltip-shortcut={shortcut}

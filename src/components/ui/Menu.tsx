@@ -19,7 +19,7 @@ const resolveAnchor = (anchor: Anchor) => (anchor && 'current' in anchor ? ancho
  * Popover menu anchored to an element (opens below, flips up near the bottom;
  * `placement="top"` prefers above, e.g. controls at the bottom of a video).
  * Pass either a ref to the trigger or a captured element (e.g. from a context-menu event).
- * Closes on outside click, Escape, scroll or selection.
+ * Closes on outside click, Escape, selection or scrolling the anchor’s container.
  */
 export function Menu({ open, anchor, point, items, onClose, align = 'start', placement = 'bottom', portalContainer }: { open: boolean; anchor: Anchor; point?: { x: number; y: number } | null; items: MenuItem[]; onClose: () => void; align?: 'start' | 'end'; placement?: 'top' | 'bottom'; portalContainer?: HTMLElement | null }) {
   const panel = useRef<HTMLDivElement>(null);
@@ -51,7 +51,14 @@ export function Menu({ open, anchor, point, items, onClose, align = 'start', pla
       onClose();
     };
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { event.preventDefault(); event.stopImmediatePropagation(); onClose(); resolveAnchor(anchor)?.focus(); } };
-    const onScroll = (event: Event) => { if (!panel.current?.contains(event.target as Node)) onClose(); };
+    const onScroll = (event: Event) => {
+      const scroller = event.target;
+      if (scroller === window || scroller === document) { onClose(); return; }
+      if (!(scroller instanceof Node) || panel.current?.contains(scroller)) return;
+      // Lyrics and other sibling panels scroll independently of the trigger.
+      const trigger = resolveAnchor(anchor);
+      if (point || !trigger?.isConnected || scroller.contains(trigger)) onClose();
+    };
     document.addEventListener('pointerdown', onPointer);
     window.addEventListener('keydown', onKey, true);
     window.addEventListener('scroll', onScroll, true);
@@ -60,7 +67,7 @@ export function Menu({ open, anchor, point, items, onClose, align = 'start', pla
       window.removeEventListener('keydown', onKey, true);
       window.removeEventListener('scroll', onScroll, true);
     };
-  }, [open, anchor, onClose]);
+  }, [open, anchor, point, onClose]);
 
   if (typeof document === 'undefined') return null;
   return createPortal(

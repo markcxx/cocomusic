@@ -3,7 +3,7 @@
   --icon-button-active-background: transparent;
   display: grid;
   /* Equal side tracks keep the transport centered on the window. */
-  grid-template-columns: minmax(0, 1fr) minmax(380px, 540px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) min(48%, 540px) minmax(max-content, 1fr);
   gap: var(--space-6);
   align-items: center;
   height: 88px;

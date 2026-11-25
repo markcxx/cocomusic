@@ -19,6 +19,11 @@
 
 .brandMark {
   display: inline-flex;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  -webkit-app-region: no-drag;
   transition: opacity 200ms ease, transform var(--dur) var(--ease);
 }
 
