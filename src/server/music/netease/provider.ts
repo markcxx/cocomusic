@@ -5,7 +5,8 @@ import { albumDetail, playlistDetail } from './collections';
 import { categories, charts, dailySongs, featured, newReleases, playlists, topArtists } from './discovery';
 import { bestMatch, search, searchDiscovery, suggest } from './search';
 import { SOURCE } from './mappers';
-import { comments, downloadSource, lyrics, songSource, songStats } from './playback';
+import { commentActions, commentReplies, comments } from './comments';
+import { downloadSource, lyrics, songSource, songStats } from './playback';
 
 export const neteaseProvider: CatalogProvider = {
   source: SOURCE,
@@ -14,6 +15,8 @@ export const neteaseProvider: CatalogProvider = {
   lyrics,
   songStats,
   comments,
+  commentReplies,
+  commentActions,
   featured,
   dailySongs,
   newReleases,

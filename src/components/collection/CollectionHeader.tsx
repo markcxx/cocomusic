@@ -1,18 +1,20 @@
 'use client';
 
 import { motion, useTransform } from 'framer-motion';
-import { Download, HardDriveDownload, Headphones, Heart, Play, Share2 } from 'lucide-react';
+import { Download, HardDriveDownload, Headphones, Heart, MessageCircleMore, Play, Share2 } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { SkeletonBlock } from '@/components/common/AsyncState';
 import { BadgedIcon } from '@/components/common/BadgedIcon';
 import { Cover } from '@/components/common/Cover';
 import { ExpandableText } from '@/components/common/ExpandableText';
+import { useNavigation } from '@/components/layout/navigation';
 import { useScrollArea } from '@/components/scroll';
 import { useAccount } from '@/components/account/account-store';
 import { Button, toast } from '@/components/ui';
 import { formatCount, type CollectionInfo } from '@/lib/catalog-client';
 import { useSettings } from '@/lib/settings';
 import { shareUrl } from '@/lib/share-links';
+import { COMMENT_FEATURES } from '@/server/music/comment-features';
 import { SOURCE_NAMES } from '@/server/music/ids';
 import styles from './CollectionHeader.module.css';
 
@@ -94,6 +96,7 @@ export function CollectionHeader({ info, fallbackTitle, onPlayAll, onDownloadAll
 }) {
   const { isSubscribed, isOwnPlaylist, toggleSubscribe } = useAccount();
   const platform = useSettings().catalogSource;
+  const { navigate } = useNavigation();
   const [saving, setSaving] = useState(false);
   const native = info?.source === platform;
   const own = info && native ? isOwnPlaylist(info.id) : false;
@@ -160,6 +163,11 @@ export function CollectionHeader({ info, fallbackTitle, onPlayAll, onDownloadAll
             {saving ? '保存中…' : '存为本地歌单'}
           </Button>
           <Button icon={<Download size={16} strokeWidth={1.5} />} disabled={!info || !onDownloadAll} onClick={onDownloadAll} title="下载全部歌曲">下载</Button>
+          {info && COMMENT_FEATURES[info.source].collections && (
+            <Button icon={<MessageCircleMore size={16} strokeWidth={1.5} />} onClick={() => navigate({ name: 'comments', kind: info.kind, id: info.id, source: info.source, title: info.name, artist: info.owner?.name, cover: info.cover })}>
+              评论
+            </Button>
+          )}
           <Button icon={<Share2 size={16} strokeWidth={1.5} />} disabled={!info} onClick={() => info && void copyLink(info)}>分享</Button>
         </>
       )}

@@ -205,6 +205,8 @@ export interface SongStats {
 }
 
 export type CommentSort = 'recommend' | 'hot' | 'latest';
+/** What a comment thread belongs to. */
+export type CommentTarget = 'song' | 'playlist' | 'album';
 
 export interface SongComment {
   id: string;
@@ -218,6 +220,12 @@ export interface SongComment {
   user: { id: string; nickname: string; avatar?: string; vip?: boolean };
   /** The comment this one replies to. */
   replyTo?: { nickname: string; content: string };
+  /** The signed-in user liked this comment. */
+  liked?: boolean;
+  /** Posted by the signed-in user. */
+  mine?: boolean;
+  /** Opaque upstream context that opening this comment's replies needs (Kugou's sub-thread id). */
+  floor?: string;
 }
 
 export interface CommentPage {
@@ -239,7 +247,11 @@ export interface CatalogProvider {
   downloadSource?(id: string, quality?: AudioQuality): Promise<SongSource>;
   lyrics(id: string): Promise<Lyrics>;
   songStats(id: string): Promise<SongStats>;
-  comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage>;
+  comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number, target?: CommentTarget): Promise<CommentPage>;
+  /** Replies under one comment (楼层). `floor` is the comment's own `floor` field. */
+  commentReplies?(target: CommentTarget, id: string, commentId: string, floor: string | undefined, cursor: string | undefined, limit: number): Promise<CommentPage>;
+  /** Writing needs the platform's login; see COMMENT_FEATURES for what each platform offers. */
+  commentActions?: CommentActions;
   featured(): Promise<HomeFeatured>;
   dailySongs(): Promise<{ tracks: CatalogTrack[] }>;
   newReleases(): Promise<{ tracks: CatalogTrack[]; albums: CatalogAlbum[] }>;
@@ -261,6 +273,13 @@ export interface CatalogProvider {
   account?: AccountProvider;
   suggest(keyword: string): Promise<SearchSuggestion>;
   searchDiscovery(): Promise<SearchDiscovery>;
+}
+
+export interface CommentActions {
+  /** New comment, or a reply when `replyTo` is a comment id. Resolves the posted comment when upstream returns it. */
+  post(target: CommentTarget, id: string, content: string, replyTo?: string): Promise<SongComment | undefined>;
+  remove(target: CommentTarget, id: string, commentId: string): Promise<void>;
+  like?(target: CommentTarget, id: string, commentId: string, like: boolean): Promise<void>;
 }
 
 export interface ArtistBiography {

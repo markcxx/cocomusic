@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { Film, MessageCircleMore, Music2, RefreshCw } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { CommentList, commentSortKey, commentSorts, type CommentSortLabel } from '@/components/comments/CommentsView';
+import { CommentList, commentSortKey, commentSorts, type CommentSortLabel } from '@/components/comments/CommentList';
 import { SkeletonBlock } from '@/components/common/AsyncState';
 import { Cover } from '@/components/common/Cover';
 import { fadeSwap } from '@/components/common/motion';
@@ -102,7 +102,7 @@ export function MvView({ songId, source = 'netease', title, artist, cover }: Pro
           {isCurrent && !player.playing && (
             <Button icon={<Music2 size={15} strokeWidth={1.6} />} onClick={player.togglePlay}>切回听歌</Button>
           )}
-          <Button variant="ghost" icon={<MessageCircleMore size={15} strokeWidth={1.5} />} onClick={() => navigate({ name: 'comments', songId, source, title, artist, cover })}>
+          <Button variant="ghost" icon={<MessageCircleMore size={15} strokeWidth={1.5} />} onClick={() => navigate({ name: 'comments', id: songId, source, title, artist, cover })}>
             评论页
           </Button>
         </div>
@@ -118,7 +118,7 @@ export function MvView({ songId, source = 'netease', title, artist, cover }: Pro
       </StickyBar>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={sort} {...fadeSwap}>
-          <CommentList songId={songId} source={source} sort={commentSortKey[sort]} onTotal={setTotal} />
+          <CommentList thread={{ kind: 'song', id: songId, source }} sort={commentSortKey[sort]} onTotal={setTotal} />
         </motion.div>
       </AnimatePresence>
     </Page>

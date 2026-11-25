@@ -23,6 +23,10 @@ export type InfiniteState<T> = {
   retry: () => void;
   /** Drop loaded items locally (e.g. after removing tracks from a playlist). */
   removeWhere: (predicate: (item: T) => boolean) => void;
+  /** Patch loaded items locally (e.g. a toggled like). */
+  updateWhere: (predicate: (item: T) => boolean, update: (item: T) => T) => void;
+  /** Put items first and count them in the total (e.g. a comment just posted). */
+  prepend: (items: T[]) => void;
 };
 
 type Page<T> = { items: T[]; total: number; hasMore: boolean };
@@ -86,6 +90,12 @@ export function useInfiniteList<T>(key: string, loadPage: (offset: number, signa
       return { ...previous, items, total: Math.max(0, previous.total - (previous.items.length - items.length)) };
     });
   }, []);
+  const updateWhere = useCallback((predicate: (item: T) => boolean, update: (item: T) => T) => {
+    setState(previous => (previous ? { ...previous, items: previous.items.map(item => (predicate(item) ? update(item) : item)) } : previous));
+  }, []);
+  const prepend = useCallback((items: T[]) => {
+    setState(previous => (previous ? { ...previous, items: [...items, ...previous.items], total: previous.total + items.length } : previous));
+  }, []);
 
   const ready = state?.request === request;
   return {
@@ -98,6 +108,8 @@ export function useInfiniteList<T>(key: string, loadPage: (offset: number, signa
     loadMore,
     retry,
     removeWhere,
+    updateWhere,
+    prepend,
   };
 }
 

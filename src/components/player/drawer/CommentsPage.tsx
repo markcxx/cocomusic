@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import { CommentList, commentSortKey, commentSorts, type CommentSortLabel } from '@/components/comments/CommentsView';
+import { CommentList, commentSortKey, commentSorts, type CommentSortLabel } from '@/components/comments/CommentList';
 import { fadeSwap } from '@/components/common/motion';
 import { Tabs } from '@/components/common/Tabs';
 import { ScrollArea } from '@/components/scroll';
@@ -24,7 +24,7 @@ export function CommentsPage({ songId, source, total }: { songId: string; source
       <ScrollArea className={styles.commentsScroll} nativeWheel>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div key={`${songId}:${sort}`} className={styles.commentsBody} {...fadeSwap}>
-            <CommentList songId={songId} source={source} sort={commentSortKey[sort]} onTotal={setLoaded} />
+            <CommentList thread={{ kind: 'song', id: songId, source }} sort={commentSortKey[sort]} onTotal={setLoaded} />
           </motion.div>
         </AnimatePresence>
       </ScrollArea>

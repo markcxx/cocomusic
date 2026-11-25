@@ -7,12 +7,12 @@ import type { ArtistDirectoryQuery } from './artist-directory';
 import type { ArtistDirectoryPage } from '@/server/music/artist-directory';
 import { useLatest } from './use-latest';
 import type {
-  ArtistBiography, ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, HomeFeatured, Lyrics,
-  PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongSource, SongStats,
+  ArtistBiography, ArtistInfo, AudioQuality, BestMatch, CatalogAlbum, CatalogSource, CatalogArtist, CatalogChart, CatalogTrack, CategoryGroup, CollectionDetail, CommentPage, CommentSort, CommentTarget, HomeFeatured, Lyrics,
+  PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
 } from '@/server/music/types';
 
 export type {
-  ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogSource, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort,
+  ArtistInfo, AudioQuality, CatalogAlbum, CatalogArtist, CatalogChart, CatalogPlaylist, CatalogSource, CatalogTrack, CategoryGroup, CollectionDetail, CollectionInfo, CommentPage, CommentSort, CommentTarget,
   LyricLine, Lyrics, PlaylistOrder, PlaylistPage, SearchDiscovery, SearchResult, SearchSuggestion, SearchType, SongComment, SongSource, SongStats,
 } from '@/server/music/types';
 
@@ -51,6 +51,37 @@ async function get<T>(path: string, params: Record<string, string | number | und
   return data as T;
 }
 
+async function send<T>(path: string, body: unknown, from: CatalogSource): Promise<T> {
+  const response = await fetch(`/api/music/${path}?${new URLSearchParams({ source: from })}`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'application/json' },
+    signal: AbortSignal.timeout(20000),
+  });
+  const data = await response.json().catch(() => ({ error: '曲库返回了无法解析的数据' }));
+  if (!response.ok) {
+    if (response.status === 401) requestAccountRecheck(from);
+    throw new CatalogRequestError(data.error || '操作失败，请稍后重试', response.status, data.code, data.verificationUrl);
+  }
+  return data as T;
+}
+
+/** A comment thread: a song (platform song id), playlist or album. */
+export type CommentThread = { kind: CommentTarget; id: string; source?: CatalogSource };
+
+export const commentsApi = {
+  list: (thread: CommentThread, sort: CommentSort, cursor?: string, signal?: AbortSignal) =>
+    get<CommentPage>('comments', { kind: thread.kind, id: thread.id, sort, cursor, limit: 20 }, signal, thread.source),
+  replies: (thread: CommentThread, parent: SongComment, cursor?: string, signal?: AbortSignal) =>
+    get<CommentPage>('comments', { kind: thread.kind, id: thread.id, parent: parent.id, floor: parent.floor, cursor, limit: 10 }, signal, thread.source),
+  post: (thread: CommentThread, content: string, replyTo?: string) =>
+    send<{ comment: SongComment | null }>('comments', { kind: thread.kind, id: thread.id, action: 'post', content, commentId: replyTo }, thread.source ?? currentSource()),
+  remove: (thread: CommentThread, commentId: string) =>
+    send<{ ok: true }>('comments', { kind: thread.kind, id: thread.id, action: 'delete', commentId }, thread.source ?? currentSource()),
+  like: (thread: CommentThread, commentId: string, like: boolean) =>
+    send<{ ok: true }>('comments', { kind: thread.kind, id: thread.id, action: 'like', commentId, like }, thread.source ?? currentSource()),
+};
+
 export const catalogApi = {
   artistDirectory: (query: ArtistDirectoryQuery, signal?: AbortSignal) => get<ArtistDirectoryPage>('artists', { ...query }, signal),
   dailySongs: (signal?: AbortSignal) => get<{ tracks: CatalogTrack[] }>('home', { section: 'daily-songs' }, signal),
@@ -76,7 +107,6 @@ export const catalogApi = {
   songSource: (id: string, signal?: AbortSignal, quality?: AudioQuality, from?: CatalogSource) => get<SongSource>('song', { id, section: 'url', quality }, signal, from),
   lyrics: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<Lyrics>('song', { id, section: 'lyrics' }, signal, from),
   songStats: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<SongStats>('song', { id, section: 'stats' }, signal, from),
-  comments: (id: string, sort: CommentSort, cursor?: string, signal?: AbortSignal, from?: CatalogSource) => get<CommentPage>('song', { id, section: 'comments', sort, cursor, limit: 20 }, signal, from),
 };
 
 export type Resource<T> = { data: T | null; loading: boolean; error: string; retry: () => void };

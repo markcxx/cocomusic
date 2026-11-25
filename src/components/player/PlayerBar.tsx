@@ -34,11 +34,11 @@ export function PlayerBar() {
   // Sampled only when it is shown; without a source this is the cheap seeded fallback.
   const tint = useCoverTint(tinted ? track.cover : undefined, track.coverSeed);
   const background = tinted ? deepenTint(tint) : undefined;
-  const viewingComments = route.name === 'comments' && route.songId === track.songId && (route.source ?? 'netease') === (track.source ?? 'netease');
+  const viewingComments = route.name === 'comments' && (route.kind ?? 'song') === 'song' && route.id === track.songId && (route.source ?? 'netease') === (track.source ?? 'netease');
 
   const openComments = () => {
     if (!track.songId) return;
-    navigate({ name: 'comments', songId: track.songId, source: track.source, title: track.title, artist: track.artist, cover: track.cover });
+    navigate({ name: 'comments', id: track.songId, source: track.source, title: track.title, artist: track.artist, cover: track.cover });
   };
 
   return (

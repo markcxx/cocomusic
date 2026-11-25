@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSettings } from '@/lib/settings';
-import type { CatalogSource } from '@/server/music/types';
+import type { CatalogSource, CommentTarget } from '@/server/music/types';
 
 /**
  * In-app routes. Detail and search routes carry their parameters. Catalog
@@ -27,8 +27,11 @@ export type Route =
   /** A playlist kept on this machine (no login, songs from any platform and local files). */
   | { name: 'local-playlist'; id: string; title?: string }
   | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' }
-  /** Song comments; carries display info so the header renders before data loads. */
-  | { name: 'comments'; songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string }
+  /**
+   * Comments of a song (default), playlist or album; `id` is the platform id of that item.
+   * Carries display info so the header renders before data loads.
+   */
+  | { name: 'comments'; id: string; kind?: CommentTarget; source?: CatalogSource; title?: string; artist?: string; cover?: string }
   /** The song's official MV; same display info as comments. */
   | { name: 'mv'; songId: string; source?: CatalogSource; title?: string; artist?: string; cover?: string };
 
@@ -59,7 +62,8 @@ export const routeKey = (route: Route) => {
     case 'playlist': case 'album': case 'artist': return `${route.name}:${route.source ?? ''}:${route.id}`;
     case 'local-playlist': return `${route.name}:${route.id}`;
     case 'search': return `search:${route.keyword}:${route.type ?? 'song'}`;
-    case 'comments': case 'mv': return `${route.name}:${route.source ?? 'netease'}:${route.songId}`;
+    case 'comments': return `comments:${route.source ?? 'netease'}:${route.kind ?? 'song'}:${route.id}`;
+    case 'mv': return `mv:${route.source ?? 'netease'}:${route.songId}`;
     default: return route.name;
   }
 };

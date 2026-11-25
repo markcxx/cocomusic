@@ -2,7 +2,8 @@ import type { CatalogProvider } from '../types';
 import { qqAccount } from './account';
 import { albumDetail, artistAlbums, artistInfo, artistSongs, bestMatch, categories, charts, dailySongs, featured, newReleases, playlistDetail, playlists, search, searchDiscovery, suggest, topArtists } from './catalog';
 import { SOURCE } from './mappers';
-import { comments, lyrics, songSource, songStats } from './playback';
+import { commentActions, commentReplies, comments } from './comments';
+import { lyrics, songSource, songStats } from './playback';
 
 export const qqProvider: CatalogProvider = {
   source: SOURCE,
@@ -10,6 +11,8 @@ export const qqProvider: CatalogProvider = {
   lyrics,
   songStats,
   comments,
+  commentReplies,
+  commentActions,
   featured,
   dailySongs,
   newReleases,

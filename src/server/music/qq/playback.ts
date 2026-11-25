@@ -1,10 +1,11 @@
 import { buildLyrics } from '../lrc';
-import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
+import type { AudioQuality, Lyrics, SongSource, SongStats } from '../types';
 import { createHash } from 'node:crypto';
 import { session } from '../session';
 import { qqEnsureLogin } from './auth';
 import { auth, QQError, qqRequest } from './client';
-import { https, num, record, rows, splitSongKey, text, type Raw } from './mappers';
+import { comments } from './comments';
+import { num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
 /**
  * Stream files by quality: [file-name prefix, extension, size field in `file`].
@@ -22,7 +23,7 @@ const ORDER: AudioQuality[] = ['hires', 'lossless', 'exhigh', 'higher', 'standar
 /** Stable per-install device guid (32 hex), like the official client sends. */
 const GUID = createHash('md5').update(session.deviceId()).digest('hex');
 
-async function trackInfo(mid: string) {
+export async function trackInfo(mid: string) {
   const data = await qqRequest<Raw>('music.trackInfo.UniformRuleCtrl', 'CgiGetTrackInfo', { mids: [mid], types: [0] });
   const track = rows(data.tracks)[0];
   if (!track) throw new QQError('歌曲不存在或已下架', 404);
@@ -97,46 +98,6 @@ export async function lyrics(key: string): Promise<Lyrics> {
   if (!original.trim()) return { lines: [], synced: false, instrumental: /纯音乐/.test(text(data.songName)) };
   // QQ prefixes the first line with "title - artist"; it is real lyric text, keep it.
   return buildLyrics(original, decode(data.trans).replace(/\/\//g, ''));
-}
-
-function mapComment(item: Raw): SongComment {
-  const replied = rows(item.SubComments)[0] ?? record(item.RepliedComment);
-  return {
-    id: text(item.CmId ?? item.SeqNo),
-    content: text(item.Content).replace(/\[em\]e\d+\[\/em\]/g, ''),
-    time: (num(item.PubTime) ?? 0) * 1000,
-    likedCount: num(item.PraiseNum) ?? 0,
-    replyCount: num(item.ReplyCnt) || undefined,
-    location: text(item.Location) || undefined,
-    user: { id: text(item.EncryptUin), nickname: text(item.Nick) || 'QQ 音乐用户', avatar: https(item.Avatar), vip: Boolean(item.VipIcon) },
-    replyTo: text(replied?.Content) ? { nickname: text(replied.Nick) || 'QQ 音乐用户', content: text(replied.Content) } : undefined,
-  };
-}
-
-/**
- * Song comments (music.globalComment.CommentRead). 最热 uses GetHotCommentList;
- * 推荐 and 最新 use GetNewCommentList, paged by the last comment's SeqNo.
- * Opaque cursor: "<pageNo>:<lastSeqNo>".
- */
-export async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
-  const { mid, id } = splitSongKey(key);
-  const bizId = id ?? text((await trackInfo(mid)).id);
-  const [pageText, lastSeq = ''] = (cursor ?? '').split(/:(.*)/s);
-  const pageNum = Math.max(0, Number(pageText) || 0);
-  const hot = sort === 'hot';
-  const data = await qqRequest<Raw>('music.globalComment.CommentRead', hot ? 'GetHotCommentList' : 'GetNewCommentList', hot
-    ? { BizType: 1, BizId: bizId, LastCommentSeqNo: lastSeq, PageSize: limit, PageNum: pageNum, HotType: 1, WithAirborne: 0, PicEnable: 1 }
-    : { BizType: 1, BizId: bizId, LastCommentSeqNo: lastSeq, PageSize: limit, PageNum: pageNum, FromCommentId: '', WithHot: 0, PicEnable: 1 });
-  const list = record(data.CommentList);
-  const raw = rows(list.Comments);
-  const items = raw.map(mapComment);
-  const hasMore = Boolean(Number(list.HasMore)) && items.length > 0;
-  return {
-    items,
-    total: num(list.Total) ?? items.length,
-    hasMore,
-    cursor: hasMore ? `${pageNum + 1}:${text(raw[raw.length - 1]?.SeqNo)}` : undefined,
-  };
 }
 
 export async function songStats(key: string): Promise<SongStats> {

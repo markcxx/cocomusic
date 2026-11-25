@@ -1,6 +1,6 @@
 import { inflateSync } from 'node:zlib';
 import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
-import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
+import type { AudioQuality, CommentPage, CommentSort, CommentTarget, Lyrics, SongComment, SongSource, SongStats } from '../types';
 import { createKugouClient, KugouError, type KugouClient } from './client';
 import { image, num, record, rows, splitSongKey, text, type Raw } from './mappers';
 
@@ -37,6 +37,11 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
   const ORDER: AudioQuality[] = ['hires', 'lossless', 'exhigh', 'higher', 'standard'];
 
   const COMMENT_CODE = 'fc4be23b4e972707f36b8a828a93ba8a';
+  /** Playlist and album threads live on the comment service under their own codes. */
+  const COLLECTION_THREADS: Record<'playlist' | 'album', Raw> = {
+    playlist: { code: 'ca53b96fe5a1d9c22d71c8f522ef7c4f', content_type: 0, tag: 5 },
+    album: { code: '94f1792ced1df89aa68a7939eaf2efca' },
+  };
 
   async function conceptResources(hash: string, albumId: string, behavior: 'play' | 'download') {
     const json = await kugouRequest<Raw>({
@@ -171,7 +176,33 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
       location: text(ext.city) || undefined,
       user: { id: text(item.user_id), nickname: text(item.user_name) || '酷狗用户', avatar: image(item.user_pic, 150), vip: Number(item.vip_type) > 0 },
       replyTo: text(item.pcontent) ? { nickname: text(item.puser) || '酷狗用户', content: text(item.pcontent) } : undefined,
+      liked: record(item.like).haslike === true,
+      floor: text(item.special_child_id) || undefined,
     };
+  }
+
+  const byTime = (list: Raw[]) => [...list].sort((a, b) => text(b.addtime).localeCompare(text(a.addtime)));
+  const byLikes = (list: Raw[]) => [...list].sort((a, b) => (num(record(b.like).count) ?? 0) - (num(record(a.like).count) ?? 0));
+
+  function commentPage(json: Raw, list: Raw[], page: number, limit: number): CommentPage {
+    const total = num(json.count) ?? list.length;
+    const items = list.map(mapComment);
+    const maxPage = num(json.maxPage) ?? Infinity;
+    const hasMore = items.length > 0 && page < maxPage && page * limit < total;
+    return { items, total, hasMore, cursor: hasMore ? String(page + 1) : undefined };
+  }
+
+  /**
+   * Playlist / album threads. Like songs, only the default ranking pages:
+   * 最热 and 最新 reorder each page by likes or time.
+   */
+  async function collectionComments(target: 'playlist' | 'album', id: string, sort: CommentSort, page: number, limit: number) {
+    const json = await kugouRequest<Raw>({
+      method: 'POST', path: '/m.comment.service/v1/cmtlist', raw: true,
+      params: { childrenid: id, ...COLLECTION_THREADS[target], need_show_image: 1, p: page, pagesize: limit, show_classify: 1, show_hotword_list: 1 },
+    });
+    const list = rows(json.list);
+    return commentPage(json, sort === 'hot' ? byLikes(list) : sort === 'latest' ? byTime(list) : list, page, limit);
   }
 
   /**
@@ -180,7 +211,8 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
    * time-ordered feed, so 最新 reorders each page of the default thread by time.
    * Cursor: next page number.
    */
-  async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
+  async function comments(key: string, sort: CommentSort, cursor: string | undefined, limit: number, target: CommentTarget = 'song'): Promise<CommentPage> {
+    if (target !== 'song') return collectionComments(target, key, sort, Math.max(1, Number(cursor) || 1), limit);
     const { albumAudioId } = splitSongKey(key);
     if (!albumAudioId) return { items: [], total: 0, hasMore: false };
     const page = Math.max(1, Number(cursor) || 1);
@@ -198,12 +230,27 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
     const hotFallback = sort === 'hot' && !rows(json.list).length;
     if (hotFallback) json = await thread();
     let list = rows(json.list);
-    if (sort === 'latest') list = [...list].sort((a, b) => text(b.addtime).localeCompare(text(a.addtime)));
-    if (hotFallback) list = [...list].sort((a, b) => (num(record(b.like).count) ?? 0) - (num(record(a.like).count) ?? 0));
-    const total = num(json.count) ?? list.length;
-    const items = list.map(mapComment);
-    const maxPage = num(json.maxPage) ?? Infinity;
-    const hasMore = items.length > 0 && page < maxPage && page * limit < total;
+    if (sort === 'latest') list = byTime(list);
+    if (hotFallback) list = byLikes(list);
+    return commentPage(json, list, page, limit);
+  }
+
+  /**
+   * hot_replylist: replies under comment `tid`. Song threads also need the
+   * comment's sub-thread id (`floor`, its special_child_id). Cursor: next page number.
+   */
+  async function commentReplies(target: CommentTarget, id: string, commentId: string, floor: string | undefined, cursor: string | undefined, limit: number): Promise<CommentPage> {
+    const page = Math.max(1, Number(cursor) || 1);
+    const thread = target === 'song'
+      ? { path: '/mcomment/v1/hot_replylist', params: { mixsongid: splitSongKey(id).albumAudioId, childrenid: floor ?? '', code: COMMENT_CODE } }
+      : { path: '/m.comment.service/v1/hot_replylist', params: { childrenid: id, code: text(COLLECTION_THREADS[target].code) } };
+    const json = await kugouRequest<Raw>({
+      method: 'POST', path: thread.path, raw: true,
+      params: { ...thread.params, tid: commentId, need_show_image: 1, p: page, pagesize: limit, show_classify: 1, show_hotword_list: 1 },
+    });
+    const items = rows(json.list).map(mapComment);
+    const total = num(json.comments_num) ?? items.length;
+    const hasMore = items.length > 0 && page * limit < total;
     return { items, total, hasMore, cursor: hasMore ? String(page + 1) : undefined };
   }
 
@@ -220,6 +267,6 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
     };
   }
 
-  return { songSource, downloadSource, lyrics, songStats, comments };
+  return { songSource, downloadSource, lyrics, songStats, comments, commentReplies };
 }
 export const { songSource, lyrics, songStats, comments } = createKugouPlayback();

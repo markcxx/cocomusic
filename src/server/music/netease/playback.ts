@@ -1,7 +1,8 @@
 import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
-import type { AudioQuality, CommentPage, CommentSort, Lyrics, SongComment, SongSource, SongStats } from '../types';
+import type { AudioQuality, Lyrics, SongSource, SongStats } from '../types';
 import { NeteaseError, neteaseEapi } from './client';
-import { image, num, record, rows, text, type Raw } from './mappers';
+import { comments } from './comments';
+import { num, record, rows, text, type Raw } from './mappers';
 
 /** song_url_v1. Uses the stored login when present so VIP members get full tracks. */
 export async function songSource(id: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
@@ -47,59 +48,6 @@ export async function lyrics(id: string): Promise<Lyrics> {
   const built = buildLyrics(text(record(data.lrc).lyric), text(record(data.tlyric).lyric));
   const words = parseWordLyrics(text(record(data.yrc).lyric));
   return words.length && built.synced ? { ...built, lines: attachWords(built.lines, words) } : built;
-}
-
-const sortTypes: Record<CommentSort, number> = { recommend: 99, hot: 2, latest: 3 };
-
-function mapComment(item: Raw): SongComment {
-  const user = record(item.user);
-  const replied = rows(item.beReplied)[0];
-  const repliedUser = record(replied?.user);
-  return {
-    id: text(item.commentId),
-    content: text(item.content),
-    time: num(item.time) ?? 0,
-    likedCount: num(item.likedCount) ?? 0,
-    replyCount: num(item.replyCount ?? record(item.showFloorComment).replyCount) || undefined,
-    location: text(record(item.ipLocation).location) || undefined,
-    user: {
-      id: text(user.userId),
-      nickname: text(user.nickname) || '网易云用户',
-      avatar: image(user.avatarUrl, 80),
-      vip: Number(user.vipType) > 0,
-    },
-    replyTo: replied && text(replied.content) ? { nickname: text(repliedUser.nickname) || '网易云用户', content: text(replied.content) } : undefined,
-  };
-}
-
-/**
- * comment_new (v2 resource comments). Paging differs by sort:
- * recommend uses an offset cursor, hot `normalHot#offset`, latest the last comment's time.
- * Our opaque cursor is "pageNo:upstreamCursor".
- */
-export async function comments(id: string, sort: CommentSort, cursor: string | undefined, limit: number): Promise<CommentPage> {
-  const [pageText, upstream = ''] = (cursor ?? '').split(/:(.*)/s);
-  const pageNo = Math.max(1, Number(pageText) || 1);
-  const offset = (pageNo - 1) * limit;
-  const sortType = sortTypes[sort];
-  const upstreamCursor = sortType === 99 ? offset : sortType === 2 ? `normalHot#${offset}` : upstream || '0';
-  const data = await neteaseEapi<Raw>('/api/v2/resource/comments', {
-    threadId: `R_SO_4_${id}`,
-    pageNo,
-    showInner: true,
-    pageSize: limit,
-    cursor: upstreamCursor,
-    sortType,
-  }, { auth: false });
-  const body = record(data.data);
-  const items = rows(body.comments).map(mapComment);
-  const hasMore = Boolean(body.hasMore) && items.length > 0;
-  return {
-    items,
-    total: num(body.totalCount) ?? items.length,
-    hasMore,
-    cursor: hasMore ? `${pageNo + 1}:${text(body.cursor)}` : undefined,
-  };
 }
 
 /** song_red_count + comment total; either may fail independently. */
