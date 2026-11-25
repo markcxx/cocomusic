@@ -1,7 +1,7 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ACCOUNT_RECHECK_EVENT, accountApi, type UserPlaylist, type UserProfile } from '@/lib/account-client';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ACCOUNT_RECHECK_EVENT, AccountError, accountApi, type UserPlaylist, type UserProfile } from '@/lib/account-client';
 import { useLatest } from '@/lib/use-latest';
 import { toast } from '@/components/ui/toast';
 import { useSettings } from '@/lib/settings';
@@ -47,6 +47,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const [likesRevision, setLikesRevision] = useState(0);
   const [playlists, setPlaylists] = useState<UserPlaylist[]>([]);
   const [loginOpen, setLoginOpen] = useState(false);
+  const pendingLike = useRef<{ id: string; title: string; like: boolean; accountId: string } | null>(null);
   const profileRef = useLatest(profile);
 
   const loadLibrary = useCallback(async () => {
@@ -70,7 +71,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
   const platform = useSettings().catalogSource;
   useEffect(() => {
     let cancelled = false;
-    const reset = setTimeout(() => { if (!cancelled) { setProfile(undefined); setLiked(new Set()); setPlaylists([]); } }, 0);
+    const reset = setTimeout(() => { if (!cancelled) { pendingLike.current = null; setProfile(undefined); setLiked(new Set()); setPlaylists([]); } }, 0);
     accountApi.me()
       .then(({ profile: current, expired }) => {
         if (cancelled) return;
@@ -131,16 +132,34 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     likesRevision,
     loginOpen,
     openLogin: () => setLoginOpen(true),
-    closeLogin: () => setLoginOpen(false),
+    closeLogin: () => { pendingLike.current = null; setLoginOpen(false); },
     onLoggedIn: next => {
       if (next.source !== currentSource()) return;
       setProfile(next);
       setLoginOpen(false);
-      toast.success(`欢迎回来，${next.nickname}`);
-      void loadLibrary();
+      const pending = pendingLike.current;
+      pendingLike.current = null;
+      if (pending && next.source === 'qq' && pending.accountId === next.id) {
+        void accountApi.like(pending.id, pending.like, pending.title, next.id).then(() => {
+          if (currentSource() !== 'qq' || profileRef.current?.id !== next.id) return;
+          setLiked(previous => {
+            const copy = new Set(previous);
+            if (pending.like) copy.add(pending.id); else copy.delete(pending.id);
+            return copy;
+          });
+          setLikesRevision(value => value + 1);
+          toast.success(`已${pending.like ? '收藏' : '取消收藏'}《${pending.title}》`);
+        }).catch(error => {
+          if (currentSource() === 'qq' && profileRef.current?.id === next.id) toast.error(error.message || '收藏操作失败');
+        }).finally(() => { if (currentSource() === 'qq') void loadLibrary(); });
+      } else {
+        toast.success(`欢迎回来，${next.nickname}`);
+        void loadLibrary();
+      }
     },
     logout: async () => {
       await accountApi.logout().catch(() => undefined);
+      pendingLike.current = null;
       setProfile(null);
       setLiked(new Set());
       setPlaylists([]);
@@ -149,13 +168,23 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     isLiked: id => liked.has(id),
     toggleLike: async (id, title) => {
       if (!requireLogin()) return;
+      const viewer = profileRef.current;
+      const sameViewer = () => currentSource() === viewer?.source && profileRef.current?.id === viewer?.id;
       const next = !liked.has(id);
       setLiked(previous => { const copy = new Set(previous); if (next) copy.add(id); else copy.delete(id); return copy; });
       try {
-        await accountApi.like(id, next, title);
+        await accountApi.like(id, next, title, viewer?.source === 'qq' ? viewer.id : undefined);
+        if (!sameViewer()) return;
         setLikesRevision(value => value + 1);
       } catch (error) {
+        if (!sameViewer()) return;
         setLiked(previous => { const copy = new Set(previous); if (next) copy.delete(id); else copy.add(id); return copy; });
+        if (viewer?.source === 'qq' && error instanceof AccountError && error.code === 80105) {
+          pendingLike.current = { id, title, like: next, accountId: viewer.id };
+          toast.info('请重新扫码登录 QQ 音乐，登录后会继续刚才的收藏操作');
+          setLoginOpen(true);
+          return;
+        }
         toast.error(error instanceof Error ? error.message : '操作失败');
       }
     },
@@ -210,7 +239,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       const { playlists: next } = await accountApi.playlists();
       setPlaylists(next);
     },
-  }), [profile, playlists, loginOpen, liked, likesRevision, loadLibrary, requireLogin]);
+  }), [profile, playlists, loginOpen, liked, likesRevision, loadLibrary, requireLogin, profileRef]);
 
   return <AccountContext.Provider value={value}>{children}</AccountContext.Provider>;
 }

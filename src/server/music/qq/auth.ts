@@ -42,7 +42,8 @@ export function qqRefreshLogin(): Promise<boolean> {
     try {
       const data = await qqRequest<Raw>('music.login.LoginServer', 'Login', param);
       const musickey = text(data.musickey);
-      if (!musickey) return false;
+      const live = session.get('qq')?.cookie;
+      if (!musickey || live?.uin !== cookie.uin || live?.qm_keyst !== cookie.qm_keyst) return false;
       session.updateCookie('qq', {
         qm_keyst: musickey,
         ...Object.fromEntries(['openid', 'unionid', 'access_token', 'refresh_token', 'refresh_key', 'encryptUin', 'expired_at', 'musickeyCreateTime', 'keyExpiresIn'].map(name => [name, text(data[name])])),

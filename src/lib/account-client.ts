@@ -12,7 +12,7 @@ export type { QrLoginState, UserDetail, UserPlaylist, UserProfile } from '@/serv
 
 
 export class AccountError extends Error {
-  constructor(message: string, public readonly status: number) {
+  constructor(message: string, public readonly status: number, public readonly code?: number) {
     super(message);
   }
 }
@@ -23,13 +23,14 @@ async function call<T>(path: string, init: RequestInit & { query?: Record<string
   const response = await fetch(`/api/account/${path}?${query}`, {
     ...init,
     headers: init.body ? { 'Content-Type': 'application/json' } : undefined,
-    signal: init.signal ?? AbortSignal.timeout(20000),
+    signal: init.signal ?? AbortSignal.timeout(query.get('source') === 'qq' && path === 'likes' && init.method === 'POST' ? 40000 : 20000),
   });
   const data = await response.json().catch(() => ({ error: '账号服务返回了无法解析的数据' }));
   if (!response.ok) {
-    if (response.status === 401 && path !== 'me') requestAccountRecheck(query.get('source')!);
+    const favoriteNeedsQr = query.get('source') === 'qq' && path === 'likes' && data.code === 80105;
+    if (response.status === 401 && path !== 'me' && !favoriteNeedsQr) requestAccountRecheck(query.get('source')!);
     requestKugouVerification(data.verificationUrl);
-    throw new AccountError(data.error || '账号请求失败，请稍后重试', response.status);
+    throw new AccountError(data.error || '账号请求失败，请稍后重试', response.status, data.code);
   }
   return data as T;
 }
@@ -51,7 +52,8 @@ export const accountApi = {
   qrCreate: () => call<{ key: string; url: string; svg: string }>('login/qr', { method: 'POST' }),
   qrCheck: (key: string, signal?: AbortSignal) => call<QrLoginState>('login/qr', { query: { key }, signal }),
   likes: () => call<{ ids: string[] }>('likes'),
-  like: (id: string, like: boolean, title: string) => post<{ ok: true }>('likes', { id, like, title }),
+  like: (id: string, like: boolean, title: string, qqAccountId?: string) =>
+    post<{ ok: true }>('likes', { id, like, title, expectedAccountId: qqAccountId }, qqAccountId ? 'qq' : undefined),
   playlists: () => call<{ playlists: UserPlaylist[] }>('playlists'),
   createPlaylist: (name: string, privacy: 'public' | 'private') => post<{ playlist: UserPlaylist }>('playlists', { name, privacy }),
   deletePlaylist: (id: string) => call<{ ok: true }>('playlists', { method: 'DELETE', query: { id } }),

@@ -29,14 +29,14 @@ export function LikedView() {
       </Page>
     );
   }
-  const concept = likedPlaylist.source === 'kugou-lite';
+  const refreshOnLike = likedPlaylist.source === 'kugou-lite' || likedPlaylist.source === 'qq';
   return (
     <CollectionView
       kind="playlist"
       id={likedPlaylist.id}
       source={likedPlaylist.source}
       title="我喜欢的音乐"
-      revision={concept ? likesRevision : undefined}
+      revision={refreshOnLike ? likesRevision : undefined}
     />
   );
 }

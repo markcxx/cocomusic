@@ -1,5 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { account, CatalogError, invalidate, readJson, respond } from '@/server/music';
+import { session } from '@/server/music/session';
 import { isSource, validId } from '@/server/music/ids';
 
 export const dynamic = 'force-dynamic';
@@ -13,10 +14,13 @@ export function GET(request: NextRequest) {
 export function POST(request: NextRequest) {
   return respond(async () => {
     const source = request.nextUrl.searchParams.get('source');
-    const body = await readJson<{ id?: unknown; like?: unknown; title?: unknown }>(request);
+    const body = await readJson<{ id?: unknown; like?: unknown; title?: unknown; expectedAccountId?: unknown }>(request);
     const id = String(body.id ?? '');
     if (!validId(isSource(source) ? source : 'netease', 'song', id) || typeof body.like !== 'boolean') throw new CatalogError('参数无效', 400);
     const title = typeof body.title === 'string' ? body.title.trim() : undefined;
+    if (source === 'qq' && body.expectedAccountId !== undefined && session.get('qq')?.cookie.uin !== body.expectedAccountId) {
+      throw new CatalogError('QQ 音乐账号已切换，请重新操作', 409);
+    }
     await account(source).likeSong(id, body.like, title);
     // 我喜欢的音乐 is a playlist too; its cached pages are now stale.
     invalidate(`${source || 'netease'}:playlist:`);

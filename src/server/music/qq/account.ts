@@ -1,6 +1,6 @@
 import { session } from '../session';
 import type { AccountProvider, UserDetail, UserPlaylist, UserProfile } from '../types';
-import { qqEnsureLogin } from './auth';
+import { qqEnsureLogin, qqRefreshLogin } from './auth';
 import { QQError, qqRequest } from './client';
 import { qqQrPoll, qqQrStart } from './login';
 import { https, mapPlaylistBasic, num, record, rows, splitSongKey, SOURCE, text, type Raw } from './mappers';
@@ -100,10 +100,24 @@ export const qqAccount: AccountProvider = {
   },
 
   async likeSong(id, like) {
-    current();
+    const { uin } = current();
     const songId = Number(splitSongKey(id).id);
     if (!songId) throw new QQError('歌曲信息不完整', 400);
-    await qqRequest('music.musicasset.PlaylistDetailWrite', like ? 'AddSonglist' : 'DelSonglist', { dirId: LIKED_DIR, v_songInfo: [{ songType: 0, songId }] });
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (current().uin !== uin) throw new QQError('QQ 音乐账号已切换，请重新操作', 409);
+      try {
+        const data = await qqRequest('music.musicasset.PlaylistDetailWrite', like ? 'AddSonglist' : 'DelSonglist', {
+          dirId: LIKED_DIR, v_songInfo: [{ songType: 0, songId }],
+        });
+        if (data.retCode == null || Number(data.retCode) !== 0) throw new QQError('QQ 音乐未确认收藏操作', 502, num(data.retCode));
+        return;
+      } catch (error) {
+        // A stale music key may still read the library while favorite writes return 80105.
+        if (!(error instanceof QQError) || error.code !== 80105) throw error;
+        if (attempt === 0 && current().uin === uin && await qqRefreshLogin()) continue;
+        throw new QQError('请重新登录 QQ 音乐以更新收藏', 401, 80105);
+      }
+    }
   },
 
   async userPlaylists() {
