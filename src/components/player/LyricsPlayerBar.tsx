@@ -14,16 +14,27 @@ import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { QualityBadge } from './QualityBadge';
+import { useProgressScrubber } from './use-progress-scrubber';
 import { useSongStats } from './use-song-stats';
 import styles from './LyricsPlayerBar.module.css';
 
-/** Thin full-width progress line along the bar's top edge; the time shows in the thumb tooltip. */
+/** Thin full-width progress line along the bar's top edge; the time + lyric line show in the thumb tooltip. */
 function Progress() {
   const { duration, seek } = usePlayer();
   const position = usePlaybackPosition();
+  const { highlights, renderTooltip } = useProgressScrubber();
   return (
     <div className={styles.progress} data-lyrics-progress>
-      <Slider value={Math.min(position, duration)} max={duration} onCommit={seek} label="播放进度" formatValue={formatTime} size="sm" />
+      <Slider
+        value={Math.min(position, duration)}
+        max={duration}
+        onCommit={seek}
+        label="播放进度"
+        formatValue={formatTime}
+        highlights={highlights}
+        renderTooltip={renderTooltip}
+        size="sm"
+      />
     </div>
   );
 }

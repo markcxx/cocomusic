@@ -1,9 +1,15 @@
 'use client';
 
 import { AnimatePresence, motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import styles from './Slider.module.css';
+
+export type SliderHighlight = {
+  start: number;
+  end: number;
+  kind: 'chorus' | 'trial';
+};
 
 /**
  * Pointer-driven slider with a hover preview tooltip.
@@ -11,7 +17,7 @@ import styles from './Slider.module.css';
  * - Drag: thumb grows, fill follows the pointer instantly; onCommit fires on release.
  * - Keyboard: arrows/Page/Home/End, same as a native range input.
  */
-export function Slider({ value, max, onChange, onCommit, label, formatValue, step, className, size = 'md', orientation = 'horizontal' }: {
+export function Slider({ value, max, onChange, onCommit, label, formatValue, renderTooltip, highlights, step, className, size = 'md', orientation = 'horizontal' }: {
   value: number;
   max: number;
   /** Fires continuously while dragging. */
@@ -20,6 +26,10 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
   onCommit?: (value: number) => void;
   label: string;
   formatValue?: (value: number) => string;
+  /** Custom hover/drag preview content (e.g. timestamp + synced lyric line). */
+  renderTooltip?: (value: number) => ReactNode;
+  /** Highlighted intervals along a horizontal rail (chorus peak or trial clip). */
+  highlights?: readonly SliderHighlight[];
   step?: number;
   className?: string;
   size?: 'md' | 'sm';
@@ -90,6 +100,10 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
 
   const hoverRatio = hover !== null && max > 0 ? hover / max : null;
   const format = formatValue ?? (v => String(Math.round(v)));
+  const activeRatio = dragging ? ratio : hoverRatio ?? 0;
+  const activeVal = dragging ? shown : hover ?? 0;
+  // Rich tooltips (lyric lines) clamp slightly inside the rail ends so they never overflow narrow bars.
+  const tooltipPct = renderTooltip && !vertical ? Math.min(88, Math.max(12, activeRatio * 100)) : activeRatio * 100;
 
   return (
     <div
@@ -112,21 +126,46 @@ export function Slider({ value, max, onChange, onCommit, label, formatValue, ste
       style={{ '--ratio': ratio } as CSSProperties}
     >
       <div className={styles.rail}>
+        {!vertical && max > 0 && highlights?.map((seg, i) => {
+          const s = Math.max(0, Math.min(1, seg.start / max));
+          const e = Math.max(s, Math.min(1, seg.end / max));
+          if (e - s <= 0.005) return null;
+          return (
+            <span
+              key={`${seg.kind}:${i}`}
+              className={cn(styles.segment, seg.kind === 'chorus' ? styles.segmentChorus : styles.segmentTrial)}
+              style={{ left: `${(s * 100).toFixed(2)}%`, width: `${((e - s) * 100).toFixed(2)}%` }}
+              aria-hidden
+            />
+          );
+        })}
         {hoverRatio !== null && !dragging && <div className={styles.ghost} style={vertical ? { height: `${hoverRatio * 100}%` } : { width: `${hoverRatio * 100}%` }} />}
         <motion.div className={styles.fill} style={vertical ? { height: width } : { width }} />
       </div>
+      {!vertical && max > 0 && highlights?.map((seg, i) => {
+        if (seg.kind !== 'chorus') return null;
+        const s = Math.max(0, Math.min(1, seg.start / max));
+        const e = Math.max(s, Math.min(1, seg.end / max));
+        if (e - s <= 0.005) return null;
+        return (
+          <span key={`tick:${i}`} className={styles.chorusMarkers} aria-hidden>
+            <i className={styles.chorusTick} style={{ left: `${(s * 100).toFixed(2)}%` }} />
+            <i className={styles.chorusTick} style={{ left: `${(e * 100).toFixed(2)}%` }} />
+          </span>
+        );
+      })}
       <motion.div className={styles.thumb} style={vertical ? { bottom: width } : { left: width }} />
       <AnimatePresence>
         {(hoverRatio !== null || dragging) && (
           <motion.div
-            className={styles.tooltip}
-            style={vertical ? { bottom: `${(dragging ? ratio : hoverRatio ?? 0) * 100}%` } : { left: `${(dragging ? ratio : hoverRatio ?? 0) * 100}%` }}
-            initial={{ opacity: 0, y: 4, scale: 0.9 }}
+            className={cn(styles.tooltip, renderTooltip && styles.richTooltip)}
+            style={vertical ? { bottom: `${activeRatio * 100}%` } : { left: `${tooltipPct}%` }}
+            initial={{ opacity: 0, y: 4, scale: 0.92 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.9 }}
+            exit={{ opacity: 0, y: 4, scale: 0.92 }}
             transition={{ duration: 0.14 }}
           >
-            {format(dragging ? shown : hover ?? 0)}
+            {renderTooltip ? renderTooltip(activeVal) : format(activeVal)}
           </motion.div>
         )}
       </AnimatePresence>
