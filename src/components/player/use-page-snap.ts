@@ -2,19 +2,18 @@
 
 import { animate, useMotionValue, type MotionValue } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { easeOut } from '@/components/common/motion';
 import { useLatest } from '@/lib/use-latest';
 
-/** Commit as soon as the pull covers this fraction of the viewport. */
-const COMMIT_RATIO = 0.18;
+/** Fraction of the viewport the user must pull before releasing commits to the other page. */
+const COMMIT_RATIO = 0.22;
 /** Pixels/second that commits regardless of distance (a quick flick). */
 const FLING_VELOCITY = 1100;
 /**
  * Wheel streams have no "release"; this much silence ends a gesture. Trackpads
  * stream at ~60Hz; mouse wheels tick in coarse steps that can be 150ms+ apart.
  */
-const IDLE_TRACKPAD_MS = 80;
-const IDLE_WHEEL_MS = 180;
+const IDLE_TRACKPAD_MS = 140;
+const IDLE_WHEEL_MS = 260;
 /**
  * Input gap that separates two gestures at a boundary (nested list edge, or just
  * after a page change). Generous on purpose: slow mouse ticks inside one swipe
@@ -30,6 +29,8 @@ const unrubber = (offset: number, range: number) => {
   return (range * clamped) / (range - Math.abs(clamped) * DAMP);
 };
 
+const spring = { type: 'spring' as const, stiffness: 320, damping: 33, mass: 0.9 };
+
 export type PageSnap = {
   /** 0 = lyrics, 1 = comments. */
   page: 0 | 1;
@@ -42,8 +43,8 @@ export type PageSnap = {
 
 /**
  * Two full-height pages stacked vertically, moved as a unit. Wheel/trackpad input
- * drags the track with resistance until it crosses COMMIT_RATIO. A shorter
- * pull settles on release, advancing only if it ended with a quick flick.
+ * drags the track with resistance; when input pauses it either springs back or,
+ * past COMMIT_RATIO (or on a flick), animates the next page fully into place.
  *
  * Nested scrollers (`[data-scroll-native]`, e.g. the lyric column or the comment
  * list) keep the wheel until they hit an edge in the gesture's direction.
@@ -69,7 +70,7 @@ export function usePageSnap(viewport: () => HTMLElement | null, enabled: boolean
     animation.current?.stop();
     if (target !== pageRef.current) lockedUntil.current = performance.now() + EDGE_HOLD_MS;
     setPage(target);
-    animation.current = animate(y, -target * height(), { type: 'tween', duration: 0.22, ease: easeOut });
+    animation.current = animate(y, -target * height(), spring);
   }, [y, height, pageRef]);
 
   const goTo = useCallback((target: 0 | 1) => {
@@ -91,15 +92,19 @@ export function usePageSnap(viewport: () => HTMLElement | null, enabled: boolean
     const current = gesture.current;
     gesture.current = null;
     if (!current) return;
-    // Measure at the last wheel event, before the idle delay used to detect release.
-    const last = current.samples.at(-1);
-    const first = last && current.samples.find(sample => last.t - sample.t < 120);
+    const h = height();
+    // Velocity over the last ~100ms of input (px/s, positive = towards comments).
+    const now = performance.now();
+    const recent = current.samples.filter(sample => now - sample.t < 120);
+    const first = recent[0];
+    const last = recent[recent.length - 1];
     const velocity = first && last && last.t > first.t ? ((last.pull - first.pull) / (last.t - first.t)) * 1000 : 0;
     const from = pageRef.current;
     const towardsOther = from === 0 ? current.pull > 0 : current.pull < 0;
+    const far = Math.abs(current.pull) > h * COMMIT_RATIO;
     const flick = from === 0 ? velocity > FLING_VELOCITY : velocity < -FLING_VELOCITY;
-    settle(towardsOther && flick ? (from === 0 ? 1 : 0) : from);
-  }, [pageRef, settle]);
+    settle(towardsOther && (far || flick) ? (from === 0 ? 1 : 0) : from);
+  }, [height, pageRef, settle]);
 
   const onWheel = useCallback((event: WheelEvent) => {
     if (!enabled || event.ctrlKey) return;
@@ -141,19 +146,15 @@ export function usePageSnap(viewport: () => HTMLElement | null, enabled: boolean
     current.pull += delta;
     // Pull may not go past the resting position on the near side.
     current.pull = from === 0 ? Math.max(0, current.pull) : Math.min(0, current.pull);
-    y.set(-from * h - rubber(current.pull, h));
-    if (Math.abs(current.pull) >= h * COMMIT_RATIO) {
-      goTo(from === 0 ? 1 : 0);
-      return;
-    }
-    current.samples.push({ t: now, pull: current.pull });
+    current.samples.push({ t: performance.now(), pull: current.pull });
     if (current.samples.length > 12) current.samples.shift();
+    y.set(-from * h - rubber(current.pull, h));
 
     if (current.idle) clearTimeout(current.idle);
     // Line-mode or large whole-number steps are a notched mouse wheel.
     const notched = event.deltaMode === 1 || (Math.abs(delta) >= 50 && Number.isInteger(delta));
     current.idle = setTimeout(release, notched ? IDLE_WHEEL_MS : IDLE_TRACKPAD_MS);
-  }, [enabled, goTo, height, pageRef, release, y]);
+  }, [enabled, height, pageRef, release, y]);
 
   // Reset to the lyrics when the page is closed/reopened.
   useEffect(() => {
