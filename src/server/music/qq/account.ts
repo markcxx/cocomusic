@@ -62,21 +62,20 @@ export const qqAccount: AccountProvider = {
     return { status: 'success', profile };
   },
 
-  async profile() {
+  async profile(verifiedOnly = false) {
     // The base-info call below answers for any uin, so it cannot detect a dead
     // key: check (and renew) the musickey itself first.
     const state = await qqEnsureLogin();
-    if (state === 'none' || state === 'expired') return null;
+    if (state === 'none' || state === 'expired' || (verifiedOnly && state === 'unknown')) return null;
     const value = session.get('qq');
     if (!value) return null;
     try {
       const profile = await fetchProfile(value.cookie.uin);
-      if (!profile) return value.profile ?? null;
-      session.setProfile('qq', profile);
-      return profile;
+      if (!profile) return verifiedOnly ? null : value.profile ?? null;
+      return session.setProfile('qq', profile, value.cookie) ? profile : null;
     } catch (error) {
       // Offline: keep the cached profile.
-      if (error instanceof QQError && error.status !== 401) return value.profile ?? null;
+      if (error instanceof QQError && error.status !== 401) return verifiedOnly ? null : value.profile ?? null;
       throw error;
     }
   },

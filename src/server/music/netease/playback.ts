@@ -1,3 +1,4 @@
+import { PlaybackUnavailableError } from '../errors';
 import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
 import type { AudioQuality, Lyrics, SongSource, SongStats } from '../types';
 import { NeteaseError, neteaseEapi } from './client';
@@ -15,7 +16,11 @@ export async function songSource(id: string, quality: AudioQuality = 'exhigh'): 
   if (!item || !url) {
     const code = num(item?.code);
     // 404: no copyright for this region/account; fee 1/4: VIP or paid album.
-    throw new NeteaseError(code === 404 ? '该歌曲暂无版权，无法播放' : '暂时无法获取播放地址，可能需要登录或会员', 404);
+    if (code === 404) throw new PlaybackUnavailableError('该歌曲暂无版权，无法播放', 404);
+    if ((code === 403 || code === -110 || code === 200) && [1, 4].includes(Number(item?.fee))) {
+      throw new PlaybackUnavailableError('该歌曲需要会员或购买后播放', 403);
+    }
+    throw new NeteaseError('暂时无法获取播放地址，可能需要登录或会员', 404);
   }
   const trialInfo = record(item.freeTrialInfo);
   const start = num(trialInfo.start);

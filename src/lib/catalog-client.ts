@@ -40,7 +40,7 @@ export const currentSource = (): CatalogSource => {
 };
 
 export class CatalogRequestError extends Error {
-  constructor(message: string, public readonly status: number, public readonly code?: number, public readonly verificationUrl?: string) { super(message); }
+  constructor(message: string, public readonly status: number, public readonly code?: number, public readonly verificationUrl?: string, public readonly playbackUnavailable = false) { super(message); }
 }
 
 async function get<T>(path: string, params: Record<string, string | number | undefined> = {}, signal?: AbortSignal, from: CatalogSource = currentSource()): Promise<T> {
@@ -50,7 +50,7 @@ async function get<T>(path: string, params: Record<string, string | number | und
   const data = await response.json().catch(() => ({ error: '曲库返回了无法解析的数据' }));
   if (!response.ok) {
     if (response.status === 401) requestAccountRecheck(from);
-    throw new CatalogRequestError(data.error || '曲库请求失败，请稍后重试', response.status, data.code, data.verificationUrl);
+    throw new CatalogRequestError(data.error || '曲库请求失败，请稍后重试', response.status, data.code, data.verificationUrl, data.playbackUnavailable === true);
   }
   return data as T;
 }
@@ -65,7 +65,7 @@ async function send<T>(path: string, body: unknown, from: CatalogSource): Promis
   const data = await response.json().catch(() => ({ error: '曲库返回了无法解析的数据' }));
   if (!response.ok) {
     if (response.status === 401) requestAccountRecheck(from);
-    throw new CatalogRequestError(data.error || '操作失败，请稍后重试', response.status, data.code, data.verificationUrl);
+    throw new CatalogRequestError(data.error || '操作失败，请稍后重试', response.status, data.code, data.verificationUrl, data.playbackUnavailable === true);
   }
   return data as T;
 }

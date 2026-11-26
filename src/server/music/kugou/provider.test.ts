@@ -80,6 +80,24 @@ test('concept playback uses its parameters; downloads use separate rights and re
   assert.deepEqual((await playback.songSource(key, 'standard')).trial, { start: 30, end: 90 });
 });
 
+test('a clip-only tracker URL without offsets still counts as a preview', async t => {
+  t.mock.method(globalThis, 'fetch', async (input: string) => {
+    const preview = new URL(input).searchParams.get('IsFreePart') === '1';
+    return Response.json(preview ? { status: 1, url: ['https://media.test/clip'], timeLength: 30 } : { status: 1, url: [], fail_process: [1] });
+  });
+  const playback = createKugouPlayback(createKugouClient('kugou'));
+  assert.deepEqual((await playback.songSource(key, 'standard')).trial, { start: 0, end: 30 });
+});
+
+test('tracker service failures are distinct from a confirmed unavailable stream', async t => {
+  const { PlaybackUnavailableError } = require('../errors') as typeof import('../errors');
+  const playback = createKugouPlayback(createKugouClient('kugou'));
+  for (const [body, unavailable] of [[{ status: 0, errcode: 999 }, false], [{ status: 1, url: [], fail_process: [1] }, true]] as const) {
+    t.mock.method(globalThis, 'fetch', async () => Response.json(body));
+    await assert.rejects(playback.songSource(key, 'standard'), (error: unknown) => (error instanceof PlaybackUnavailableError) === unavailable);
+  }
+});
+
 test('logged-in concept playback obtains user and song authorization before resolving the stream', async t => {
   session.set('kugou-lite', { userid: '202', token: 'lite-token' });
   t.after(() => session.clear('kugou-lite'));

@@ -4,3 +4,6 @@ export class CatalogError extends Error {
     super(message);
   }
 }
+
+/** The catalog explicitly denied playback or delisted the recording. */
+export class PlaybackUnavailableError extends CatalogError {}

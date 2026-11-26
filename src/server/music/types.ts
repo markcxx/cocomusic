@@ -375,7 +375,7 @@ export interface AccountProvider {
    * still accepted (renewing it where the platform allows); a rejected login is
    * cleared with `session.clear(source, { expired: true })`.
    */
-  profile(): Promise<UserProfile | null>;
+  profile(verifiedOnly?: boolean): Promise<UserProfile | null>;
   /** Rich profile of the logged-in user for the account card. */
   detail(): Promise<UserDetail>;
   logout(): Promise<void>;

@@ -1,4 +1,4 @@
-import { CatalogError } from './errors';
+import { CatalogError, PlaybackUnavailableError } from './errors';
 import { SOURCE_NAMES } from './ids';
 import { kugouProvider, kugouLiteProvider } from './kugou/provider';
 import { neteaseProvider } from './netease/provider';
@@ -67,7 +67,7 @@ export async function respond(load: () => Promise<unknown>) {
     if (!known) console.error('[catalog]', error);
     const code = known && 'code' in error && typeof error.code === 'number' ? error.code : undefined;
     const verificationUrl = known && 'verificationUrl' in error && typeof error.verificationUrl === 'string' ? error.verificationUrl : undefined;
-    return Response.json({ error: message, ...(code === undefined ? {} : { code }), ...(verificationUrl ? { verificationUrl } : {}) }, { status, headers: { 'Cache-Control': 'no-store' } });
+    return Response.json({ error: message, ...(error instanceof PlaybackUnavailableError ? { playbackUnavailable: true } : {}), ...(code === undefined ? {} : { code }), ...(verificationUrl ? { verificationUrl } : {}) }, { status, headers: { 'Cache-Control': 'no-store' } });
   }
 }
 

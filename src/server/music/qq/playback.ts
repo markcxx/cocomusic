@@ -1,3 +1,4 @@
+import { PlaybackUnavailableError } from '../errors';
 import { buildLyrics } from '../lrc';
 import type { AudioQuality, Lyrics, SongSource, SongStats } from '../types';
 import { createHash } from 'node:crypto';
@@ -25,8 +26,9 @@ const GUID = createHash('md5').update(session.deviceId()).digest('hex');
 
 export async function trackInfo(mid: string) {
   const data = await qqRequest<Raw>('music.trackInfo.UniformRuleCtrl', 'CgiGetTrackInfo', { mids: [mid], types: [0] });
+  if (!Array.isArray(data.tracks)) throw new QQError('QQ 音乐未返回歌曲信息');
   const track = rows(data.tracks)[0];
-  if (!track) throw new QQError('歌曲不存在或已下架', 404);
+  if (!track) throw new PlaybackUnavailableError('歌曲不存在或已下架', 404);
   return track;
 }
 
@@ -39,7 +41,8 @@ async function vkey(mid: string, filename: string) {
     guid: GUID, songmid: [mid], songtype: [0], uin: login?.uin ?? '0', loginflag: 1, platform: '20', filename: [filename],
   });
   const info = rows(data.midurlinfo)[0];
-  const purl = text(info?.purl);
+  if (!info || typeof info.purl !== 'string') throw new QQError('QQ 音乐未返回播放授权结果');
+  const purl = text(info.purl);
   if (!purl) return '';
   const hosts = Array.isArray(data.sip) ? data.sip.map(text) : [];
   const host = hosts.find(item => item.startsWith('https://')) ?? (hosts[0] ? hosts[0].replace(/^http:\/\//, 'https://') : 'https://isure.stream.qqmusic.qq.com/');
@@ -68,8 +71,17 @@ async function resolveSource(key: string, quality: AudioQuality): Promise<SongSo
     : undefined;
   const start = Math.max(0, ORDER.indexOf(quality === 'hires' ? 'lossless' : quality));
   const candidates = FILES.filter(item => ORDER.indexOf(item.level) >= start && Number(file[item.size]) > 0);
+  let requestError: unknown;
+  const getKey = async (filename: string) => {
+    try { return await vkey(mid, filename); }
+    catch (error) {
+      if (error instanceof QQError && error.status === 401) throw error;
+      requestError = error;
+      return '';
+    }
+  };
   for (const candidate of candidates) {
-    const url = await vkey(mid, `${candidate.prefix}${mediaMid}.${candidate.ext}`).catch(() => '');
+    const url = await getKey(`${candidate.prefix}${mediaMid}.${candidate.ext}`);
     if (url) {
       const bytes = Number(file[candidate.size]) || 0;
       const bitrate = bytes > 0 && durationSec > 0 ? Math.round((bytes * 8) / durationSec) : undefined;
@@ -78,7 +90,7 @@ async function resolveSource(key: string, quality: AudioQuality): Promise<SongSo
   }
   // No full stream for this account: the preview clip (RS02) when QQ offers one.
   if (Number(file.size_try) > 0 || (tryEnd && tryBegin !== undefined && tryEnd > tryBegin)) {
-    const url = await vkey(mid, `RS02${mediaMid}.mp3`).catch(() => '');
+    const url = await getKey(`RS02${mediaMid}.mp3`);
     if (url) {
       return {
         id: key, url, level: 'standard',
@@ -86,7 +98,8 @@ async function resolveSource(key: string, quality: AudioQuality): Promise<SongSo
       };
     }
   }
-  throw new QQError(Number(record(track.pay).pay_play) === 1 ? '该歌曲需要 QQ 音乐会员或购买后播放' : '该歌曲暂无版权，无法播放', 404);
+  if (requestError) throw requestError;
+  throw new PlaybackUnavailableError(Number(record(track.pay).pay_play) === 1 ? '该歌曲需要 QQ 音乐会员或购买后播放' : '该歌曲暂无版权，无法播放', 404);
 }
 
 const decode = (value: unknown) => {

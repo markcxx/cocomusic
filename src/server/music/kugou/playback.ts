@@ -1,3 +1,4 @@
+import { PlaybackUnavailableError } from '../errors';
 import { inflateSync } from 'node:zlib';
 import { attachWords, buildLyrics, parseWordLyrics } from '../lrc';
 import type { AudioQuality, CommentPage, CommentSort, CommentTarget, Lyrics, SongComment, SongSource, SongStats } from '../types';
@@ -91,10 +92,15 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
         ...(auth.auth || auth.open_time ? { auth: text(auth.auth), open_time: text(auth.open_time) || 0, module_id: 51, need_m: 0, mtype: 0, ptype: 0, clientver: 11561 } : { IsFreePart: freePart ? 1 : 0, clientver: 11430 }),
       },
     });
+    const code = Number(json.error_code ?? json.errcode ?? 0);
+    if ([20010, 20018, 30768].includes(code)) throw new KugouError('酷狗账号认证未通过', 401, code);
+    const restricted = Array.isArray(json.fail_process) && json.fail_process.length > 0;
+    const invalid = (Number(json.status) === 0 || code !== 0 || !Array.isArray(json.url)) && !restricted;
+    const error = invalid ? new KugouError(text(json.error_msg ?? json.error) || '酷狗未返回有效的播放授权结果', 502, code || undefined) : undefined;
     const urls = Array.isArray(json.url) ? json.url.map(text).filter(url => /^https?:\/\//.test(url)) : [];
     // Concept's youth CDN can be HTTP-only (its HTTPS certificate is for another
     // hostname). Preserve the signed upstream URL; never disable TLS validation.
-    return { json, url: urls[0] ?? '' };
+    return { json, url: urls[0] ?? '', restricted, error };
   }
 
   async function resolveSource(key: string, quality: AudioQuality = 'exhigh', behavior: 'play' | 'download' = 'play'): Promise<SongSource> {
@@ -112,6 +118,7 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
     const resolvedAlbum = text(resource?.album_id) || albumId;
     const resolvedAudio = text(resource?.album_audio_id) || albumAudioId;
     let paid = false;
+    let trackerError: KugouError | undefined;
     let preview: SongSource | undefined;
     for (const candidate of candidates) {
       const good = goods.find(item => text(item.quality) === candidate.quality && Number(item.status) === 1)
@@ -123,8 +130,9 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
       const oggHash = candidate.quality === '128' || candidate.quality === '320'
         ? text(record(resource?.trans_param)[`ogg_${candidate.quality}_hash`]) : '';
       const resourceHash = oggHash || text(good?.hash) || hash;
-      const { json, url } = await streamUrl(resourceHash, resolvedAlbum, resolvedAudio, candidate.quality, false, behavior);
-      if (Array.isArray(json.fail_process) && json.fail_process.length) paid = true;
+      const { json, url, restricted, error } = await streamUrl(resourceHash, resolvedAlbum, resolvedAudio, candidate.quality, false, behavior);
+      paid ||= restricted;
+      trackerError ??= error;
       if (url) {
         const result = mapKugouStream(key, json, url);
         if (!result.trial) return resourceChorus && !result.chorus ? { ...result, chorus: resourceChorus } : result;
@@ -135,10 +143,18 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
     if (preview) return preview;
     // The authorized concept endpoint does not implement IsFreePart. Retrying
     // it as a clip repeats the same request and cannot grant playback rights.
+    if (resource && trackerError) throw trackerError;
+    if (resource && paid && behavior === 'play') throw new PlaybackUnavailableError('当前账号没有可用的歌曲播放权益', 403);
     if (resource) throw new KugouError(paid ? '当前账号没有可用的歌曲播放权益' : '酷狗未返回可用的播放地址', 403);
-    const { json, url } = await streamUrl(hash, albumId, albumAudioId, '128', true, behavior);
-    if (url) return mapKugouStream(key, json, url);
-    throw new KugouError(paid ? '该歌曲需要酷狗音乐会员或购买后播放' : '该歌曲暂无版权，无法播放', 404);
+    const { json, url, restricted, error } = await streamUrl(hash, albumId, albumAudioId, '128', true, behavior);
+    if (url) {
+      const clip = mapKugouStream(key, json, url);
+      return clip.trial ? clip : { ...clip, trial: { start: 0, end: num(json.timeLength) || 60 } };
+    }
+    if (error || trackerError) throw error ?? trackerError;
+    const message = paid || restricted ? '该歌曲需要酷狗音乐会员或购买后播放' : '该歌曲暂无版权，无法播放';
+    if (behavior === 'play') throw new PlaybackUnavailableError(message, 404);
+    throw new KugouError(message, 404);
   }
 
   const songSource = (key: string, quality?: AudioQuality) => resolveSource(key, quality, 'play');

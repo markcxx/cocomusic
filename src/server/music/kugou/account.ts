@@ -183,15 +183,15 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
       return { status: 'success', profile };
     },
 
-    async profile() {
+    async profile(verifiedOnly = false) {
       const value = session.get(SOURCE);
       if (!value?.cookie.token || !value.cookie.userid) return null;
       try {
         const profile = toProfile(value.cookie.userid, await myInfo(value.cookie.userid, value.cookie.token));
         // A response started under an old login must not replace a newer one.
         const latest = session.get(SOURCE);
-        if (latest?.cookie.token !== value.cookie.token || latest?.cookie.userid !== value.cookie.userid) return latest?.profile ?? null;
-        if (!profile) return value.profile ?? null;
+        if (latest?.cookie.token !== value.cookie.token || latest?.cookie.userid !== value.cookie.userid) return verifiedOnly ? null : latest?.profile ?? null;
+        if (!profile) return verifiedOnly ? null : value.profile ?? null;
         session.setProfile(SOURCE, profile, value.cookie);
         return profile;
       } catch (error) {
@@ -199,8 +199,8 @@ export function createKugouAccount(client: KugouClient = createKugouClient()) {
         // construction/device binding. Keep the original credentials to allow
         // diagnosis and recovery rather than forcing repeated QR authorizations.
         const latest = session.get(SOURCE);
-        if (latest?.cookie.token !== value.cookie.token || latest?.cookie.userid !== value.cookie.userid) return latest?.profile ?? null;
-        if (error instanceof KugouError) return value.profile ?? null;
+        if (latest?.cookie.token !== value.cookie.token || latest?.cookie.userid !== value.cookie.userid) return verifiedOnly ? null : latest?.profile ?? null;
+        if (error instanceof KugouError) return verifiedOnly ? null : value.profile ?? null;
         throw error;
       }
     },

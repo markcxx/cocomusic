@@ -52,18 +52,19 @@ export const neteaseAccount: AccountProvider = {
     return { status: 'success', profile };
   },
 
-  async profile() {
+  async profile(verifiedOnly = false) {
     const current = session.get('netease');
     if (!current?.cookie.MUSIC_U) return null;
     try {
       const profile = await fetchProfile();
+      if (session.get('netease')?.cookie.MUSIC_U !== current.cookie.MUSIC_U) return null;
       // An expired MUSIC_U still answers 200, just without a profile.
       if (!profile) { session.clear('netease', { expired: true }); return null; }
-      session.setProfile('netease', profile);
-      return profile;
+      return session.setProfile('netease', profile, current.cookie) ? profile : null;
     } catch (error) {
+      if (session.get('netease')?.cookie.MUSIC_U !== current.cookie.MUSIC_U) return null;
       // Offline: keep the cached profile instead of logging the user out.
-      if (error instanceof NeteaseError && error.status === 504) return current.profile ?? null;
+      if (error instanceof NeteaseError && error.status === 504) return verifiedOnly ? null : current.profile ?? null;
       if (error instanceof NeteaseError && error.status === 401) { session.clear('netease', { expired: true }); return null; }
       throw error;
     }
