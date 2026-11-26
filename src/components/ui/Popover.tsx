@@ -50,20 +50,27 @@ export function Popover({ open, anchor, onClose, label, width = 320, children }:
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div
-          ref={panel}
-          role="dialog"
-          aria-label={label}
-          className={styles.popover}
-          data-scroll-native
-          style={{ width, top: position?.top ?? -9999, left: position?.left ?? -9999 }}
-          initial={{ opacity: 0, y: -4, scale: 0.97 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
-          transition={{ type: 'spring', stiffness: 520, damping: 34 }}
-        >
-          {children}
-        </motion.div>
+        <>
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 155, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            onPointerDown={onClose}
+            aria-hidden
+          />
+          <motion.div
+            ref={panel}
+            role="dialog"
+            aria-label={label}
+            className={styles.popover}
+            data-scroll-native
+            style={{ width, top: position?.top ?? -9999, left: position?.left ?? -9999 }}
+            initial={{ opacity: 0, y: -4, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.12 } }}
+            transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+          >
+            {children}
+          </motion.div>
+        </>
       )}
     </AnimatePresence>,
     document.body,

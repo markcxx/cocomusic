@@ -73,37 +73,45 @@ export function Menu({ open, anchor, point, items, onClose, align = 'start', pla
   return createPortal(
     <AnimatePresence>
       {open && (
-        <motion.div
-          ref={panel}
-          role="menu"
-          className={styles.menu}
-          data-scroll-native
-          style={{ top: position?.top ?? -9999, left: position?.left ?? -9999, transformOrigin: position?.origin }}
-          initial={{ opacity: 0, scale: 0.94, y: position?.origin.endsWith('bottom') ? 4 : -4 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
-          transition={{ type: 'spring', stiffness: 520, damping: 34 }}
-        >
-          {items.map((item, index) => {
-            if (item.type === 'divider') return <div key={`d${index}`} className={styles.divider} role="separator" />;
-            if (item.type === 'section') return <div key={`s${index}`} className={styles.section}>{item.label}</div>;
-            return (
-              <button
-                key={`${item.label}${index}`}
-                type="button"
-                role={item.selected === undefined ? 'menuitem' : 'menuitemradio'}
-                aria-checked={item.selected}
-                className={cn(styles.item, item.danger && styles.danger, item.selected && styles.selected)}
-                disabled={item.disabled}
-                onClick={() => { onClose(); item.onSelect(); }}
-              >
-                {item.icon && <span className={styles.icon}>{item.icon}</span>}
-                <span className={styles.label}>{item.label}</span>
-                {item.hint && <span className={styles.hint}>{item.hint}</span>}
-              </button>
-            );
-          })}
-        </motion.div>
+        <>
+          {/* Covers TopBar's -webkit-app-region: drag so clicking the title bar dismisses the menu too. */}
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 155, WebkitAppRegion: 'no-drag' } as React.CSSProperties}
+            onPointerDown={onClose}
+            aria-hidden
+          />
+          <motion.div
+            ref={panel}
+            role="menu"
+            className={styles.menu}
+            data-scroll-native
+            style={{ top: position?.top ?? -9999, left: position?.left ?? -9999, transformOrigin: position?.origin }}
+            initial={{ opacity: 0, scale: 0.94, y: position?.origin.endsWith('bottom') ? 4 : -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.12 } }}
+            transition={{ type: 'spring', stiffness: 520, damping: 34 }}
+          >
+            {items.map((item, index) => {
+              if (item.type === 'divider') return <div key={`d${index}`} className={styles.divider} role="separator" />;
+              if (item.type === 'section') return <div key={`s${index}`} className={styles.section}>{item.label}</div>;
+              return (
+                <button
+                  key={`${item.label}${index}`}
+                  type="button"
+                  role={item.selected === undefined ? 'menuitem' : 'menuitemradio'}
+                  aria-checked={item.selected}
+                  className={cn(styles.item, item.danger && styles.danger, item.selected && styles.selected)}
+                  disabled={item.disabled}
+                  onClick={() => { onClose(); item.onSelect(); }}
+                >
+                  {item.icon && <span className={styles.icon}>{item.icon}</span>}
+                  <span className={styles.label}>{item.label}</span>
+                  {item.hint && <span className={styles.hint}>{item.hint}</span>}
+                </button>
+              );
+            })}
+          </motion.div>
+        </>
       )}
     </AnimatePresence>,
     portalContainer ?? document.body,
