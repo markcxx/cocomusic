@@ -1,12 +1,13 @@
 'use client';
 
 import { animate } from 'framer-motion';
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Spinner } from '@/components/ui';
 import type { LyricLine } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
+import { ActiveLyricText, InterludeSlot } from './LyricsWordLine';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
 import { useTrackLyrics } from './use-track-lyrics';
 import styles from './LyricsLines.module.css';
@@ -14,21 +15,47 @@ import styles from './LyricsLines.module.css';
 /** Lead so a line lights up as it starts, not a frame late (also hides decode latency). */
 const LEAD_SECONDS = 0.25;
 
-const LineList = memo(function LineList({ lines, active, synced, onSeek, translation }: { lines: LyricLine[]; active: number; synced: boolean; onSeek: (time: number) => void; translation: boolean }) {
+const LineList = memo(function LineList({ lines, active, cascadeKey, synced, onSeek, translation, offsetSeconds, centered }: {
+  lines: LyricLine[];
+  active: number;
+  cascadeKey: number;
+  synced: boolean;
+  onSeek: (time: number) => void;
+  translation: boolean;
+  offsetSeconds: number;
+  centered: boolean;
+}) {
   return (
     <>
-      {lines.map((line, index) => (
-        <p
-          key={`${line.time}:${index}`}
-          data-line={index}
-          className={cn(styles.line, synced && index === active && styles.lineActive, synced && index < active && styles.linePast)}
-          onClick={synced ? () => onSeek(line.time) : undefined}
-          title={synced ? `跳转到 ${formatTime(line.time)}` : undefined}
-        >
-          <span className={styles.lineText}>{line.text}</span>
-          {translation && line.translation && <span className={styles.lineTranslation}>{line.translation}</span>}
-        </p>
-      ))}
+      {synced && <InterludeSlot lines={lines} active={active} slotAfterIndex={-1} offsetSeconds={offsetSeconds} centered={centered} />}
+      {lines.map((line, index) => {
+        const isCurrent = synced && index === active;
+        const staggerIndex = index - active;
+        const shouldCascade = cascadeKey > 0 && staggerIndex >= 0 && staggerIndex <= 7;
+        const cascadeClass = shouldCascade ? (cascadeKey % 2 === 1 ? styles.cascadeA : styles.cascadeB) : undefined;
+        return (
+          <Fragment key={`${line.time}:${index}`}>
+            <p
+              data-line={index}
+              className={cn(
+                styles.line,
+                isCurrent && styles.lineActive,
+                synced && index < active && styles.linePast,
+                cascadeClass,
+              )}
+              style={shouldCascade ? { '--cascade-delay': `${staggerIndex * 26}ms` } as CSSProperties : undefined}
+              onClick={synced ? () => onSeek(line.time) : undefined}
+              title={synced ? `跳转到 ${formatTime(line.time)}` : undefined}
+            >
+              {isCurrent
+                ? <ActiveLyricText line={line} next={lines[index + 1]} offsetSeconds={offsetSeconds} />
+                : <span className={styles.lineText}>{line.text}</span>}
+              {translation && line.translation && <span className={styles.lineTranslation}>{line.translation}</span>}
+            </p>
+            {isCurrent && <InterludeSlot lines={lines} active={active} slotAfterIndex={index} offsetSeconds={offsetSeconds} centered={centered} />}
+          </Fragment>
+        );
+      })}
     </>
   );
 });
@@ -50,9 +77,18 @@ export function LyricsPanel({ centered = false }: { centered?: boolean }) {
   const prefs = useSettings();
   // 设置 › 歌词页 › 歌词偏移: positive shows lines earlier.
   const active = synced ? activeLineIndex(lines, position + offset + LEAD_SECONDS + prefs.lyricsOffset) : -1;
+  const isCentered = centered || prefs.lyricsAlign === 'center';
 
   const container = useRef<HTMLDivElement>(null);
   const [hovering, setHovering] = useState(false);
+  const [prevActiveState, setPrevActiveState] = useState({ songId, active, cascadeKey: 0 });
+  if (prevActiveState.songId !== songId) {
+    setPrevActiveState({ songId, active, cascadeKey: 0 });
+  } else if (prevActiveState.active !== active) {
+    const naturalStep = !hovering && !prefs.reduceMotion && active === prevActiveState.active + 1 && active >= 0;
+    setPrevActiveState({ songId, active, cascadeKey: naturalStep ? prevActiveState.cascadeKey + 1 : 0 });
+  }
+  const cascadeKey = prevActiveState.cascadeKey;
   const hoveringRef = useRef(false);
   const firstScroll = useRef(true);
   const glide = useRef<ReturnType<typeof animate> | null>(null);
@@ -123,7 +159,7 @@ export function LyricsPanel({ centered = false }: { centered?: boolean }) {
   return (
     <div
       ref={container}
-      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced, prefs.lyricsBlurInactive && styles.blurInactive, (centered || prefs.lyricsAlign === 'center') && styles.centered)}
+      className={cn(styles.lines, hovering && styles.browsing, !synced && styles.unsynced, prefs.lyricsBlurInactive && styles.blurInactive, isCentered && styles.centered)}
       style={{ '--lyric-size': `${prefs.lyricsFontSize}px` } as React.CSSProperties}
       // Own scroller: wheel browses lyrics, and chains to the page (comments) at either end.
       data-scroll-native
@@ -131,7 +167,16 @@ export function LyricsPanel({ centered = false }: { centered?: boolean }) {
       onPointerLeave={() => setHovering(false)}
       aria-label="歌词"
     >
-      <LineList lines={lines} active={active} synced={synced} onSeek={onSeek} translation={prefs.lyricsShowTranslation} />
+      <LineList
+        lines={lines}
+        active={active}
+        cascadeKey={cascadeKey}
+        synced={synced}
+        onSeek={onSeek}
+        translation={prefs.lyricsShowTranslation}
+        offsetSeconds={offset}
+        centered={isCentered}
+      />
     </div>
   );
 }

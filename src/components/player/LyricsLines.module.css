@@ -35,8 +35,120 @@
 
 .lineActive {
   color: #fff;
+  font-weight: 600;
   transform: scale(1.06);
-  text-shadow: 0 0 18px rgba(255, 255, 255, 0.25);
+  text-shadow: 0 0 18px rgba(255, 255, 255, 0.22);
+}
+
+/* Staggered spring wave when playback steps naturally to the next line.
+ * Alternating A/B animation names re-triggers the keyframe without remounting DOM nodes. */
+.cascadeA {
+  animation: cascadeStepA 480ms cubic-bezier(0.22, 1, 0.36, 1) var(--cascade-delay, 0ms) both;
+}
+
+.cascadeB {
+  animation: cascadeStepB 480ms cubic-bezier(0.22, 1, 0.36, 1) var(--cascade-delay, 0ms) both;
+}
+
+@keyframes cascadeStepA {
+  0% { translate: 0 12px; }
+  100% { translate: 0 0; }
+}
+
+@keyframes cascadeStepB {
+  0% { translate: 0 12px; }
+  100% { translate: 0 0; }
+}
+
+/* ───────── Word-by-word fluid fill & vocal lift ───────── */
+
+.wordLine {
+  text-shadow: none;
+}
+
+.word {
+  display: inline-block;
+  white-space: pre-wrap;
+  color: rgba(255, 255, 255, 0.42);
+  transition: color 140ms ease;
+  will-change: transform, filter;
+}
+
+.wordSung {
+  color: #fff;
+  text-shadow: 0 0 16px rgba(255, 255, 255, 0.24);
+}
+
+.wordSinging {
+  background-image: linear-gradient(
+    90deg,
+    #fff calc(var(--word-fill, 0%) - 14%),
+    rgba(255, 255, 255, 0.94) var(--word-fill, 0%),
+    rgba(255, 255, 255, 0.42) calc(var(--word-fill, 0%) + 16%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Smooth line-level sweep fallback when only LRC line timestamps exist. */
+.lineSweep {
+  text-shadow: none;
+  background-image: linear-gradient(
+    90deg,
+    #fff calc(var(--line-fill, 100%) - 10%),
+    rgba(255, 255, 255, 0.92) var(--line-fill, 100%),
+    rgba(255, 255, 255, 0.48) calc(var(--line-fill, 100%) + 12%)
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ───────── Instrumental interlude breathing dots ───────── */
+
+.interlude {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 var(--space-3_5);
+  overflow: hidden;
+}
+
+.interludeCentered {
+  justify-content: center;
+}
+
+.interludeDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.45);
+  transition: opacity 160ms linear, transform 180ms ease;
+}
+
+.interludeReady .interludeDot {
+  animation: interludePulse 760ms ease-in-out infinite alternate;
+}
+
+.interludeReady .interludeDot:nth-child(2) {
+  animation-delay: 110ms;
+}
+
+.interludeReady .interludeDot:nth-child(3) {
+  animation-delay: 220ms;
+}
+
+@keyframes interludePulse {
+  from {
+    filter: brightness(1);
+  }
+  to {
+    filter: brightness(1.35) drop-shadow(0 0 8px rgba(255, 255, 255, 0.75));
+  }
 }
 
 .lineTranslation {

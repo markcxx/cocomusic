@@ -158,3 +158,75 @@ export function lineProgress(line: LyricLine | undefined, next: LyricLine | unde
   const rest = Math.min(1.6, Math.max(0.35, gap * REST_SHARE), gap * 0.4);
   return Math.min(1, Math.max(0, (seconds - line.time) / (gap - rest)));
 }
+
+/** End time of a line's vocal delivery (seconds), estimated when word timing is absent. */
+export function lineEndTime(line: LyricLine, next?: LyricLine): number {
+  if (line.words?.length) return line.words[line.words.length - 1].end;
+  const span = next ? Math.min(4.2, Math.max(1.2, (next.time - line.time) * 0.48)) : 3.5;
+  return line.time + span;
+}
+
+/**
+ * Active instrumental interlude (intro before line 0, or a ≥5.5s bridge between
+ * lines). Returns `afterIndex` (-1 for intro) and `progress` (0 → 1 until the next vocal).
+ */
+export function interludeAt(lines: readonly LyricLine[], active: number, seconds: number): { afterIndex: number; progress: number } | null {
+  if (!lines.length) return null;
+  if (active < 0) {
+    const first = lines[0].time;
+    if (first >= 4.5 && seconds >= 0.25 && seconds < first - 0.15) {
+      return { afterIndex: -1, progress: Math.min(1, Math.max(0, (seconds - 0.25) / Math.max(0.5, first - 0.4))) };
+    }
+    return null;
+  }
+  const current = lines[active];
+  const next = lines[active + 1];
+  if (!current || !next) return null;
+  const vocalEnd = lineEndTime(current, next);
+  if (next.time - vocalEnd < 5.5) return null;
+  const start = vocalEnd + 0.35;
+  const end = next.time - 0.15;
+  if (seconds < start || seconds >= end) return null;
+  return { afterIndex: active, progress: Math.min(1, Math.max(0, (seconds - start) / Math.max(0.5, end - start))) };
+}
+
+const CREDIT_PATTERN = /^(作词|作曲|编曲|制作|混音|母带|录音|和声|吉他|贝斯|鼓|弦乐|监制|出品|词|曲|编)\s*[:：]/i;
+const normalizeHook = (text: string) => text.toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, '');
+
+/**
+ * Fallback chorus detector from synced lyrics: finds the strongest repeated
+ * multi-line hook (2+ lines) when the upstream platform provides no chorus window.
+ */
+export function detectLyricChorus(lines: readonly LyricLine[], totalDuration = 0): { start: number; end: number } | undefined {
+  if (lines.length < 8) return undefined;
+  const norms = lines.map(line => (CREDIT_PATTERN.test(line.text.trim()) ? '' : normalizeHook(line.text)));
+  let best: { score: number; start: number; end: number } | undefined;
+
+  for (let i = 0; i < lines.length - 3; i += 1) {
+    if (norms[i].length < 3) continue;
+    let repeats = 0;
+    let bestLen = 0;
+    for (let j = i + 2; j < lines.length - 1; j += 1) {
+      if (norms[j] !== norms[i]) continue;
+      let len = 1;
+      while (i + len < j && j + len < lines.length && norms[i + len].length >= 2 && norms[i + len] === norms[j + len]) {
+        len += 1;
+      }
+      if (len >= 2) {
+        repeats += 1;
+        if (len > bestLen) bestLen = len;
+      }
+    }
+    if (!repeats || bestLen < 2) continue;
+    const start = lines[i].time;
+    const rawEnd = lines[i + bestLen]?.time ?? lineEndTime(lines[i + bestLen - 1]);
+    const end = Math.min(totalDuration > 0 ? totalDuration : rawEnd, Math.max(start + 14, Math.min(start + 36, rawEnd)));
+    if (end - start < 10) continue;
+    const chars = norms.slice(i, i + bestLen).reduce((sum, s) => sum + s.length, 0);
+    // Prefer hooks after the intro (~12s+) with multiple lines and repeats.
+    const timingBonus = start >= 18 ? 6 : start >= 8 ? 2 : 0;
+    const score = repeats * 12 + bestLen * 5 + chars * 0.25 + timingBonus;
+    if (!best || score > best.score) best = { score, start: Math.round(start), end: Math.round(end) };
+  }
+  return best ? { start: best.start, end: best.end } : undefined;
+}

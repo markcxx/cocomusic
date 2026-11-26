@@ -23,9 +23,12 @@ export function LyricsSection() {
   const s = useSettings();
   const player = usePlayer();
   return (
-    <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor'))}>
+    <Section id="lyrics" icon={<Type size={17} strokeWidth={1.6} />} title="歌词页" description="全屏歌词的字号、翻译与背景" onReset={() => settings.reset(keysOf('lyricsFontSize', 'lyricsShowTranslation', 'lyricsKaraoke', 'lyricsBlurInactive', 'lyricsAlign', 'lyricsBackground', 'lyricsOffset', 'lyricsSpinCover', 'lyricsKeepAwake', 'lyricsLayout', 'lyricsVisualizer', 'lyricsVinylEffect', 'lyricsVisualizerColor', 'lyricsVisualizerCustomColor'))}>
       <Row icon={<Type size={16} strokeWidth={1.5} />} title="歌词字号">
         <Range value={s.lyricsFontSize} min={14} max={32} onChange={setter('lyricsFontSize')} label="歌词字号" format={value => `${value}px`} />
+      </Row>
+      <Row icon={<Sparkles size={16} strokeWidth={1.5} />} title="逐字流光与间奏动效" description="支持逐字歌词时展现音节流光、长音微浮，并在前奏和长间奏显示呼吸节拍点">
+        <Switch checked={s.lyricsKaraoke} onChange={setter('lyricsKaraoke')} label="逐字流光与间奏动效" />
       </Row>
       <Row icon={<Languages size={16} strokeWidth={1.5} />} title="显示翻译" description="有翻译的歌曲在原文下方显示译文">
         <Switch checked={s.lyricsShowTranslation} onChange={setter('lyricsShowTranslation')} label="显示翻译" />

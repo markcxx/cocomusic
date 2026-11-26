@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo } from 'react';
 import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
+import { ActiveLyricText, InterludeSlot } from './LyricsWordLine';
 import { usePlaybackPosition, usePlayer } from './player-store';
 import { useTrackLyrics } from './use-track-lyrics';
 import styles from './LyricsLines.module.css';
@@ -47,7 +48,12 @@ export function LyricsDuo() {
             exit={{ opacity: 0, y: -18 }}
             transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
           >
-            <p className={styles.duoCurrent}>{current?.text}</p>
+            <p className={styles.duoCurrent}>
+              {current && synced && active >= 0
+                ? <ActiveLyricText line={current} next={next} offsetSeconds={trial?.start ?? 0} />
+                : current?.text}
+            </p>
+            <InterludeSlot lines={lines} active={active} slotAfterIndex={active} offsetSeconds={trial?.start ?? 0} centered />
             {/* Second line: the translation when shown, else the next lyric. */}
             {translation ? <p className={styles.duoNext}>{translation}</p> : next ? <p className={styles.duoNext}>{next.text}</p> : null}
           </motion.div>
