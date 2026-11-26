@@ -13,6 +13,7 @@ import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { usePlayer } from './player-store';
 import { ProgressBar } from './ProgressBar';
+import { QualityBadge } from './QualityBadge';
 import { TrackInfo } from './TrackInfo';
 import { useSongStats } from './use-song-stats';
 import { useCoverTint } from './visualizer/cover-tint';
@@ -61,6 +62,7 @@ export function PlayerBar() {
       </div>
 
       <div className={styles.tools}>
+        <QualityBadge />
         <MvButton />
         <CommentButton count={stats.commentCount} onClick={openComments} disabled={!track.songId} active={viewingComments} />
         <AddToPlaylistButton />

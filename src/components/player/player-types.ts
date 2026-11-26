@@ -15,8 +15,12 @@ export type PlayerState = {
   duration: number;
   /** Set when only a preview clip plays; lyric time = position + trial.start. */
   trial?: SongSource['trial'];
+  /** Chorus / climax window in seconds (from upstream metadata when available). */
+  chorus?: SongSource['chorus'];
   /** Quality level of the loaded online stream (standard / exhigh / lossless…). */
   level?: string;
+  /** Bitrate of the loaded online stream in bps, when reported upstream. */
+  bitrate?: number;
   /** Re-fetch the current song's stream (e.g. after changing quality), keeping the position. */
   reloadStream: () => void;
   /** The playback element (read-only use, e.g. the audio visualizer). */

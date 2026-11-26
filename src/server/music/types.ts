@@ -172,6 +172,8 @@ export interface SongSource {
    * Seconds within the full song; the stream itself starts at `start`.
    */
   trial?: { start: number; end: number };
+  /** Chorus / climax highlight segment (seconds within the full song), when reported upstream. */
+  chorus?: { start: number; end: number };
 }
 
 export interface LyricLine {

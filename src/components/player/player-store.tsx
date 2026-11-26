@@ -65,7 +65,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [position, setPosition] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number>();
   const [trial, setTrial] = useState<SongSource['trial']>();
+  const [chorus, setChorus] = useState<SongSource['chorus']>();
   const [level, setLevel] = useState<string>();
+  const [bitrate, setBitrate] = useState<number>();
   const [volume, setVolumeState] = useState(DEFAULT_VOLUME);
   const lastVolume = useRef(DEFAULT_VOLUME);
   const [mode, setMode] = useState<PlayMode>('loop');
@@ -93,7 +95,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
+    setChorus(undefined);
     setLevel(undefined);
+    setBitrate(undefined);
     setStatus(isPlayable(next) ? 'loading' : 'idle');
     setPlaying(options.autoplay !== false && isPlayable(next));
     recorded.current = null;
@@ -114,6 +118,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
+    setChorus(undefined);
+    setLevel(undefined);
+    setBitrate(undefined);
   };
 
   const refillRadio = (advance: boolean) => {
@@ -258,7 +265,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     const quality = appSettings.get().quality;
     const applySource = (source: SongSource) => {
       setTrial(source.trial);
+      setChorus(source.chorus);
       setLevel(source.level);
+      setBitrate(source.bitrate);
       if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
       // Previews can mean the login lapsed: let the account store verify it now.
       if (source.trial) window.dispatchEvent(new Event(ACCOUNT_RECHECK_EVENT));
@@ -408,7 +417,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<PlayerState>(() => {
     const audio = () => audioRef.current;
     return {
-      track, queue, radioSource, playing, status, trial, level, volume, mode, lyricsOpen, queueOpen,
+      track, queue, radioSource, playing, status, trial, chorus, level, bitrate, volume, mode, lyricsOpen, queueOpen,
       audioElement: audio,
       setMvMedia: media => { mvMedia.current = media; if (media) media.volume = volume; },
       openMv: () => {
@@ -529,7 +538,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     // select/step/stop only read refs and setters; they are recreated each render but behave identically.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, radioSource, track, playing, status, trial, level, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
+  }, [queue, radioSource, track, playing, status, trial, chorus, level, bitrate, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
   usePlayerIntegrations(value, position, { audioRef, mvMedia, mvSession });
 

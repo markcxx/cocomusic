@@ -4,9 +4,12 @@ import { NeteaseError, neteaseEapi } from './client';
 import { comments } from './comments';
 import { num, record, rows, text, type Raw } from './mappers';
 
-/** song_url_v1. Uses the stored login when present so VIP members get full tracks. */
+/** song_url_v1 + chorus window. Uses the stored login when present so VIP members get full tracks. */
 export async function songSource(id: string, quality: AudioQuality = 'exhigh'): Promise<SongSource> {
-  const data = await neteaseEapi<Raw>('/api/song/enhance/player/url/v1', { ids: `[${id}]`, level: quality, encodeType: 'flac' });
+  const [data, chorusRaw] = await Promise.all([
+    neteaseEapi<Raw>('/api/song/enhance/player/url/v1', { ids: `[${id}]`, level: quality, encodeType: 'flac' }),
+    neteaseEapi<Raw>('/api/song/chorus', { id: `[${id}]` }, { auth: false }).catch(() => ({} as Raw)),
+  ]);
   const item = rows(data.data).find(row => text(row.id) === id) ?? rows(data.data)[0];
   const url = text(item?.url).replace(/^http:/, 'https:');
   if (!item || !url) {
@@ -17,12 +20,19 @@ export async function songSource(id: string, quality: AudioQuality = 'exhigh'): 
   const trialInfo = record(item.freeTrialInfo);
   const start = num(trialInfo.start);
   const end = num(trialInfo.end);
+  const chorusEntry = rows(chorusRaw.chorus)[0];
+  const cStart = num(chorusEntry?.startTime);
+  const cEnd = num(chorusEntry?.endTime);
+  const chorus = cStart !== undefined && cEnd !== undefined && cEnd > cStart
+    ? { start: Math.round(cStart / 1000), end: Math.round(cEnd / 1000) }
+    : undefined;
   return {
     id,
     url,
     bitrate: num(item.br),
     level: text(item.level) || undefined,
     trial: start !== undefined && end !== undefined && end > start ? { start, end } : undefined,
+    ...(chorus ? { chorus } : {}),
   };
 }
 

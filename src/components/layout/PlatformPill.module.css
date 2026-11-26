@@ -1,0 +1,44 @@
+/* Matches AccountButton's pill height, hover fill and caret rhythm. */
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1_5);
+  height: 36px;
+  padding: 0 var(--space-2_5) 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  font-size: var(--fs-md);
+  color: var(--text-strong);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 180ms ease;
+  -webkit-app-region: no-drag;
+}
+
+.trigger:hover,
+.trigger[data-open='true'] {
+  background: var(--hover);
+}
+
+.brandSvg {
+  display: block;
+  flex-shrink: 0;
+  border-radius: 5px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.label {
+  line-height: 1;
+}
+
+.caret {
+  display: inline-flex;
+  color: var(--text-muted);
+}
+
+@media (max-width: 1180px) {
+  .label {
+    display: none;
+  }
+}

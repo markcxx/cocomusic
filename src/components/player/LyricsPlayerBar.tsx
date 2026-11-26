@@ -7,18 +7,15 @@ import { useDesktopLyrics } from '@/components/desktop-lyrics/use-desktop-lyrics
 import { downloads } from '@/components/downloads/download-store';
 import { useNavigation } from '@/components/layout/navigation';
 import { IconButton, Menu, Slider, toast, type MenuItem } from '@/components/ui';
-import { settings, useSettings } from '@/lib/settings';
 import { shareUrl } from '@/lib/share-links';
-import type { AudioQuality, CatalogTrack } from '@/server/music/types';
+import type { CatalogTrack } from '@/server/music/types';
 import { CommentButton, PlayModeButton, PlayPauseButton, SkipButton, VolumeControl } from './controls';
 import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
+import { QualityBadge } from './QualityBadge';
 import { useSongStats } from './use-song-stats';
 import styles from './LyricsPlayerBar.module.css';
-
-const QUALITY_LABELS: Record<AudioQuality, string> = { standard: '标准', higher: '较高', exhigh: '极高', lossless: '无损', hires: 'Hi-Res' };
-const QUALITY_ORDER: AudioQuality[] = ['standard', 'higher', 'exhigh', 'lossless', 'hires'];
 
 /** Thin full-width progress line along the bar's top edge; the time shows in the thumb tooltip. */
 function Progress() {
@@ -36,37 +33,6 @@ function useCatalogTrack(): CatalogTrack | null {
   const { track } = usePlayer();
   if (!track.songId) return null;
   return { id: track.songId, source: track.source ?? 'netease', title: track.title, artist: track.artist, album: track.album, albumId: track.albumId, cover: track.cover, duration: track.duration };
-}
-
-/** 极高 / 无损 badge: shows the stream actually playing; click to change the preferred quality. */
-function QualityButton() {
-  const player = usePlayer();
-  const preferred = useSettings().quality;
-  const anchor = useRef<HTMLSpanElement>(null);
-  const [open, setOpen] = useState(false);
-  const playing = (player.level && player.level in QUALITY_LABELS ? player.level : preferred) as AudioQuality;
-  const items: MenuItem[] = [
-    { type: 'section', label: '在线播放音质' },
-    ...QUALITY_ORDER.map((quality): MenuItem => ({
-      label: QUALITY_LABELS[quality],
-      selected: quality === preferred,
-      onSelect: () => {
-        settings.set('quality', quality);
-        player.reloadStream();
-        toast.info(`已切换为${QUALITY_LABELS[quality]}音质，无权限时会自动降级`);
-      },
-    })),
-  ];
-  return (
-    <>
-      <span ref={anchor} style={{ display: 'inline-flex' }}>
-        <IconButton label={`音质：${QUALITY_LABELS[playing]}`} tone="muted" onClick={() => setOpen(value => !value)} active={open} disabled={!player.track.songId}>
-          <span className={styles.qualityBadge}>{player.trial ? '试听' : QUALITY_LABELS[playing]}</span>
-        </IconButton>
-      </span>
-      <Menu open={open} anchor={anchor} items={items} onClose={() => setOpen(false)} align="end" />
-    </>
-  );
 }
 
 function MoreButton() {
@@ -135,8 +101,8 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
         </div>
 
         <div className={styles.tools}>
+          <QualityBadge />
           <MvButton />
-          <QualityButton />
           <AddToPlaylistButton />
           <IconButton label={desktopLyrics.visible ? '关闭桌面歌词' : '打开桌面歌词'} tone="muted" onClick={desktopLyrics.toggle} disabled={!desktopLyrics.available} active={desktopLyrics.visible} pressed={desktopLyrics.visible}>
             <span className={styles.ci}>词</span>

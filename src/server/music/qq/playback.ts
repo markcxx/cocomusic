@@ -59,21 +59,30 @@ async function resolveSource(key: string, quality: AudioQuality): Promise<SongSo
   const track = await trackInfo(mid);
   const file = record(track.file);
   const mediaMid = text(file.media_mid) || mid;
+  const durationSec = num(track.interval) ?? 0;
+  const tryBegin = num(file.try_begin);
+  const tryEnd = num(file.try_end);
+  // QQ marks the official chorus/highlight clip on `file.try_begin`/`try_end` (ms) for full tracks too.
+  const chorus = tryBegin !== undefined && tryEnd && tryEnd > tryBegin
+    ? { start: Math.round(tryBegin / 1000), end: Math.round(tryEnd / 1000) }
+    : undefined;
   const start = Math.max(0, ORDER.indexOf(quality === 'hires' ? 'lossless' : quality));
   const candidates = FILES.filter(item => ORDER.indexOf(item.level) >= start && Number(file[item.size]) > 0);
   for (const candidate of candidates) {
     const url = await vkey(mid, `${candidate.prefix}${mediaMid}.${candidate.ext}`).catch(() => '');
-    if (url) return { id: key, url, level: candidate.level };
+    if (url) {
+      const bytes = Number(file[candidate.size]) || 0;
+      const bitrate = bytes > 0 && durationSec > 0 ? Math.round((bytes * 8) / durationSec) : undefined;
+      return { id: key, url, level: candidate.level, ...(bitrate ? { bitrate } : {}), ...(chorus ? { chorus } : {}) };
+    }
   }
   // No full stream for this account: the preview clip (RS02) when QQ offers one.
-  const tryBegin = num(file.try_begin);
-  const tryEnd = num(file.try_end);
   if (Number(file.size_try) > 0 || (tryEnd && tryBegin !== undefined && tryEnd > tryBegin)) {
     const url = await vkey(mid, `RS02${mediaMid}.mp3`).catch(() => '');
     if (url) {
       return {
         id: key, url, level: 'standard',
-        trial: tryBegin !== undefined && tryEnd ? { start: Math.round(tryBegin / 1000), end: Math.round(tryEnd / 1000) } : { start: 0, end: 30 },
+        trial: chorus ?? { start: 0, end: 30 },
       };
     }
   }

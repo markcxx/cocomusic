@@ -6,6 +6,7 @@ import { SearchBox } from '@/components/search/SearchBox';
 import { updateDialog, useUpdateState } from '@/components/updates/update-store';
 import { IconButton } from '@/components/ui';
 import { useNavigation } from './navigation';
+import { PlatformPill } from './PlatformPill';
 import { useFluentStyle } from '@/components/settings/ApplyAppearance';
 import { SkinDialog } from '@/components/skin/SkinDialog';
 import { WindowControls } from './WindowControls';
@@ -33,6 +34,7 @@ export function TopBar() {
 
       <div className={styles.actions}>
         <AccountButton />
+        <PlatformPill />
         <span className={styles.divider} aria-hidden />
         <SkinDialog />
         <IconButton label="迷你模式" iconHover={{ scale: 0.9, y: 1 }} onClick={() => window.coco?.window.toggleMini()}>

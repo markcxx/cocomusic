@@ -19,7 +19,16 @@ export function mapKugouStream(id: string, json: Raw, url: string): SongSource {
   const offset = record(json.hash_offset);
   const start = num(offset.start_ms) ?? 0;
   const end = num(offset.end_ms) ?? 0;
-  return { id, url, level, bitrate, trial: Number(offset.file_type) === 0 && end > start ? { start: start / 1000, end: end / 1000 } : undefined };
+  const isTrial = Number(offset.file_type) === 0 && end > start;
+  const clip = end > start ? { start: Math.round(start / 1000), end: Math.round(end / 1000) } : undefined;
+  return {
+    id,
+    url,
+    level,
+    bitrate,
+    trial: isTrial ? { start: start / 1000, end: end / 1000 } : undefined,
+    ...(clip && !isTrial ? { chorus: clip } : {}),
+  };
 }
 
 export function createKugouPlayback(client: KugouClient = createKugouClient()) {
@@ -95,6 +104,10 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
     const candidates = QUALITIES.filter(item => ORDER.indexOf(item.level) >= start);
     const resource = SOURCE === 'kugou-lite' && device().token && behavior === 'play'
       ? await conceptResources(hash, albumId, behavior) : undefined;
+    const transOffset = record(record(resource?.trans_param).hash_offset);
+    const transStart = num(transOffset.start_ms) ?? 0;
+    const transEnd = num(transOffset.end_ms) ?? 0;
+    const resourceChorus = transEnd > transStart ? { start: Math.round(transStart / 1000), end: Math.round(transEnd / 1000) } : undefined;
     const goods = rows(resource?.relate_goods);
     const resolvedAlbum = text(resource?.album_id) || albumId;
     const resolvedAudio = text(resource?.album_audio_id) || albumAudioId;
@@ -114,7 +127,7 @@ export function createKugouPlayback(client: KugouClient = createKugouClient()) {
       if (Array.isArray(json.fail_process) && json.fail_process.length) paid = true;
       if (url) {
         const result = mapKugouStream(key, json, url);
-        if (!result.trial) return result;
+        if (!result.trial) return resourceChorus && !result.chorus ? { ...result, chorus: resourceChorus } : result;
         preview ??= result;
       }
     }

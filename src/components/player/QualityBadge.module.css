@@ -1,0 +1,15 @@
+.wrap {
+  display: inline-flex;
+}
+
+/* Outlined glyph sized to match .mvGlyph in controls.module.css across all themes. */
+.glyph {
+  padding: 1px 4px;
+  border: 1.4px solid currentColor;
+  border-radius: var(--radius-xs);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  line-height: 11px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
