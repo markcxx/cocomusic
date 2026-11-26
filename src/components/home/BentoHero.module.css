@@ -1,135 +1,259 @@
 /*
- * 6-column shelf aligned 1:1 with .playlistGrid below it.
- * Subgrid keeps every cover box, title and subtitle on the exact same baseline.
+ * Non-Rectangular, Frame-Breaking Editorial Bento Collage:
+ * Seated flat and calm on the sheet (zero floating card shadows or 3D box tilt),
+ * using true alpha CSS mask cutouts, out-of-bounds records, semicircular stadium
+ * contours, and organic S-curve image blending.
  */
-.shelf {
+.bento {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: var(--space-1) var(--space-6);
-  padding: 2px 0;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-rows: 112px 112px;
+  gap: var(--space-3_5) var(--space-4);
 }
 
-@media (max-width: 1300px) {
-  .shelf {
-    column-gap: var(--space-4);
-  }
+.deckSlot {
+  grid-column: span 6;
+  grid-row: span 2;
 }
 
-.card,
-.unit {
-  min-width: 0;
-  display: grid;
-  grid-template-rows: subgrid;
-  grid-row: span 3;
-  align-items: start;
-}
-
-.span2 {
-  grid-column: span 2;
-}
-
-.span3 {
+.tileSlot {
   grid-column: span 3;
 }
 
-/* Remove PlaylistCover's own bottom margin so subgrid gap controls all rows uniformly. */
-.card :global([class*='coverFrame']) {
-  margin-bottom: var(--space-1_5);
+.skeleton {
+  height: 100%;
+  border-radius: var(--radius-3xl);
 }
 
-/* ───────── 1. Spinning Vinyl Album Player Card (span 2) ───────── */
-
-.radioHero {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3_5);
-  align-self: stretch;
-  min-height: 120px;
-  margin-bottom: var(--space-1_5);
-  padding: 5% 6% 5% 7%;
-  overflow: hidden;
-  border: 0;
-  border-radius: var(--radius-cover);
-  background:
-    radial-gradient(90% 120% at 92% 50%, rgba(var(--radio-tint, var(--accent-rgb)), 0.22), transparent 68%),
-    linear-gradient(120deg, var(--accent-tint), var(--card-hover) 62%, var(--accent-soft));
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 6px 18px rgba(var(--ink-rgb), 0.07);
-  color: var(--text-strong);
-  text-align: left;
-  cursor: pointer;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+@property --cutout-size {
+  syntax: '<length>';
+  inherits: true;
+  initial-value: 0px;
 }
 
-.radioHero:hover:not(:disabled) {
-  transform: translateY(-3px);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 14px 28px rgba(var(--ink-rgb), 0.13);
+/*
+ * Animated S-curve inverted-fillet cutout at bottom-right (0px → 58px on hover):
+ * resting state is 100% intact; hovering smoothly carves open a negative-space cradle
+ * as the circular Play button springs out inside it.
+ */
+.posterSurface,
+.stadiumSurface,
+.waveSurface,
+.crateTray {
+  mask-image:
+    linear-gradient(#000, #000),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='58' height='58' viewBox='0 0 58 58'%3E%3Cpath fill='black' d='M58 0 Q58 16 42 16 A26 26 0 0 0 16 42 Q16 58 0 58 L58 58 Z'/%3E%3C/svg%3E");
+  mask-size: 100% 100%, var(--cutout-size) var(--cutout-size);
+  mask-position: 0 0, bottom right;
+  mask-repeat: no-repeat;
+  mask-composite: exclude;
+  transition: mask-size 280ms cubic-bezier(0.22, 1, 0.36, 1), background-color 180ms ease, padding-right 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.radioHero:disabled {
-  cursor: default;
-}
-
-.radioInfo {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.radioKicker {
+.cutoutPlay {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  color: var(--accent-strong);
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
+  opacity: 0;
+  scale: 0.25;
+  transform-origin: bottom right;
+  pointer-events: none;
+  cursor: pointer;
+  transition:
+    opacity 190ms ease,
+    scale 300ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 150ms ease;
 }
 
-.radioSong {
-  overflow: hidden;
-  font-size: clamp(18px, 1.45vw, 22px);
-  font-weight: 650;
-  line-height: 1.25;
-  color: var(--text-strong);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.cutoutPlay:hover {
+  filter: brightness(1.08);
 }
 
-.radioArtist {
-  overflow: hidden;
-  font-size: var(--fs-sm);
-  color: var(--text-secondary);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.posterWrap:not([data-no-play]):hover,
+.posterWrap:not([data-no-play]):focus-within,
+.stadiumWrap:not([data-no-play]):hover,
+.stadiumWrap:not([data-no-play]):focus-within,
+.waveWrap:not([data-no-play]):hover,
+.waveWrap:not([data-no-play]):focus-within,
+.crateWrap:not([data-no-play]):hover,
+.crateWrap:not([data-no-play]):focus-within {
+  --cutout-size: 58px;
 }
 
-.turntable {
+.posterWrap:hover .cutoutPlay,
+.posterWrap:focus-within .cutoutPlay,
+.stadiumWrap:hover .cutoutPlay,
+.stadiumWrap:focus-within .cutoutPlay,
+.waveWrap:hover .cutoutPlay,
+.waveWrap:focus-within .cutoutPlay,
+.crateWrap:hover .cutoutPlay,
+.crateWrap:focus-within .cutoutPlay {
+  opacity: 1;
+  scale: 1;
+  pointer-events: auto;
+}
+
+/* ───────── 1. Left Deck: Out-of-Bounds Turntable + Top-Right Concave Cutout ───────── */
+
+.deckWrap {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-4) 0;
+}
+
+/*
+ * Indented left (`left: 34px`) so the album sleeve & vinyl break OUT beyond the card edge!
+ * Top-right corner has a smooth S-curve inverted-fillet pill notch (128×56px) cradling `.notchAction`.
+ */
+.deckSurface {
+  position: absolute;
+  inset: 0 0 0 34px;
+  z-index: 0;
+  border-radius: var(--radius-4xl);
+  background:
+    radial-gradient(68% 115% at 12% 52%, rgba(var(--deck-tint, var(--accent-rgb)), 0.22), transparent 72%),
+    linear-gradient(125deg, var(--accent-tint), var(--card-hover) 65%);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  mask-image:
+    linear-gradient(#000, #000),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='56' viewBox='0 0 128 56'%3E%3Cpath fill='black' d='M0 0 Q18 0 18 18 A19 19 0 0 0 37 37 L110 37 Q128 37 128 56 L128 0 Z'/%3E%3C/svg%3E");
+  mask-size: 100% 100%, 128px 56px;
+  mask-position: 0 0, top right;
+  mask-repeat: no-repeat;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* Pill button sitting inside the carved top-right negative-space notch */
+.notchAction {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 98px;
+  height: 30px;
+  padding: 0 var(--space-2_5);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--accent-rgb), 0.16);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  color: var(--accent-strong);
+  cursor: pointer;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.notchAction:hover:not(:disabled) {
+  background: rgba(var(--accent-rgb), 0.26);
+}
+
+.notchActionPlaying {
+  background: var(--accent-strong);
+  color: var(--text-on-accent);
+}
+
+.notchActionPlaying:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.turntableStage {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-shrink: 0;
   align-items: center;
+  width: 198px;
+  height: 156px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.turntableStage:disabled {
+  cursor: default;
+}
+
+.albumJacket {
+  position: relative;
+  z-index: 3;
+  width: 126px;
+  height: 126px;
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+  box-shadow: 6px 8px 20px rgba(18, 14, 38, 0.22);
+  transform: rotate(-3deg);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.turntableStage:hover:not(:disabled) .albumJacket {
+  transform: rotate(-1deg) scale(1.02);
+}
+
+.jacketCover {
+  width: 100%;
+  height: 100%;
+}
+
+.jacketSpine {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 5px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.45), rgba(0, 0, 0, 0.12) 75%, transparent);
+  pointer-events: none;
+}
+
+.platterWrap {
+  position: absolute;
+  left: 58px;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  align-items: center;
   justify-content: center;
-  width: 42%;
-  max-width: 118px;
-  aspect-ratio: 1;
+  width: 124px;
+  height: 124px;
+  transform: translateY(-50%);
+  transition: transform 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.turntableStage:hover:not(:disabled) .platterWrap,
+.platterActive {
+  transform: translate(9px, -50%);
 }
 
 .vinylDisc {
-  display: block;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 13%;
+  padding: 32px;
   border-radius: 50%;
   background:
-    radial-gradient(circle, transparent 52%, rgba(255, 255, 255, 0.08) 53%, transparent 54%, transparent 62%, rgba(255, 255, 255, 0.06) 63%, transparent 64%),
-    radial-gradient(circle at 30% 25%, #3d3752, #14121e 72%);
-  box-shadow: 0 8px 22px rgba(20, 16, 40, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
-  animation: vinylTurn 14s linear infinite;
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.045) 0 1px, transparent 1px 3.5px),
+    radial-gradient(circle at 30% 25%, #2f2b3f, #110f18 72%);
+  box-shadow: 0 6px 18px rgba(12, 10, 26, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  animation: vinylSpin 12s linear infinite;
   animation-play-state: paused;
 }
 
@@ -137,152 +261,158 @@
   animation-play-state: running;
 }
 
-.vinylArt {
+.vinylSheen {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 35deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.15) 24deg,
+    transparent 52deg,
+    transparent 180deg,
+    rgba(255, 255, 255, 0.13) 204deg,
+    transparent 232deg
+  );
+  pointer-events: none;
+}
+
+.vinylLabel {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
+  box-shadow: 0 0 0 3px #181522;
+}
+
+.spindleDot {
+  position: absolute;
+  z-index: 2;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e6e4f0;
 }
 
 .vinylFab {
   position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 4;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   color: #1f1b34;
-  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 150ms ease;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.radioHero:hover .vinylFab {
-  background: #fff;
+.turntableStage:hover:not(:disabled) .vinylFab {
   transform: scale(1.1);
 }
 
-/* ───────── 2. Prominent Cover Badges (Daily 30 / Favorites / New Songs) ───────── */
-
-.coverScrim {
+.tonearm {
   position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(16, 14, 28, 0.08) 0%, transparent 38%, rgba(14, 12, 28, 0.72) 100%);
+  top: 4px;
+  right: 0;
+  z-index: 5;
+  width: 42px;
+  height: 110px;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.22));
+  transform-origin: 31px 15px;
+  transform: rotate(-14deg);
+  transition: transform 520ms cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
 }
 
-/* Crisp calendar date stamp in the top-left of Daily 30 / 每日推荐 covers. */
-.dayCorner {
-  position: absolute;
-  top: 9px;
-  left: 9px;
+.tonearmPlaying {
+  transform: rotate(8deg);
+}
+
+.tonearmBase {
+  fill: rgba(140, 136, 168, 0.35);
+  stroke: rgba(255, 255, 255, 0.55);
+  stroke-width: 1.2;
+}
+
+.tonearmPivot {
+  fill: #e8e6f2;
+}
+
+.tonearmRod {
+  fill: none;
+  stroke: #dcd9ea;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tonearmHead {
+  fill: #2c2840;
+  stroke: rgba(255, 255, 255, 0.45);
+  stroke-width: 1;
+}
+
+.deckBody {
+  position: relative;
   z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 32px;
-  height: 26px;
-  padding: 0 7px;
-  border-radius: var(--radius-md);
-  background: rgba(18, 16, 34, 0.62);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26);
-  font-size: var(--fs-md);
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-  color: #fff;
-  backdrop-filter: blur(10px);
-  pointer-events: none;
-}
-
-/* Bold, high-contrast bottom badge that stays legible even over white/pastel covers. */
-.coverBadge {
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 8px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 5px 10px;
-  border-radius: var(--radius-md);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 4px 14px rgba(0, 0, 0, 0.28);
-  color: #fff;
-  backdrop-filter: blur(12px) saturate(1.3);
-  pointer-events: none;
-}
-
-.coverBadge em {
-  font-size: 11px;
-  font-style: normal;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  opacity: 0.92;
-  white-space: nowrap;
-}
-
-.coverBadge strong {
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.tone-daily {
-  background: linear-gradient(135deg, rgba(14, 132, 198, 0.92), rgba(37, 99, 235, 0.88));
-}
-
-.tone-favorites {
-  background: linear-gradient(135deg, rgba(194, 98, 18, 0.92), rgba(220, 126, 32, 0.88));
-}
-
-.tone-new {
-  background: linear-gradient(135deg, rgba(126, 58, 184, 0.92), rgba(155, 81, 224, 0.88));
-}
-
-.tone-radar {
-  background: linear-gradient(135deg, rgba(var(--accent-strong-rgb), 0.88), rgba(42, 38, 68, 0.84));
-}
-
-/* ───────── 3. Quick Tracks Card (calm ChartCard-style surface) ───────── */
-
-.tracksBox {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  margin-bottom: var(--space-1_5);
-  padding: var(--space-2_5) var(--space-3);
-  border-radius: var(--radius-cover);
-  background: var(--card);
-  box-shadow: inset 0 0 0 1px var(--glass-edge);
-  transition: background-color 200ms ease, box-shadow 200ms ease;
-}
-
-.tracksBox:hover {
-  background: var(--card-hover);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 8px 22px rgba(var(--ink-rgb), 0.07);
-}
-
-.trackRows {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  justify-content: space-between;
   min-width: 0;
+  height: 100%;
+  padding: var(--space-0_5) 0;
+}
+
+.deckHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* Leave room on the right for the top-right concave notch pill */
+  padding-right: 102px;
+  min-width: 0;
+}
+
+.deckGreeting {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.deckHeading h3 {
   margin: 0;
+  overflow: hidden;
+  font-size: var(--fs-heading);
+  font-weight: 650;
+  line-height: 1.2;
+  color: var(--text-strong);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.deckTracks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  margin: auto 0 0;
   padding: 0;
   list-style: none;
 }
 
-.trackRow {
+.deckRow {
   display: grid;
-  grid-template-columns: 20px 34px minmax(0, 1fr);
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-2_5);
+  gap: var(--space-2);
   width: 100%;
-  padding: 4px var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
@@ -292,12 +422,12 @@
   transition: background-color 150ms ease, transform 180ms ease;
 }
 
-.trackRow:hover {
-  background: rgba(var(--accent-rgb), 0.12);
+.deckRow:hover {
+  background: rgba(var(--accent-rgb), 0.13);
   transform: translateX(2px);
 }
 
-.trackRank {
+.deckRank {
   display: inline-flex;
   align-items: center;
   font-size: var(--fs-xs);
@@ -305,198 +435,461 @@
   color: var(--text-muted);
 }
 
-.trackRowCurrent .trackRank,
-.trackRowCurrent .trackNames strong {
+.deckRowCurrent .deckRank,
+.deckRowCurrent .deckSong strong {
   color: var(--accent-strong);
 }
 
-.trackNames {
+.deckSong {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.trackNames strong {
-  font-weight: 500;
+.deckSong strong {
+  font-weight: 550;
   color: var(--text-strong);
 }
 
-.trackNames span {
-  font-size: var(--fs-sm);
+.deckSong span {
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
 }
 
-/* ───────── 4. Recent 3-Cover Stack Square Card (1 col) ───────── */
+/* ───────── 2. Form A (`poster`): Full-Bleed Die-Cut Cover Poster (Daily 30) ───────── */
 
-.stackSurface {
+.posterWrap,
+.stadiumWrap,
+.waveWrap,
+.crateWrap {
+  --cutout-size: 0px;
   position: relative;
-  aspect-ratio: 1;
-  width: 100%;
-  margin-bottom: var(--space-1_5);
-  border-radius: var(--radius-cover);
+  min-width: 0;
+  transition: --cutout-size 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.stackOpen {
+/* Gently tuck text clear of the corner pocket as the cutout blooms open on hover */
+.posterWrap:not([data-no-play]):hover .posterSurface {
+  padding-right: 44px;
+}
+
+.stadiumWrap:not([data-no-play]):hover .stadiumSurface {
+  padding-right: 42px;
+}
+
+.crateWrap:not([data-no-play]):hover .crateHit {
+  padding-right: 40px;
+}
+
+.posterSurface {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-3) var(--space-3_5);
+  overflow: hidden;
+  border: 0;
+  /* Asymmetric organic leaf-poster corners: sharp-ish top-right, sweeping 28px diagonal corners */
+  border-radius: 24px 10px 24px 24px;
+  background: var(--card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.posterArt {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+  transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.posterWrap:hover .posterArt {
+  transform: scale(1.06);
+}
+
+.posterVeil {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(105deg, rgba(16, 14, 30, 0.84) 0%, rgba(16, 14, 30, 0.56) 56%, rgba(16, 14, 30, 0.18) 100%);
+  pointer-events: none;
+}
+
+.posterContent {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  min-width: 0;
+  color: #fff;
+}
+
+.posterBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.posterDay {
+  font-size: var(--fs-xs);
+  font-style: normal;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.posterTitle,
+.posterSub {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.posterTitle {
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.posterSub {
+  font-size: var(--fs-xs);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* ───────── 3. Form B (`stadium`): Semicircular Vinyl-Contour Capsule ───────── */
+
+.stadiumSurface {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  height: 100%;
+  padding: 8px var(--space-3_5) 8px 8px;
+  /* Left contour hugs the round record (`999px`); right side tapers cleanly */
+  border-radius: 999px 22px 22px 999px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  transition: background-color 180ms ease;
+}
+
+.stadiumWrap:hover .stadiumSurface {
+  background: var(--card-hover);
+}
+
+.stadiumDiscHead {
+  position: relative;
+  flex-shrink: 0;
+  width: 96px;
+  height: 96px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+
+.stadiumPeekRim {
+  position: absolute;
+  inset: 6px -6px 6px 14px;
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 3px),
+    radial-gradient(circle at 30% 25%, #36314a, #14121e 75%);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stadiumWrap:hover .stadiumPeekRim {
+  transform: translateX(7px) rotate(24deg);
+}
+
+.stadiumRecord {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 30% 25%, #353048, #161422 72%);
+}
+
+.stadiumCover {
+  width: 100%;
+  height: 100%;
+}
+
+/* ───────── 4. Form C (`wave`): Organic Curved Image-Melt Silhouette ───────── */
+
+.waveSurface {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: center;
   width: 100%;
   height: 100%;
-  padding: 12%;
+  padding: var(--space-3) 44% var(--space-3) var(--space-3_5);
   overflow: hidden;
   border: 0;
-  border-radius: var(--radius-cover);
-  background: linear-gradient(145deg, var(--accent-tint), var(--card-hover));
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 6px 18px rgba(var(--ink-rgb), 0.08);
+  border-radius: 12px 26px 22px 26px;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  text-align: left;
   cursor: pointer;
-  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+  transition: background-color 180ms ease;
 }
 
-.stackSurface:hover .stackOpen {
-  transform: translateY(-3px);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 14px 28px rgba(var(--ink-rgb), 0.15);
+.waveWrap:hover .waveSurface {
+  background: var(--card-hover);
 }
 
-.stackArt {
-  position: relative;
+/* Right 48% is full-bleed cover art clipped into a sweeping concave elliptic arc */
+.waveArtSlice {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 50%;
+  overflow: hidden;
+  clip-path: ellipse(92% 96% at 96% 50%);
+  pointer-events: none;
+}
+
+.waveCover {
   width: 100%;
   height: 100%;
-  margin-bottom: 10%;
+  border-radius: 0;
+  transition: transform 380ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.stackLayer {
+.waveWrap:hover .waveCover {
+  transform: scale(1.07);
+}
+
+.waveCopy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+}
+
+/* ───────── 5. Form D (`crate`): Out-of-Bounds Record Crate ───────── */
+
+.crateWrap {
+  display: flex;
+  align-items: flex-end;
+}
+
+/* Low-slung tray starting 16px down so the fanned covers break upward out of the card! */
+.crateTray {
   position: absolute;
-  top: 50%;
+  inset: 16px 0 0 0;
+  border-radius: 20px 20px 22px 20px;
+  background: linear-gradient(125deg, var(--accent-tint), var(--card) 68%);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  transition: background-color 180ms ease;
+  pointer-events: none;
+}
+
+.crateHit {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2_5);
+  width: 100%;
+  height: 100%;
+  padding: 0 var(--space-3) var(--space-3) var(--space-3);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: padding-right 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.crateFan {
+  position: relative;
+  flex-shrink: 0;
+  width: 88px;
+  height: 100px;
+}
+
+.crateSleeve {
+  position: absolute;
+  bottom: 2px;
+  width: 66px;
+  height: 66px;
   overflow: hidden;
   border-radius: var(--radius-md);
-  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+  box-shadow: 0 4px 12px rgba(16, 12, 34, 0.2);
+  transition: transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.stackFirst {
-  left: 4%;
+.crateFirst {
+  left: 0;
   z-index: 3;
-  width: 72%;
-  aspect-ratio: 1;
-  transform: translateY(-50%);
-  box-shadow: 5px 0 14px rgba(0, 0, 0, 0.22);
+  transform: rotate(-6deg) translateY(-10px);
 }
 
-.stackSecond {
-  left: 19%;
+.crateSecond {
+  left: 13px;
   z-index: 2;
-  width: 63%;
-  aspect-ratio: 1;
-  transform: translateY(-50%);
-  filter: brightness(0.92);
+  transform: rotate(4deg) translateY(-16px);
+  filter: brightness(0.93);
 }
 
-.stackThird {
-  left: 32%;
+.crateThird {
+  left: 25px;
   z-index: 1;
-  width: 54%;
-  aspect-ratio: 1;
-  transform: translateY(-50%);
-  filter: brightness(0.84);
+  transform: rotate(13deg) translateY(-11px);
+  filter: brightness(0.85);
 }
 
-.stackSurface:hover .stackSecond {
-  transform: translate(6px, -50%) rotate(4deg);
+.crateWrap:hover .crateFirst {
+  transform: rotate(-10deg) translate(-2px, -14px);
 }
 
-.stackSurface:hover .stackThird {
-  transform: translate(12px, -50%) rotate(8deg);
+.crateWrap:hover .crateSecond {
+  transform: rotate(3deg) translateY(-21px);
 }
 
-.stackCover {
+.crateWrap:hover .crateThird {
+  transform: rotate(17deg) translate(4px, -15px);
+}
+
+.crateImg {
   width: 100%;
   height: 100%;
 }
 
-.floatingPlay {
-  position: absolute;
-  top: 46%;
-  left: 50%;
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
+.crateCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  min-width: 0;
+}
+
+/* ───────── Shared Copy & Prominent Badges ───────── */
+
+.tileCopy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
-  width: 46px;
-  height: 46px;
-  margin: -23px 0 0 -23px;
-  padding: 0 0 0 3px;
-  border: 0;
-  border-radius: 50%;
-  background: var(--field-focus);
-  box-shadow: 0 8px 20px rgba(var(--ink-rgb), 0.28);
-  color: var(--accent-strong);
-  opacity: 0;
-  translate: 0 8px;
-  cursor: pointer;
-  transition: opacity 220ms ease, translate 260ms cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.stackSurface:hover .floatingPlay,
-.stackSurface:focus-within .floatingPlay {
-  opacity: 1;
-  translate: 0 0;
-}
-
-/* ───────── Shared Captions & Skeletons ───────── */
-
-.caption,
-.meta {
-  display: block;
-  overflow: hidden;
+  gap: 4px;
+  min-width: 0;
   padding: 0;
   border: 0;
   background: transparent;
   text-align: left;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  cursor: pointer;
+  transition: padding-right 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.caption {
+.pill {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.03em;
+  line-height: 1;
+  color: #fff;
+}
+
+.pill-daily {
+  background: #0e88d4;
+}
+
+.pill-favorites {
+  background: #d97706;
+}
+
+.pill-new {
+  background: #7c3aed;
+}
+
+.pill-radar,
+.pill-recent {
+  background: var(--accent-strong);
+}
+
+.tileTitle,
+.tileSub {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tileTitle {
   font-size: var(--fs-lg);
+  font-weight: 650;
+  line-height: 1.2;
   color: var(--text-strong);
-  cursor: pointer;
   transition: color 160ms ease;
 }
 
-button.caption:hover {
+.stadiumWrap:hover .tileTitle,
+.waveWrap:hover .tileTitle,
+.crateWrap:hover .tileTitle {
   color: var(--accent-strong);
 }
 
-.meta {
-  font-size: var(--fs-sm);
+.tileSub {
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
 }
 
-.skeletonWide {
-  width: 100%;
-  aspect-ratio: 2.15 / 1;
-  margin-bottom: var(--space-2);
-  border-radius: var(--radius-cover);
-}
-
-.skeletonSquare {
-  width: 100%;
-  aspect-ratio: 1;
-  margin-bottom: var(--space-2);
-  border-radius: var(--radius-cover);
-}
-
-.skeletonLine {
-  width: 72%;
-  height: 12px;
-}
-
-@keyframes vinylTurn {
+@keyframes vinylSpin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 1220px) {
+  .turntableStage {
+    width: 164px;
+  }
+  .albumJacket {
+    width: 108px;
+    height: 108px;
+  }
+  .platterWrap {
+    left: 46px;
+    width: 106px;
+    height: 106px;
+  }
+  .vinylDisc {
+    padding: 26px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .vinylDisc {
     animation: none;
+  }
+  .posterWrap,
+  .stadiumWrap,
+  .waveWrap,
+  .crateWrap,
+  .posterSurface,
+  .stadiumSurface,
+  .waveSurface,
+  .crateTray,
+  .cutoutPlay {
+    transition: none;
   }
 }
