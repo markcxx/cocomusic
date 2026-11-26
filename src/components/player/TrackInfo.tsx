@@ -5,6 +5,7 @@ import { ChevronUp } from 'lucide-react';
 import { Cover } from '@/components/common/Cover';
 import { isEmptyTrack } from '@/lib/mock-data';
 import { useSettings } from '@/lib/settings';
+import { TrackByline } from './TrackByline';
 import { usePlayer } from './player-store';
 import styles from './PlayerBar.module.css';
 
@@ -27,7 +28,7 @@ const FLUENT_SWAP = {
  * Before anything is chosen it shows a neutral placeholder and a hint instead.
  */
 export function TrackInfo() {
-  const { track, openLyrics } = usePlayer();
+  const { track, openLyrics, alternatePlatform } = usePlayer();
   const empty = isEmptyTrack(track);
   // Fluent: the cover is the bar's full height, flush with the window edge.
   const fluent = useSettings().windowEffect === 'fluent';
@@ -74,7 +75,7 @@ export function TrackInfo() {
           </span>
           <span className={styles.meta}>
             <strong>{track.title}</strong>
-            <span>{track.artist}{track.album ? ` · ${track.album}` : ''}</span>
+            <TrackByline artist={track.artist} album={track.album} platform={alternatePlatform} />
           </span>
         </motion.span>
       </AnimatePresence>

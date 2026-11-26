@@ -13,6 +13,7 @@ import { CommentButton, PlayModeButton, PlayPauseButton, SkipButton, VolumeContr
 import { AddToPlaylistButton } from './AddToPlaylistButton';
 import { MvButton } from './mv/MvButton';
 import { formatTime, usePlaybackPosition, usePlayer } from './player-store';
+import { TrackByline } from './TrackByline';
 import { QualityBadge } from './QualityBadge';
 import { useProgressScrubber } from './use-progress-scrubber';
 import { useSongStats } from './use-song-stats';
@@ -92,7 +93,7 @@ export function LyricsPlayerBar({ onComments }: { onComments: () => void }) {
         <div className={styles.song}>
           <span className={styles.meta}>
             <strong data-tooltip={track.title} data-tooltip-overflow>{track.title}</strong>
-            <small data-tooltip={track.artist} data-tooltip-overflow>{track.artist}</small>
+            <TrackByline artist={track.artist} platform={player.alternatePlatform} />
           </span>
           {track.songId && <LikeButton songId={track.songId} title={track.title} source={track.source} size="md" iconSize={19} count={stats.likeCount} />}
           <CommentButton count={stats.commentCount} onClick={onComments} disabled={!track.songId} />

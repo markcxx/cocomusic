@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useId, useRef, useState } from 'react';
 import { Menu, toast, type MenuItem } from '@/components/ui';
 import { settings, useSettings } from '@/lib/settings';
 import { SOURCE_NAMES } from '@/server/music/ids';
@@ -11,6 +11,7 @@ import styles from './PlatformPill.module.css';
 
 /** Authentic vector brand emblems for each supported music platform. */
 export function PlatformIcon({ source, size = 18 }: { source: CatalogSource; size?: number }) {
+  const gradientId = useId();
   switch (source) {
     case 'netease':
       return (
@@ -56,12 +57,12 @@ export function PlatformIcon({ source, size = 18 }: { source: CatalogSource; siz
       return (
         <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden className={styles.brandSvg}>
           <defs>
-            <linearGradient id="coco-kg-lite" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+            <linearGradient id={gradientId} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
               <stop stopColor="#35D0BA" />
               <stop offset="1" stopColor="#7C5CFA" />
             </linearGradient>
           </defs>
-          <rect width="24" height="24" rx="6" fill="url(#coco-kg-lite)" />
+          <rect width="24" height="24" rx="6" fill={`url(#${gradientId})`} />
           <circle cx="12" cy="12" r="6.2" stroke="#fff" strokeOpacity="0.45" strokeWidth="1.3" />
           <path
             d="M9.6 8.2v7.6M9.6 12l4.8-3.7M11.6 10.6l3.2 5.2"

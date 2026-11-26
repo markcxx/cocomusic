@@ -50,7 +50,7 @@ export function QualityBadge() {
   const activeQuality = (level && level in QUALITY_LABELS ? level : preferred) as AudioQuality;
   const badgeText = isLocal ? '本地' : trial ? '试听' : QUALITY_LABELS[activeQuality];
   const kbps = formatBitrate(bitrate);
-  const sourceName = isLocal ? '本地文件' : SOURCE_NAMES[track.source ?? 'netease'];
+  const sourceName = isLocal ? '本地文件' : SOURCE_NAMES[player.alternatePlatform ?? track.source ?? 'netease'];
 
   const tooltip = isLocal
     ? '本地音频原盘播放'

@@ -150,7 +150,7 @@
 }
 
 .meta strong,
-.meta span {
+.meta > span {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -168,7 +168,7 @@
   color: var(--accent-strong);
 }
 
-.meta span {
+.meta > span {
   font-size: var(--fs-md);
   color: var(--text-secondary);
 }

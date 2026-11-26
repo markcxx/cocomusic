@@ -34,6 +34,8 @@
 }
 
 .meta {
+  /* Keep the neighbouring song actions still as the playback source changes. */
+  --byline-source-space: calc(14px + var(--space-1));
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -51,11 +53,7 @@
   color: #fff;
 }
 
-.meta small {
-  overflow: hidden;
-  font-size: var(--fs-md);
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.meta > span {
   color: rgba(255, 255, 255, 0.6);
 }
 

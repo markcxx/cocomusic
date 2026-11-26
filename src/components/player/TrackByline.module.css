@@ -1,0 +1,24 @@
+.byline {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  font-size: var(--fs-md);
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+  text-overflow: ellipsis;
+}
+
+.sourceSlot {
+  flex: none;
+  inline-size: var(--byline-source-space, auto);
+  display: flex;
+}
+
+.source {
+  margin-inline-start: var(--space-1);
+  display: inline-flex;
+}
