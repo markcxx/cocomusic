@@ -1,0 +1,502 @@
+/*
+ * 6-column shelf aligned 1:1 with .playlistGrid below it.
+ * Subgrid keeps every cover box, title and subtitle on the exact same baseline.
+ */
+.shelf {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-1) var(--space-6);
+  padding: 2px 0;
+}
+
+@media (max-width: 1300px) {
+  .shelf {
+    column-gap: var(--space-4);
+  }
+}
+
+.card,
+.unit {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: subgrid;
+  grid-row: span 3;
+  align-items: start;
+}
+
+.span2 {
+  grid-column: span 2;
+}
+
+.span3 {
+  grid-column: span 3;
+}
+
+/* Remove PlaylistCover's own bottom margin so subgrid gap controls all rows uniformly. */
+.card :global([class*='coverFrame']) {
+  margin-bottom: var(--space-1_5);
+}
+
+/* ───────── 1. Spinning Vinyl Album Player Card (span 2) ───────── */
+
+.radioHero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3_5);
+  align-self: stretch;
+  min-height: 120px;
+  margin-bottom: var(--space-1_5);
+  padding: 5% 6% 5% 7%;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-cover);
+  background:
+    radial-gradient(90% 120% at 92% 50%, rgba(var(--radio-tint, var(--accent-rgb)), 0.22), transparent 68%),
+    linear-gradient(120deg, var(--accent-tint), var(--card-hover) 62%, var(--accent-soft));
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 6px 18px rgba(var(--ink-rgb), 0.07);
+  color: var(--text-strong);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+}
+
+.radioHero:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 14px 28px rgba(var(--ink-rgb), 0.13);
+}
+
+.radioHero:disabled {
+  cursor: default;
+}
+
+.radioInfo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.radioKicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--accent-strong);
+}
+
+.radioSong {
+  overflow: hidden;
+  font-size: clamp(18px, 1.45vw, 22px);
+  font-weight: 650;
+  line-height: 1.25;
+  color: var(--text-strong);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.radioArtist {
+  overflow: hidden;
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.turntable {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 42%;
+  max-width: 118px;
+  aspect-ratio: 1;
+}
+
+.vinylDisc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 13%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, transparent 52%, rgba(255, 255, 255, 0.08) 53%, transparent 54%, transparent 62%, rgba(255, 255, 255, 0.06) 63%, transparent 64%),
+    radial-gradient(circle at 30% 25%, #3d3752, #14121e 72%);
+  box-shadow: 0 8px 22px rgba(20, 16, 40, 0.28), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  animation: vinylTurn 14s linear infinite;
+  animation-play-state: paused;
+}
+
+.vinylSpinning {
+  animation-play-state: running;
+}
+
+.vinylArt {
+  width: 100%;
+  height: 100%;
+}
+
+.vinylFab {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  color: #1f1b34;
+  transition: transform 200ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 150ms ease;
+}
+
+.radioHero:hover .vinylFab {
+  background: #fff;
+  transform: scale(1.1);
+}
+
+/* ───────── 2. Prominent Cover Badges (Daily 30 / Favorites / New Songs) ───────── */
+
+.coverScrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(16, 14, 28, 0.08) 0%, transparent 38%, rgba(14, 12, 28, 0.72) 100%);
+  pointer-events: none;
+}
+
+/* Crisp calendar date stamp in the top-left of Daily 30 / 每日推荐 covers. */
+.dayCorner {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 26px;
+  padding: 0 7px;
+  border-radius: var(--radius-md);
+  background: rgba(18, 16, 34, 0.62);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  color: #fff;
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+/* Bold, high-contrast bottom badge that stays legible even over white/pastel covers. */
+.coverBadge {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32), 0 4px 14px rgba(0, 0, 0, 0.28);
+  color: #fff;
+  backdrop-filter: blur(12px) saturate(1.3);
+  pointer-events: none;
+}
+
+.coverBadge em {
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.92;
+  white-space: nowrap;
+}
+
+.coverBadge strong {
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.tone-daily {
+  background: linear-gradient(135deg, rgba(14, 132, 198, 0.92), rgba(37, 99, 235, 0.88));
+}
+
+.tone-favorites {
+  background: linear-gradient(135deg, rgba(194, 98, 18, 0.92), rgba(220, 126, 32, 0.88));
+}
+
+.tone-new {
+  background: linear-gradient(135deg, rgba(126, 58, 184, 0.92), rgba(155, 81, 224, 0.88));
+}
+
+.tone-radar {
+  background: linear-gradient(135deg, rgba(var(--accent-strong-rgb), 0.88), rgba(42, 38, 68, 0.84));
+}
+
+/* ───────── 3. Quick Tracks Card (calm ChartCard-style surface) ───────── */
+
+.tracksBox {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  margin-bottom: var(--space-1_5);
+  padding: var(--space-2_5) var(--space-3);
+  border-radius: var(--radius-cover);
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--glass-edge);
+  transition: background-color 200ms ease, box-shadow 200ms ease;
+}
+
+.tracksBox:hover {
+  background: var(--card-hover);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 8px 22px rgba(var(--ink-rgb), 0.07);
+}
+
+.trackRows {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.trackRow {
+  display: grid;
+  grid-template-columns: 20px 34px minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2_5);
+  width: 100%;
+  padding: 4px var(--space-2);
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease, transform 180ms ease;
+}
+
+.trackRow:hover {
+  background: rgba(var(--accent-rgb), 0.12);
+  transform: translateX(2px);
+}
+
+.trackRank {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+}
+
+.trackRowCurrent .trackRank,
+.trackRowCurrent .trackNames strong {
+  color: var(--accent-strong);
+}
+
+.trackNames {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.trackNames strong {
+  font-weight: 500;
+  color: var(--text-strong);
+}
+
+.trackNames span {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+/* ───────── 4. Recent 3-Cover Stack Square Card (1 col) ───────── */
+
+.stackSurface {
+  position: relative;
+  aspect-ratio: 1;
+  width: 100%;
+  margin-bottom: var(--space-1_5);
+  border-radius: var(--radius-cover);
+}
+
+.stackOpen {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 12%;
+  overflow: hidden;
+  border: 0;
+  border-radius: var(--radius-cover);
+  background: linear-gradient(145deg, var(--accent-tint), var(--card-hover));
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 6px 18px rgba(var(--ink-rgb), 0.08);
+  cursor: pointer;
+  transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1), box-shadow 260ms ease;
+}
+
+.stackSurface:hover .stackOpen {
+  transform: translateY(-3px);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 14px 28px rgba(var(--ink-rgb), 0.15);
+}
+
+.stackArt {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  margin-bottom: 10%;
+}
+
+.stackLayer {
+  position: absolute;
+  top: 50%;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  transition: transform 340ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stackFirst {
+  left: 4%;
+  z-index: 3;
+  width: 72%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  box-shadow: 5px 0 14px rgba(0, 0, 0, 0.22);
+}
+
+.stackSecond {
+  left: 19%;
+  z-index: 2;
+  width: 63%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  filter: brightness(0.92);
+}
+
+.stackThird {
+  left: 32%;
+  z-index: 1;
+  width: 54%;
+  aspect-ratio: 1;
+  transform: translateY(-50%);
+  filter: brightness(0.84);
+}
+
+.stackSurface:hover .stackSecond {
+  transform: translate(6px, -50%) rotate(4deg);
+}
+
+.stackSurface:hover .stackThird {
+  transform: translate(12px, -50%) rotate(8deg);
+}
+
+.stackCover {
+  width: 100%;
+  height: 100%;
+}
+
+.floatingPlay {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin: -23px 0 0 -23px;
+  padding: 0 0 0 3px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--field-focus);
+  box-shadow: 0 8px 20px rgba(var(--ink-rgb), 0.28);
+  color: var(--accent-strong);
+  opacity: 0;
+  translate: 0 8px;
+  cursor: pointer;
+  transition: opacity 220ms ease, translate 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.stackSurface:hover .floatingPlay,
+.stackSurface:focus-within .floatingPlay {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* ───────── Shared Captions & Skeletons ───────── */
+
+.caption,
+.meta {
+  display: block;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  font-size: var(--fs-lg);
+  color: var(--text-strong);
+  cursor: pointer;
+  transition: color 160ms ease;
+}
+
+button.caption:hover {
+  color: var(--accent-strong);
+}
+
+.meta {
+  font-size: var(--fs-sm);
+  color: var(--text-secondary);
+}
+
+.skeletonWide {
+  width: 100%;
+  aspect-ratio: 2.15 / 1;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-cover);
+}
+
+.skeletonSquare {
+  width: 100%;
+  aspect-ratio: 1;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-cover);
+}
+
+.skeletonLine {
+  width: 72%;
+  height: 12px;
+}
+
+@keyframes vinylTurn {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vinylDisc {
+    animation: none;
+  }
+}

@@ -4,8 +4,6 @@ import { motion } from 'framer-motion';
 import { RefreshCw } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useAccount } from '@/components/account/account-store';
-import { useSettings } from '@/lib/settings';
-import { dailySongsTitle, useRecommendationDay } from './DailySongs';
 import { ErrorState } from '@/components/common/AsyncState';
 import { staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
@@ -18,9 +16,11 @@ import { Button, toast } from '@/components/ui';
 import { catalogApi, useCatalog, type CatalogPlaylist } from '@/lib/catalog-client';
 import { fetchCollectionTracks } from '@/lib/collection-tracks';
 import { QUEUE_LIMIT } from '@/lib/me-client';
+import { useSettings } from '@/lib/settings';
 import { toTrack } from '@/lib/to-track';
+import { BentoHero, BentoSkeleton } from './BentoHero';
+import { dailySongsTitle, useRecommendationDay } from './DailySongs';
 import { ChartSkeleton, PlaylistSkeleton, TrackSkeleton } from './skeletons';
-import { RecommendationShelf } from './RecommendationShelf';
 import styles from './Home.module.css';
 
 export function FeaturedTab() {
@@ -48,24 +48,43 @@ export function FeaturedTab() {
   };
 
   const recommendationCards = data?.recommendationCards;
+  const hasShelfCards = Boolean(recommendationCards?.length);
   const songsFirst = source === 'netease' || (data?.dailySongs ?? (viewer !== 'guest'));
-  const songs = (
+  const songs = tracks.length > 0 || loading ? (
     <section className={styles.section}>
-      <SectionHeader title={data?.dailySongs ? dailySongsTitle(source) : '推荐歌曲'} actionLabel={data?.dailySongs ? '查看全部' : '播放全部'}
-        onAction={() => data?.dailySongs ? navigate({ name: 'daily-songs' }) : tracks[0] && player.play(tracks[0], tracks)}>
+      <SectionHeader
+        title={data?.dailySongs ? dailySongsTitle(source) : '推荐歌曲'}
+        actionLabel={data?.dailySongs ? '查看全部' : '播放全部'}
+        onAction={() => data?.dailySongs ? navigate({ name: 'daily-songs' }) : tracks[0] && player.play(tracks[0], tracks)}
+      >
         {data?.dailySongs && <Button variant="ghost" disabled={!tracks.length} onClick={() => player.play(tracks[0], tracks)}>播放全部</Button>}
       </SectionHeader>
-      {loading || !data ? <TrackSkeleton count={9} /> : !tracks.length ? <span>暂无推荐歌曲</span> : (
+      {loading || !data ? <TrackSkeleton count={9} /> : !tracks.length ? null : (
         <motion.div className={styles.trackGrid} variants={staggerList} initial="hidden" animate="show">
           {(data.dailySongs ? tracks.slice(0, 9) : tracks).map(track => <TrackTile key={track.id} track={track} queue={tracks} />)}
         </motion.div>
       )}
     </section>
-  );
+  ) : null;
 
   return (
     <>
-      {recommendationCards?.length ? <RecommendationShelf source={source} cards={recommendationCards} dailyTracks={tracks} playPlaylist={playPlaylist} /> : songsFirst && songs}
+      {loading && !data ? (
+        <BentoSkeleton />
+      ) : data && (
+        <BentoHero
+          source={source}
+          dailyMode={Boolean(data.dailySongs)}
+          cards={recommendationCards}
+          tracks={tracks}
+          playlists={data.playlists}
+          charts={data.charts}
+          playPlaylist={playPlaylist}
+        />
+      )}
+
+      {!hasShelfCards && songsFirst && songs}
+
       <section className={styles.section}>
         <SectionHeader title={data?.dailyPlaylists ? '每日推荐歌单' : '推荐歌单'} actionLabel="歌单广场" onAction={() => navigate({ name: 'discover' })}>
           {!data?.dailyPlaylists && <Button variant="ghost" icon={<RefreshCw size={13} strokeWidth={1.6} />} disabled={loading} onClick={() => setBatch(value => value + 1)}>
@@ -81,7 +100,7 @@ export function FeaturedTab() {
         )}
       </section>
 
-      {!recommendationCards?.length && !songsFirst && songs}
+      {!hasShelfCards && !songsFirst && songs}
 
       <section className={styles.section}>
         <SectionHeader title="热门榜单" actionLabel="查看全部" onAction={() => navigate({ name: 'charts' })} />
