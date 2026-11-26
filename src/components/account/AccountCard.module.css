@@ -1,44 +1,93 @@
+/* Full-viewport no-drag scrim so clicking TopBar's drag region dismisses the card reliably. */
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 155;
+  -webkit-app-region: no-drag;
+}
+
 .card {
   position: fixed;
   z-index: 160;
-  width: 320px;
+  width: 316px;
   overflow: hidden;
   border-radius: var(--radius-4xl);
   background: var(--popover);
-  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 24px 64px rgba(var(--ink-rgb), 0.24);
-  backdrop-filter: blur(30px) saturate(1.5);
-  -webkit-backdrop-filter: blur(30px) saturate(1.5);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 22px 60px rgba(var(--ink-rgb), 0.22);
+  backdrop-filter: blur(32px) saturate(1.5);
+  -webkit-backdrop-filter: blur(32px) saturate(1.5);
   transform-origin: right top;
 }
 
-/* Profile background (or a lavender wash) fading into the card. */
+/* Profile background (or soft blurred avatar aura) melting cleanly into the card body. */
 .banner {
   position: relative;
-  height: 104px;
+  height: 92px;
   overflow: hidden;
-  background: linear-gradient(135deg, var(--accent-tint-strong) 0%, color-mix(in srgb, var(--accent-tint) 60%, #c4d4f5) 55%, color-mix(in srgb, var(--accent-tint) 60%, #efd6ea) 100%);
+  background: linear-gradient(
+    135deg,
+    var(--accent-tint-strong) 0%,
+    color-mix(in srgb, var(--accent-tint) 60%, #c4d4f5) 55%,
+    color-mix(in srgb, var(--accent-tint) 60%, #efd6ea) 100%
+  );
 }
 
-.banner img {
+.bannerPhoto {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
+.bannerAura {
+  position: absolute;
+  inset: -35%;
+  width: 170%;
+  height: 170%;
+  object-fit: cover;
+  filter: blur(28px) saturate(1.35);
+  opacity: 0.62;
+  transform: scale(1.1);
+}
+
 .banner::after {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, transparent 30%, var(--popover-solid) 100%);
+  background: linear-gradient(180deg, rgba(var(--ink-rgb), 0.04) 0%, rgba(var(--surface-rgb), 0.25) 48%, var(--popover-solid) 100%);
   content: '';
+}
+
+/* Frosted platform identity badge tucked neatly in the top-right corner of the banner. */
+.platformBadge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 9px 0 6px;
+  border-radius: var(--radius-pill);
+  background: rgba(var(--raised-rgb), 0.72);
+  box-shadow: inset 0 0 0 1px var(--glass-edge), 0 2px 8px rgba(var(--ink-rgb), 0.08);
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  color: var(--text-strong);
+  backdrop-filter: blur(12px);
+}
+
+:global(html[data-color-scheme='dark']) .platformBadge {
+  background: rgba(24, 21, 38, 0.68);
 }
 
 .identity {
   position: relative;
+  z-index: 2;
   display: flex;
   align-items: flex-end;
   gap: var(--space-3);
-  margin-top: -40px;
-  padding: 0 var(--space-5);
+  margin-top: -36px;
+  padding: 0 var(--space-4_5, 18px);
 }
 
 .avatar {
@@ -46,34 +95,34 @@
   padding: 3px;
   border-radius: 50%;
   background: var(--popover-solid);
-  box-shadow: 0 6px 16px rgba(var(--ink-rgb), 0.18);
+  box-shadow: 0 6px 18px rgba(var(--ink-rgb), 0.16);
 }
 
-/* VIP: gold ring around the avatar. */
+/* VIP: warm gold ring around the avatar. */
 .avatarVip {
   background: linear-gradient(135deg, #f6d68a, #e2a84b 50%, #f8e3a6);
 }
 
 .avatarImage {
-  width: 68px;
-  height: 68px;
+  width: 64px;
+  height: 64px;
 }
 
 .names {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 4px;
   min-width: 0;
-  padding-bottom: var(--space-0_5);
+  padding-bottom: 2px;
 }
 
 .names h2 {
   margin: 0;
   overflow: hidden;
   font-size: var(--fs-3xl);
-  font-weight: 600;
-  line-height: 24px;
+  font-weight: 650;
+  line-height: 22px;
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--text-strong);
@@ -95,7 +144,7 @@
   padding: 0 7px;
   border-radius: var(--radius-pill);
   font-size: var(--fs-xs);
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -117,10 +166,10 @@
 
 .signature {
   display: -webkit-box;
-  margin: var(--space-3_5) var(--space-5) 0;
+  margin: var(--space-3) 18px 0;
   overflow: hidden;
-  font-size: var(--fs-md);
-  line-height: 1.6;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
   color: var(--text-secondary);
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -135,7 +184,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1_5);
-  margin: var(--space-2_5) var(--space-5) 0;
+  margin: var(--space-2_5) 18px 0;
 }
 
 .chip {
@@ -143,11 +192,11 @@
   align-items: center;
   gap: var(--space-1);
   height: 22px;
-  padding: 0 9px;
+  padding: 0 8px;
   border-radius: var(--radius-pill);
   background: var(--field);
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.12);
-  font-size: var(--fs-sm);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.1);
+  font-size: var(--fs-xs);
   color: var(--text-secondary);
 }
 
@@ -163,49 +212,70 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin: var(--space-3_5) var(--space-5) 0;
+  margin: var(--space-3) 18px 0;
 }
 
 .skeletonLine {
-  width: 80%;
-  height: 12px;
+  width: 78%;
+  height: 11px;
 }
 
 .skeletonShort {
-  width: 50%;
-  height: 12px;
+  width: 48%;
+  height: 11px;
 }
 
-/* ───────── Numbers ───────── */
+/* ───────── Adaptive Stats Strip ───────── */
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  margin: var(--space-4) var(--space-3_5) 0;
-  padding: var(--space-3) 0;
+  grid-template-columns: repeat(var(--stat-cols, 4), minmax(0, 1fr));
+  margin: var(--space-3_5) var(--space-3_5) 0;
+  padding: var(--space-2_5) var(--space-1);
   border-radius: var(--radius-2xl);
   background: var(--chip);
-  box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.08), 0 4px 14px rgba(var(--ink-rgb), 0.05);
+  box-shadow: inset 0 0 0 1px rgba(var(--accent-strong-rgb), 0.08);
 }
 
 .stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-0_5);
-  padding: 0;
+  gap: 2px;
+  padding: 4px 2px;
   border: 0;
+  border-radius: var(--radius-lg);
   background: transparent;
+  transition: background-color 140ms ease;
+}
+
+.statButton {
+  cursor: pointer;
+}
+
+.statButton:hover {
+  background: rgba(var(--accent-rgb), 0.12);
 }
 
 .stat + .stat {
-  border-left: 1px solid rgba(var(--accent-strong-rgb), 0.1);
+  position: relative;
+}
+
+.stat + .stat::before {
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 0;
+  width: 1px;
+  background: rgba(var(--accent-strong-rgb), 0.1);
+  content: '';
 }
 
 .stat strong {
-  font-size: var(--fs-3xl);
-  font-weight: 600;
+  font-size: var(--fs-2xl);
+  font-weight: 650;
   font-variant-numeric: tabular-nums;
+  line-height: 1.2;
   color: var(--text-strong);
 }
 
@@ -216,31 +286,31 @@
 
 /* ───────── Actions ───────── */
 
-/* Row of quiet buttons; logout separated on the right. */
 .actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-1);
-  margin: var(--space-3_5) 0 0;
+  margin: var(--space-3) 0 0;
   padding: var(--space-2);
-  border-top: 1px solid rgba(var(--accent-strong-rgb), 0.1);
+  border-top: 1px solid rgba(var(--accent-strong-rgb), 0.09);
 }
 
 .action {
-  display: flex;
-  flex: 1;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-1_5);
+  gap: 5px;
   height: 34px;
   padding: 0 var(--space-2);
   white-space: nowrap;
   border: 0;
   border-radius: var(--radius-lg);
   background: transparent;
-  font-size: var(--fs-md);
+  font-size: var(--fs-sm);
+  font-weight: 500;
   color: var(--text-strong);
-  text-align: left;
-  transition: background-color 120ms ease;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .action:hover,
@@ -251,6 +321,7 @@
 
 .actionIcon {
   display: inline-flex;
+  flex-shrink: 0;
   color: var(--text-secondary);
 }
 
@@ -259,9 +330,14 @@
   color: var(--danger);
 }
 
-/* VIP: warm gold glow along the card's top edge. */
+.danger:hover,
+.danger:focus-visible {
+  background: rgba(217, 83, 79, 0.12);
+}
+
+/* VIP: warm gold hairline along the card edge. */
 .cardVip {
-  box-shadow: inset 0 0 0 1px rgba(226, 168, 75, 0.35), 0 24px 64px rgba(var(--ink-rgb), 0.24);
+  box-shadow: inset 0 0 0 1px rgba(226, 168, 75, 0.35), 0 22px 60px rgba(var(--ink-rgb), 0.22);
 }
 
 :global(html[data-color-scheme='dark']) .banner {
