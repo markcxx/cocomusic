@@ -82,19 +82,6 @@ function runLoop(element: HTMLCanvasElement, spectrum: Spectrum, paint: Painter,
   let frame = 0;
   let last = performance.now();
 
-  const resize = () => {
-    const rect = element.getBoundingClientRect();
-    const ratio = Math.min(2, window.devicePixelRatio || 1);
-    width = rect.width;
-    height = rect.height;
-    element.width = Math.max(1, Math.round(width * ratio));
-    element.height = Math.max(1, Math.round(height * ratio));
-    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-  };
-  resize();
-  const observer = new ResizeObserver(resize);
-  observer.observe(element);
-
   const tick = (now: number) => {
     const current = latest.current;
     const delta = Math.min(0.064, (now - last) / 1000);
@@ -116,7 +103,20 @@ function runLoop(element: HTMLCanvasElement, spectrum: Spectrum, paint: Painter,
     if (!current.active && !spectrum.moving()) { frame = 0; return; }
     frame = requestAnimationFrame(tick);
   };
-  frame = requestAnimationFrame(tick);
+  const observer = new ResizeObserver(([entry]) => {
+    // The content box stays in layout coordinates throughout the artwork transition.
+    // Screen bounds include its temporary scale, which can differ on the two axes.
+    ({ width, height } = entry.contentRect);
+    cancelAnimationFrame(frame);
+    if (!width || !height) return;
+    const ratio = Math.min(2, window.devicePixelRatio || 1);
+    element.width = Math.max(1, Math.round(width * ratio));
+    element.height = Math.max(1, Math.round(height * ratio));
+    ctx.setTransform(element.width / width, 0, 0, element.height / height, 0, 0);
+    // Resizing clears the bitmap, including the resting frame when paused.
+    tick(performance.now());
+  });
+  observer.observe(element);
   return () => { cancelAnimationFrame(frame); observer.disconnect(); };
 }
 

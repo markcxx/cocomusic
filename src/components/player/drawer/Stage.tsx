@@ -56,7 +56,7 @@ export function Stage({ progress, flowActive = false, hideArt = false, onOpenFlo
       {layout !== 'lyrics' && (
       <motion.div
         key="art"
-        layout
+        layout={ringTemplate ? 'position' : true}
         className={styles.art}
         initial={{ scale: 0.85, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
