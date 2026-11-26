@@ -149,6 +149,7 @@ export interface Settings {
   /* 迷你模式 */
   miniShowLyrics: boolean;
   miniSpinRecord: boolean;
+  miniEdgeDock: boolean;
 
   /* 快捷键 */
   /** In-app: Space play/pause, ⌘/Ctrl+←/→ previous/next, ⌘/Ctrl+↑/↓ volume. */
@@ -236,6 +237,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
   miniShowLyrics: true,
   miniSpinRecord: true,
+  miniEdgeDock: true,
 
   appShortcuts: true,
   seekStep: 5,
@@ -303,7 +305,7 @@ const RULES: Record<keyof Settings, Rule> = {
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsKaraoke: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'fluid', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
   desktopFontSize: num(20, 64), desktopColor: oneOf(...Object.keys(LYRIC_COLORS), 'custom'), desktopCustomColor: { type: 'hex' }, desktopShowTranslation: bool, desktopSecondLine: oneOf('translation', 'next', 'none'),
   desktopKaraoke: bool, desktopStroke: bool, desktopAlign: oneOf('left', 'center', 'right'), desktopFontWeight: oneOf(500, 700, 900),
-  miniShowLyrics: bool, miniSpinRecord: bool,
+  miniShowLyrics: bool, miniSpinRecord: bool, miniEdgeDock: bool,
   appShortcuts: bool, seekStep: oneOf(0, 5, 10, 15, 30), rememberSearches: bool,
   trialNotice: bool, showVipBadge: bool, titleShowsTrack: bool, lyricsKeepAwake: bool,
   lyricsLayout: oneOf('standard', 'centered', 'lyrics'), lyricsVisualizer: oneOf(...VISUALIZER_TEMPLATES), lyricsVinylEffect: oneOf('none', 'lines', 'glow'), lyricsVisualizerColor: oneOf('blue', 'cover', 'white', 'accent', 'aurora', 'custom'), lyricsVisualizerCustomColor: { type: 'hex' },

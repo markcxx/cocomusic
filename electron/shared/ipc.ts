@@ -8,6 +8,10 @@ export const IPC = {
   windowToggleMaximize: 'window:toggle-maximize',
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
+  /** renderer → main: expand/collapse docked mini ear ('peek' | 'collapse' | 'dock-nearest' | 'undock') or enable/disable docking. */
+  windowMiniDock: 'window:mini-dock',
+  /** main → renderer: { side: 'left' | 'right' | null, expanded: boolean }. */
+  miniDockChanged: 'window:mini-dock-changed',
   /** main → renderer: window maximized (true) or restored (false). */
   maximizedChanged: 'window:maximized-changed',
   /** renderer → main (invoke): current maximized state. */

@@ -8,6 +8,8 @@ const IPC = {
   windowToggleMaximize: 'window:toggle-maximize',
   windowClose: 'window:close',
   windowToggleMini: 'window:toggle-mini',
+  windowMiniDock: 'window:mini-dock',
+  miniDockChanged: 'window:mini-dock-changed',
   miniChanged: 'window:mini-changed',
   maximizedChanged: 'window:maximized-changed',
   windowIsMaximized: 'window:is-maximized',
@@ -76,6 +78,13 @@ contextBridge.exposeInMainWorld('coco', {
     toggleMaximize: () => ipcRenderer.send(IPC.windowToggleMaximize),
     close: () => ipcRenderer.send(IPC.windowClose),
     toggleMini: () => ipcRenderer.send(IPC.windowToggleMini),
+    miniDock: (command: string) => ipcRenderer.send(IPC.windowMiniDock, command),
+    onMiniDockChange: (listener: (state: { side: 'left' | 'right' | null; expanded: boolean }) => void) =>
+      listen(IPC.miniDockChanged, value => {
+        const raw = value && typeof value === 'object' ? value as { side?: unknown; expanded?: unknown } : {};
+        const side: 'left' | 'right' | null = raw.side === 'left' || raw.side === 'right' ? raw.side : null;
+        return { side, expanded: raw.expanded !== false };
+      }, listener),
     isMaximized: () => ipcRenderer.invoke(IPC.windowIsMaximized).then(value => value === true),
     /** Subscribe to maximize/restore; returns an unsubscribe function. */
     onMaximizeChange: (listener: (maximized: boolean) => void) => listen(IPC.maximizedChanged, value => value === true, listener),

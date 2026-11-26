@@ -1,22 +1,25 @@
 'use client';
 
 import { AnimatePresence, motion } from 'framer-motion';
-import { Loader2, Maximize2, Pause, Play, SkipBack, SkipForward, X } from 'lucide-react';
-import { useMemo } from 'react';
+import { Loader2, Maximize2, PanelRightClose, Pause, PinOff, Play, SkipBack, SkipForward, X } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { LikeButton } from '@/components/account/LikeButton';
 import { Cover } from '@/components/common/Cover';
 import { PlayModeButton } from '@/components/player/controls';
 import { usePlaybackPosition, usePlayer } from '@/components/player/player-store';
 import { useTrackLyrics } from '@/components/player/use-track-lyrics';
-import { isPlayable } from '@/types/music';
 import { IconButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useSettings } from '@/lib/settings';
 import { activeLineIndex } from '@/server/music/lrc';
+import { isPlayable } from '@/types/music';
 import { exitMini } from './use-mini-mode';
 import styles from './MiniPlayer.module.css';
 
 const RING = 2 * Math.PI * 21;
+const EAR_RING = 2 * Math.PI * 31;
+
+type DockSide = 'left' | 'right' | null;
 
 /** Current lyric line (song title when unsynced), swapped with a vertical slide. */
 function LyricTicker() {
@@ -67,17 +70,175 @@ function RingPlay() {
 }
 
 /**
- * Mini mode: the whole window becomes a floating capsule. The spinning record
- * and the live lyric line carry the "now playing" feel; controls surface on
- * hover so the resting bar stays calm. Empty areas drag the window.
+ * Edge-docked "Vinyl Ear": half-peeking spinning vinyl disc + progress arc
+ * tucked flush against the screen's left or right edge. Hovering expands the
+ * full mini player; clicking toggles play/pause.
+ */
+function VinylEar({ side, onPeek }: { side: 'left' | 'right'; onPeek: () => void }) {
+  const player = usePlayer();
+  const position = usePlaybackPosition();
+  const miniSpin = useSettings().miniSpinRecord;
+  const empty = !isPlayable(player.track);
+  const ratio = player.duration > 0 ? Math.min(1, position / player.duration) : 0;
+
+  return (
+    <div
+      className={cn(styles.earShell, side === 'left' ? styles.earLeft : styles.earRight)}
+      data-theme="dark"
+      onPointerEnter={onPeek}
+      onClick={player.togglePlay}
+      role="button"
+      tabIndex={0}
+      aria-label={`迷你黑胶耳：${empty ? '未在播放' : player.track.title}（移入展开）`}
+    >
+      <div className={styles.backdrop} aria-hidden>
+        {!empty && <Cover seed={player.track.coverSeed} src={player.track.cover} className={styles.backdropCover} />}
+      </div>
+
+      <div className={styles.earDiscWrap}>
+        <svg viewBox="0 0 68 68" className={styles.earArc} aria-hidden>
+          <circle cx="34" cy="34" r="31" className={styles.earArcTrack} />
+          <circle cx="34" cy="34" r="31" className={styles.earArcFill} strokeDasharray={EAR_RING} strokeDashoffset={EAR_RING * (1 - ratio)} />
+        </svg>
+        <span className={cn(styles.disc, styles.earDisc, player.playing && miniSpin && styles.spinning)}>
+          <Cover seed={player.track.coverSeed} src={player.track.cover} radius={999} className={styles.discCover} empty={empty} />
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Mini mode: the whole window becomes a floating capsule. Dragging to the left
+ * or right screen edge (or clicking the dock button) tucks it into a magnetic
+ * "vinyl ear" that expands smoothly when hovered.
  */
 export function MiniPlayer() {
   const player = usePlayer();
   const { track } = player;
   const empty = !isPlayable(track);
-  const miniSpin = useSettings().miniSpinRecord;
+  const { miniSpinRecord: miniSpin, miniEdgeDock } = useSettings();
+
+  const [rawDock, setDock] = useState<{ side: DockSide; expanded: boolean }>({ side: null, expanded: true });
+  const dock = miniEdgeDock ? rawDock : { side: null as DockSide, expanded: true };
+  // Web preview (`?mini`) drag & edge-dock simulation so browser previews behave just like desktop.
+  const [webPos, setWebPos] = useState<{ x: number; y: number } | null>(null);
+  const webDrag = useRef<{ startX: number; startY: number; origX: number; origY: number } | null>(null);
+  const webCollapseTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const isWeb = typeof window !== 'undefined' && !window.coco;
+
+  useEffect(() => {
+    window.coco?.window.miniDock?.(miniEdgeDock ? 'enable' : 'disable');
+  }, [miniEdgeDock]);
+
+  useEffect(() => {
+    const off = window.coco?.window.onMiniDockChange?.(setDock);
+    return () => { off?.(); clearTimeout(webCollapseTimer.current); };
+  }, []);
+
+  const requestPeek = () => {
+    clearTimeout(webCollapseTimer.current);
+    if (window.coco) {
+      window.coco.window.miniDock?.('peek');
+    } else if (dock.side) {
+      setDock(prev => ({ ...prev, expanded: true }));
+    }
+  };
+
+  const dockNearest = () => {
+    if (window.coco) {
+      window.coco.window.miniDock?.('dock-nearest');
+      return;
+    }
+    const vw = window.innerWidth;
+    const x = webPos?.x ?? 12;
+    const side: 'left' | 'right' = x + 220 < vw / 2 ? 'left' : 'right';
+    setWebPos({ x: side === 'left' ? 0 : vw - 440, y: webPos?.y ?? 24 });
+    setDock({ side, expanded: false });
+  };
+
+  const undock = () => {
+    if (window.coco) {
+      window.coco.window.miniDock?.('undock');
+      return;
+    }
+    const vw = window.innerWidth;
+    setWebPos(prev => ({
+      x: dock.side === 'right' ? Math.max(12, vw - 464) : 24,
+      y: prev?.y ?? 24,
+    }));
+    setDock({ side: null, expanded: true });
+  };
+
+  // Web-only pointer drag for `?mini` preview mode.
+  const onWebPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isWeb || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const rect = event.currentTarget.getBoundingClientRect();
+    webDrag.current = { startX: event.clientX, startY: event.clientY, origX: rect.left, origY: rect.top };
+  };
+
+  const onWebPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!webDrag.current) return;
+    const x = Math.max(0, Math.min(window.innerWidth - 440, webDrag.current.origX + (event.clientX - webDrag.current.startX)));
+    const y = Math.max(8, Math.min(window.innerHeight - 104, webDrag.current.origY + (event.clientY - webDrag.current.startY)));
+    setWebPos({ x, y });
+  };
+
+  const onWebPointerUp = () => {
+    if (!webDrag.current) return;
+    webDrag.current = null;
+    if (!miniEdgeDock || !webPos) return;
+    const vw = window.innerWidth;
+    if (webPos.x <= 28) {
+      setWebPos({ x: 0, y: webPos.y });
+      setDock({ side: 'left', expanded: true });
+    } else if (vw - (webPos.x + 440) <= 28) {
+      setWebPos({ x: vw - 440, y: webPos.y });
+      setDock({ side: 'right', expanded: true });
+    } else if (dock.side) {
+      setDock({ side: null, expanded: true });
+    }
+  };
+
+  if (miniEdgeDock && dock.side && !dock.expanded) {
+    return (
+      <div
+        style={isWeb && webPos ? {
+          position: 'fixed',
+          top: webPos.y,
+          left: dock.side === 'left' ? 0 : undefined,
+          right: dock.side === 'right' ? 0 : undefined,
+          width: 76,
+          height: 88,
+          zIndex: 400,
+        } : undefined}
+      >
+        <VinylEar side={dock.side} onPeek={requestPeek} />
+      </div>
+    );
+  }
+
+  const webStyle: CSSProperties | undefined = isWeb && webPos
+    ? { left: dock.side === 'left' ? 0 : dock.side === 'right' ? window.innerWidth - 440 : webPos.x, top: webPos.y }
+    : undefined;
+
   return (
-    <div className={styles.shell} data-theme="dark">
+    <div
+      className={cn(styles.shell, dock.side === 'left' && styles.dockedLeft, dock.side === 'right' && styles.dockedRight)}
+      style={webStyle}
+      data-theme="dark"
+      onPointerDown={onWebPointerDown}
+      onPointerMove={onWebPointerMove}
+      onPointerUp={onWebPointerUp}
+      onPointerCancel={onWebPointerUp}
+      onPointerEnter={() => clearTimeout(webCollapseTimer.current)}
+      onPointerLeave={() => {
+        if (isWeb && miniEdgeDock && dock.side && !webDrag.current) {
+          webCollapseTimer.current = setTimeout(() => setDock(prev => (prev.side ? { ...prev, expanded: false } : prev)), 360);
+        }
+      }}
+    >
       <div className={styles.backdrop} aria-hidden>
         {!empty && <Cover seed={track.coverSeed} src={track.cover} className={styles.backdropCover} />}
       </div>
@@ -105,6 +266,17 @@ export function MiniPlayer() {
       </div>
 
       <div className={styles.windowButtons}>
+        {miniEdgeDock && (
+          dock.side ? (
+            <IconButton label="解除贴边吸附" tooltip="解除贴边磁吸" size="sm" onClick={undock}>
+              <PinOff size={13} strokeWidth={1.6} />
+            </IconButton>
+          ) : (
+            <IconButton label="贴边收起为黑胶耳" tooltip="贴边收起为黑胶耳" size="sm" onClick={dockNearest}>
+              <PanelRightClose size={13} strokeWidth={1.6} />
+            </IconButton>
+          )
+        )}
         <IconButton label="返回完整窗口" size="sm" onClick={exitMini}><Maximize2 size={13} strokeWidth={1.6} /></IconButton>
         <IconButton label="关闭" size="sm" onClick={() => window.coco?.window.close()}><X size={14} strokeWidth={1.6} /></IconButton>
       </div>

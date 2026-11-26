@@ -19,6 +19,10 @@ interface CocoDesktopBridge {
     onMaximizeChange(listener: (maximized: boolean) => void): () => void;
     /** Morph into the floating mini player bar, or restore the full window. */
     toggleMini(): void;
+    /** Drive mini-player edge docking ('peek' | 'collapse' | 'dock-nearest' | 'undock' | 'enable' | 'disable'). */
+    miniDock(command: 'peek' | 'collapse' | 'dock-nearest' | 'undock' | 'enable' | 'disable'): void;
+    /** Mini edge-docking state changed. */
+    onMiniDockChange(listener: (state: { side: 'left' | 'right' | null; expanded: boolean }) => void): () => void;
     /** Mini mode entered/left (main process decides). Returns an unsubscribe function. */
     onMiniChange(listener: (mini: boolean) => void): () => void;
   };

@@ -11,7 +11,7 @@ import { isMenuAction, parsePlayerState } from './system-menu';
 import { isTrayPage, refreshSystemMenus, runAction, sendTrayState, updatePlayerState } from './system-integration';
 import { isPanel, resizePanel } from './tray-windows';
 import { cancelDownload, changelog, checkForUpdates, dismiss, downloadUpdate, getUpdateState, installUpdate, setUpdateSettings, skipVersion } from './updater';
-import { updateScenicRegions, setColorScheme, setWindowMaterial, toggleMini, type WindowEffect } from './window';
+import { updateScenicRegions, setColorScheme, setWindowMaterial, toggleMini, handleMiniDockCommand, type WindowEffect } from './window';
 
 /** Paths the user picked through a system dialog; only these (or opened files) may be revealed. */
 const picked = new Set<string>();
@@ -65,6 +65,9 @@ export function registerIpc(trustedOrigin: () => string | undefined, lyrics: () 
     else window.close();
   });
   handle(IPC.windowToggleMini, window => { if (!lyrics()?.isLyricsWindow(window)) { toggleMini(window); refreshSystemMenus(); } });
+  handle(IPC.windowMiniDock, (window, cmd) => {
+    if (!lyrics()?.isLyricsWindow(window) && typeof cmd === 'string') handleMiniDockCommand(window, cmd);
+  });
   // Tray panel / menu-bar strip: state on load, actions, panel height.
   handle(IPC.trayReady, window => { if (isTrayPage(window)) sendTrayState(window); });
   handle(IPC.trayAction, (window, action) => { if (isTrayPage(window) && isMenuAction(action)) runAction(action); });
