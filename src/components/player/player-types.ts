@@ -15,6 +15,8 @@ export type PlayerState = {
   duration: number;
   /** Set when only a preview clip plays; lyric time = position + trial.start. */
   trial?: SongSource['trial'];
+  /** Actual alternate audio provider; track remains the original catalog identity. */
+  alternatePlatform?: CatalogSource;
   /** Chorus / climax window in seconds (from upstream metadata when available). */
   chorus?: SongSource['chorus'];
   /** Quality level of the loaded online stream (standard / exhigh / lossless…). */

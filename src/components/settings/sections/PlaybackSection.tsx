@@ -1,6 +1,6 @@
 'use client';
 
-import { AudioLines, Crown, Gauge, Headphones, History, MousePointerClick, Play, RotateCcw, SkipForward, SlidersHorizontal, Speaker } from 'lucide-react';
+import { ArrowLeftRight, AudioLines, Crown, Disc3, Gauge, Headphones, History, Layers, MousePointerClick, Play, RotateCcw, SkipForward, SlidersHorizontal, Speaker } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { settings, useSettings } from '@/lib/settings';
 import { DependentSettings, ChoiceExpander, Range, Row, Section, Select, Switch } from '../controls';
@@ -24,7 +24,7 @@ export function PlaybackSection() {
   const s = useSettings();
   const devices = useOutputDevices();
   return (
-    <Section id="playback" icon={<Play size={17} strokeWidth={1.6} />} title="播放" description="音质、过渡、输出设备与续播" onReset={() => settings.reset(keysOf('quality', 'fadeMs', 'playbackRate', 'outputDevice', 'resumeOnLaunch', 'resumePosition', 'skipOnError', 'doubleClick', 'trialNotice', 'showVipBadge'))}>
+    <Section id="playback" icon={<Play size={17} strokeWidth={1.6} />} title="播放" description="音质、过渡、输出设备与续播" onReset={() => settings.reset(keysOf('quality', 'fadeMs', 'playbackRate', 'outputDevice', 'resumeOnLaunch', 'resumePosition', 'skipOnError', 'fallbackUnavailable', 'fallbackTrial', 'fallbackPlatform', 'doubleClick', 'trialNotice', 'showVipBadge'))}>
       <ChoiceExpander variant="select" icon={<AudioLines size={16} strokeWidth={1.5} />} title="在线播放音质" description="更高音质需要账号有对应权限，不满足时会自动使用可用的最高音质" value={s.quality} onChange={setter('quality')} label="在线播放音质" options={QUALITIES} />
       <Row icon={<SlidersHorizontal size={16} strokeWidth={1.5} />} title="淡入淡出" description="播放、暂停时音量平滑过渡">
         <Range value={s.fadeMs} max={1500} step={100} onChange={setter('fadeMs')} label="淡入淡出" format={value => (value ? `${(value / 1000).toFixed(1)} 秒` : '关闭')} />
@@ -50,6 +50,34 @@ export function PlaybackSection() {
       <Row icon={<SkipForward size={16} strokeWidth={1.5} />} title="播放失败时自动跳过" description="遇到无版权或无法播放的歌曲时自动播放下一首">
         <Switch checked={s.skipOnError} onChange={setter('skipOnError')} label="播放失败时自动跳过" />
       </Row>
+      <Row
+        icon={<ArrowLeftRight size={16} strokeWidth={1.5} />}
+        title="不可播时跨平台匹配"
+        description="原平台提示下架、无版权或无播放权益时，按歌名、歌手、时长与版本在应用内其他平台检索同一曲目，并使用对应平台当前账号可播的音源"
+      >
+        <Switch checked={s.fallbackUnavailable} onChange={setter('fallbackUnavailable')} label="不可播时跨平台匹配" />
+      </Row>
+      <Row
+        icon={<Disc3 size={16} strokeWidth={1.5} />}
+        title="试听时跨平台匹配完整版"
+        description="原平台仅返回试听片段时，按上述规则检索其他平台当前账号有权限播放的完整版本；匹配成功后自动从当前进度续播，均无权限时继续播放原试听片段"
+      >
+        <Switch checked={s.fallbackTrial} onChange={setter('fallbackTrial')} label="试听时跨平台匹配完整版" />
+      </Row>
+      {(s.fallbackUnavailable || s.fallbackTrial) && (
+        <DependentSettings label="跨平台匹配">
+          <ChoiceExpander
+            variant="select"
+            icon={<Layers size={16} strokeWidth={1.5} />}
+            title="优先匹配的平台"
+            label="优先匹配的平台"
+            value={s.fallbackPlatform}
+            onChange={setter('fallbackPlatform')}
+            description="设为「自动」时，优先检索已登录且拥有有效会员或畅听权益的平台（含酷狗概念版当日领取的听歌权益），其余平台依次尝试；也可指定优先检索的平台"
+            options={[{ value: 'auto', label: '自动' }, { value: 'kugou-lite', label: '酷狗概念版' }, { value: 'qq', label: 'QQ 音乐' }, { value: 'netease', label: '网易云音乐' }, { value: 'kugou', label: '酷狗音乐' }]}
+          />
+        </DependentSettings>
+      )}
       <Row icon={<Headphones size={16} strokeWidth={1.5} />} title="试听提示" description="只能播放试听片段时弹出提示">
         <Switch checked={s.trialNotice} onChange={setter('trialNotice')} label="试听提示" />
       </Row>

@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { toast } from '@/components/ui/toast';
-import { ACCOUNT_RECHECK_EVENT } from '@/lib/account-client';
-import { catalogApi, CatalogRequestError, type SongSource } from '@/lib/catalog-client';
+import { requestAccountRecheck } from '@/lib/account-events';
+import { CatalogRequestError, type SongSource } from '@/lib/catalog-client';
 import { localAudioUrl } from '@/lib/local-client';
 import { loadPlayerState } from '@/lib/me-client';
 import { emptyTrack } from '@/lib/mock-data';
@@ -15,6 +15,7 @@ import { isPlayable, type Track } from '@/types/music';
 import { playModeLabels, playModes, randomOtherIndex, type PlayMode } from './play-mode';
 import { QUEUE_LIMIT } from '@/server/user-data/types';
 import { freshTracks, nextRadioBatch } from './radio-queue';
+import { resolvePlayback } from './playback-fallback';
 import { takePreloadedSource } from './preload-next';
 import { DEFAULT_VOLUME, readMode, readVolume, saveVolume } from './player-prefs';
 import type { PlaybackStatus, PlayerState } from './player-types';
@@ -65,6 +66,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const [position, setPosition] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number>();
   const [trial, setTrial] = useState<SongSource['trial']>();
+  const [alternatePlatform, setAlternatePlatform] = useState<PlayerState['alternatePlatform']>();
   const [chorus, setChorus] = useState<SongSource['chorus']>();
   const [level, setLevel] = useState<string>();
   const [bitrate, setBitrate] = useState<number>();
@@ -79,7 +81,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const failures = useRef(0);
   /** Resume point after re-fetching an expired stream URL. */
-  const resumeAt = useRef<number | null>(null);
+  const resumeAt = useRef<{ seconds: number; songTime?: boolean } | null>(null);
+  const clipStart = useRef(0);
   /** Played tracks, so 上一首 in shuffle mode walks back instead of rolling again. */
   const history = useRef<Track[]>([]);
   /** Track id already counted in 最近播放 for the current load (count once per play). */
@@ -95,6 +98,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
+    resumeAt.current = null;
+    clipStart.current = 0;
+    setAlternatePlatform(undefined);
     setChorus(undefined);
     setLevel(undefined);
     setBitrate(undefined);
@@ -118,6 +124,9 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setPosition(0);
     setMediaDuration(undefined);
     setTrial(undefined);
+    resumeAt.current = null;
+    clipStart.current = 0;
+    setAlternatePlatform(undefined);
     setChorus(undefined);
     setLevel(undefined);
     setBitrate(undefined);
@@ -219,8 +228,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         if (prefsNow.resumeOnLaunch && start) {
           // Restored paused: autoplay on launch would be a surprise.
           const at = prefsNow.resumePosition && stored.position?.id === start.id ? stored.position.t : 0;
-          if (at > 0) resumeAt.current = at;
           latest.current.select(start, { autoplay: false, remember: false });
+          if (at > 0) resumeAt.current = { seconds: at };
           if (at > 0) setPosition(at);
         }
       }
@@ -247,7 +256,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     audio.pause();
     audio.removeAttribute('src');
     audio.load();
-    const attach = (url: string) => {
+    const attach = (url: string, trial?: SongSource['trial']) => {
       // Once the element feeds the visualizer graph it must stay in CORS mode:
       // a tainted stream would play silent through Web Audio.
       // Users without a visualizer keep the plain (non-CORS) request.
@@ -255,7 +264,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (wantsSamples && !track.localId) audio.crossOrigin = 'anonymous';
       else if (!hasGraph(audio)) audio.removeAttribute('crossorigin');
       audio.src = url;
-      if (resumeAt.current !== null) { audio.currentTime = resumeAt.current; resumeAt.current = null; }
+      clipStart.current = trial?.start ?? 0;
+      if (resumeAt.current) {
+        const at = resumeAt.current.seconds - (resumeAt.current.songTime ? clipStart.current : 0);
+        audio.currentTime = at >= 0 && (!trial || at < trial.end - trial.start) ? at : 0;
+        resumeAt.current = null;
+      }
       if (latest.current.playing) audio.play().catch(() => undefined);
     };
     if (track.localId) {
@@ -263,26 +277,20 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return () => controller.abort();
     }
     const quality = appSettings.get().quality;
-    const applySource = (source: SongSource) => {
+    const applySource = (source: SongSource, platform?: PlayerState['alternatePlatform'], continuingPreview = false) => {
+      if (continuingPreview) resumeAt.current = { seconds: clipStart.current + audio.currentTime, songTime: true };
+      setAlternatePlatform(platform);
       setTrial(source.trial);
       setChorus(source.chorus);
       setLevel(source.level);
       setBitrate(source.bitrate);
       if (source.trial && appSettings.get().trialNotice) toast.info('当前仅可试听片段，登录有权限的账号可播放完整歌曲');
       // Previews can mean the login lapsed: let the account store verify it now.
-      if (source.trial) window.dispatchEvent(new Event(ACCOUNT_RECHECK_EVENT));
-      attach(source.url);
+      if (source.trial) requestAccountRecheck(track.source ?? 'netease');
+      attach(source.url, source.trial);
     };
     const cached = takePreloadedSource(track.id, quality);
-    if (cached) {
-      applySource(cached);
-      return () => controller.abort();
-    }
-    catalogApi.songSource(track.songId!, controller.signal, quality, track.source)
-      .then(source => {
-        if (controller.signal.aborted) return;
-        applySource(source);
-      })
+    void resolvePlayback(track, quality, cached, controller.signal, applySource)
       .catch(error => {
         if (controller.signal.aborted) return;
         if (error instanceof CatalogRequestError && error.status === 401) {
@@ -375,7 +383,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       const current = latest.current.track;
       // Catalog links expire after ~20 minutes; refetch once and resume where we were.
       if (!current.localId && audio.currentTime > 0 && resumeAt.current === null) {
-        resumeAt.current = audio.currentTime;
+        resumeAt.current = { seconds: audio.currentTime + clipStart.current, songTime: true };
         setLoadKey(value => value + 1);
         return;
       }
@@ -417,7 +425,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const value = useMemo<PlayerState>(() => {
     const audio = () => audioRef.current;
     return {
-      track, queue, radioSource, playing, status, trial, chorus, level, bitrate, volume, mode, lyricsOpen, queueOpen,
+      track, queue, radioSource, playing, status, trial, alternatePlatform, chorus, level, bitrate, volume, mode, lyricsOpen, queueOpen,
       audioElement: audio,
       setMvMedia: media => { mvMedia.current = media; if (media) media.volume = volume; },
       openMv: () => {
@@ -437,7 +445,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       reloadStream: () => {
         const element = audio();
         if (!isPlayable(track) || track.localId) return;
-        if (element && element.currentTime > 0) resumeAt.current = element.currentTime;
+        if (element && element.currentTime > 0) resumeAt.current = { seconds: element.currentTime + clipStart.current, songTime: true };
         setLoadKey(value => value + 1);
       },
       duration: mediaDuration ?? (trial ? trial.end - trial.start : track.duration ?? 0),
@@ -538,7 +546,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     };
     // select/step/stop only read refs and setters; they are recreated each render but behave identically.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queue, radioSource, track, playing, status, trial, chorus, level, bitrate, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
+  }, [queue, radioSource, track, playing, status, trial, alternatePlatform, chorus, level, bitrate, mediaDuration, volume, mode, lyricsOpen, queueOpen]);
 
   usePlayerIntegrations(value, position, { audioRef, mvMedia, mvSession });
 

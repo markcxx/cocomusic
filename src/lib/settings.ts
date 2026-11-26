@@ -4,7 +4,7 @@ import { persistentStorage } from '@/lib/persistent-storage';
 
 import { useSyncExternalStore } from 'react';
 import { parseHex, toHex } from './color';
-import type { AudioQuality } from '@/server/music/types';
+import type { AudioQuality, CatalogSource } from '@/server/music/types';
 import type { CoverQuality } from './cover-quality';
 
 /**
@@ -90,6 +90,9 @@ export interface Settings {
 
   /* 播放 */
   quality: AudioQuality;
+  fallbackUnavailable: boolean;
+  fallbackTrial: boolean;
+  fallbackPlatform: CatalogSource | 'auto';
   /** Fade in on play/resume and out on pause/skip, ms (0 = off). */
   fadeMs: number;
   playbackRate: number;
@@ -199,6 +202,9 @@ export const DEFAULT_SETTINGS: Settings = {
   zoom: 100,
 
   quality: 'exhigh',
+  fallbackUnavailable: false,
+  fallbackTrial: false,
+  fallbackPlatform: 'auto',
   fadeMs: 300,
   playbackRate: 1,
   outputDevice: '',
@@ -300,6 +306,7 @@ const RULES: Record<keyof Settings, Rule> = {
   conceptAutoCheckIn: bool,
   themeMode: oneOf('system', 'light', 'dark'), windowEffect: oneOf('acrylic', 'mica', 'vibrancy', 'transparent', 'minimal', 'fluent', 'scenic', 'none'), windowOpacity: num(0, 100),
   glassOpacity: num(0, 100), glassBlur: num(0, 60), accent: { type: 'hex' }, accentFollowsCover: bool, backdropBlur: num(0, 40), backdropDim: num(0, 70), reduceMotion: bool, coverQuality: oneOf('standard', 'high', 'original'), zoom: num(80, 130),
+  fallbackUnavailable: bool, fallbackTrial: bool, fallbackPlatform: oneOf('auto', 'netease', 'qq', 'kugou', 'kugou-lite'),
   quality: oneOf('standard', 'higher', 'exhigh', 'lossless', 'hires'), fadeMs: num(0, 2000), playbackRate: num(0.5, 2), outputDevice: { type: 'string', max: 512 },
   resumeOnLaunch: bool, resumePosition: bool, skipOnError: bool, doubleClick: oneOf('replace', 'insert'),
   lyricsFontSize: num(14, 32), lyricsShowTranslation: bool, lyricsKaraoke: bool, lyricsBlurInactive: bool, lyricsAlign: oneOf('left', 'center'), lyricsBackground: oneOf('cover', 'fluid', 'plain'), lyricsOffset: num(-5, 5), lyricsSpinCover: bool,
