@@ -40,7 +40,7 @@ function View({ route }: { route: Route }) {
     case 'local': return <LocalView />;
     case 'downloads': return <DownloadsView />;
     case 'settings': return <SettingsView />;
-    case 'search': return <SearchResultsView keyword={route.keyword} type={route.type ?? 'song'} />;
+    case 'search': return <SearchResultsView source={route.source} keyword={route.keyword} type={route.type ?? 'song'} />;
     case 'comments': return <CommentsView id={route.id} kind={route.kind} source={route.source} title={route.title} artist={route.artist} cover={route.cover} />;
     case 'mv': return <MvView songId={route.songId} mvId={route.mvId} source={route.source} title={route.title} artist={route.artist} artistId={route.artistId} cover={route.cover} />;
     case 'mvs': return <MvDiscoverView />;

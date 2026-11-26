@@ -5,7 +5,7 @@ import { Clock3, Disc3, ListMusic, Mic2, Music2, Search, Trash2, X } from 'lucid
 import { useEffect, useMemo, type ReactNode } from 'react';
 import { SkeletonBlock } from '@/components/common/AsyncState';
 import { Cover } from '@/components/common/Cover';
-import { catalogApi, useCatalog, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type Resource, type SearchDiscovery } from '@/lib/catalog-client';
+import { catalogApi, useCatalog, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type Resource, type SearchDiscovery, type CatalogSource } from '@/lib/catalog-client';
 import { cn } from '@/lib/cn';
 import { searchHistory, useSearchHistory } from '@/lib/search-history';
 import { Highlight } from './Highlight';
@@ -21,6 +21,7 @@ export type PanelItem =
 
 type Props = {
   keyword: string;
+  source?: CatalogSource;
   discovery: Resource<SearchDiscovery>;
   active: number;
   onHover: (index: number) => void;
@@ -107,7 +108,7 @@ function Empty({ props }: { props: Props }) {
 }
 
 function Suggestions({ keyword, props }: { keyword: string; props: Props }) {
-  const { data, loading } = useCatalog(signal => catalogApi.suggest(keyword, signal), `suggest:${keyword}`);
+  const { data, loading } = useCatalog(signal => catalogApi.suggest(keyword, signal, props.source), `suggest:${props.source ?? 'current'}:${keyword}`);
   const items = useMemo<PanelItem[]>(() => {
     const list: PanelItem[] = [{ kind: 'keyword', keyword }];
     for (const word of data?.keywords ?? []) if (word !== keyword) list.push({ kind: 'keyword', keyword: word });

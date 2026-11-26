@@ -26,7 +26,7 @@ export type Route =
   | { name: 'artist'; id: string; source?: CatalogSource; title?: string }
   /** A playlist kept on this machine (no login, songs from any platform and local files). */
   | { name: 'local-playlist'; id: string; title?: string }
-  | { name: 'search'; keyword: string; type?: 'song' | 'playlist' | 'album' | 'artist' | 'mv' }
+  | { name: 'search'; keyword: string; source?: CatalogSource; type?: 'song' | 'playlist' | 'album' | 'artist' | 'mv' }
   /**
    * Comments of a song (default), playlist or album; `id` is the platform id of that item.
    * Carries display info so the header renders before data loads.
@@ -67,7 +67,7 @@ export const routeKey = (route: Route) => {
   switch (route.name) {
     case 'playlist': case 'album': case 'artist': return `${route.name}:${route.source ?? ''}:${route.id}`;
     case 'local-playlist': return `${route.name}:${route.id}`;
-    case 'search': return `search:${route.keyword}:${route.type ?? 'song'}`;
+    case 'search': return `search:${route.source ?? 'current'}:${route.keyword}:${route.type ?? 'song'}`;
     case 'comments': return `comments:${route.source ?? 'netease'}:${route.kind ?? 'song'}:${route.id}`;
     case 'mv': return `mv:${route.source ?? 'netease'}:${route.mvId ? `video:${route.mvId}` : route.songId}`;
     default: return route.name;
@@ -79,7 +79,7 @@ type Entry = { id: number; route: Route; scrollTop: number };
 type History = { stack: Entry[]; index: number; source: string };
 
 /** Routes whose ids belong to one platform; they are dropped when the user switches platform. */
-const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'search', 'liked', 'daily-songs', 'mvs']);
+const PLATFORM_ROUTES = new Set<RouteName>(['playlist', 'album', 'artist', 'liked', 'daily-songs', 'mvs']);
 /** Song pages carry their own source, but the stack still drops them on a platform switch. */
 const SONG_ROUTES = new Set<RouteName>(['comments', 'mv']);
 
@@ -177,7 +177,7 @@ export function NavigationProvider({ children }: { children: ReactNode }) {
   const value = useMemo<NavigationState>(() => ({
     route: current.route,
     // The platform is part of the key so pages with local state (selected category, paging) start fresh.
-    entryKey: `${history.source}:${current.id}:${routeKey(current.route)}`,
+    entryKey: `${history.source}:${current.id}:${current.route.name === 'search' ? 'search' : routeKey(current.route)}`,
     navigate,
     replace,
     back,

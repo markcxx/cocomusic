@@ -6,7 +6,7 @@ import type { ReactNode } from 'react';
 import { Cover } from '@/components/common/Cover';
 import { riseItem, staggerList } from '@/components/common/motion';
 import { useNavigation } from '@/components/layout/navigation';
-import { catalogApi, useCatalog } from '@/lib/catalog-client';
+import { catalogApi, useCatalog, type CatalogSource } from '@/lib/catalog-client';
 import styles from './BestMatch.module.css';
 
 function MatchCard({ cover, seed, round, kind, title, meta, onClick }: { cover?: string; seed: string; round?: boolean; kind: string; title: string; meta?: string; onClick: () => void }) {
@@ -24,21 +24,21 @@ function MatchCard({ cover, seed, round, kind, title, meta, onClick }: { cover?:
 }
 
 /** "最佳匹配" strip above song results; collapses away when nothing matches. */
-export function BestMatch({ keyword }: { keyword: string }) {
+export function BestMatch({ keyword, source }: { keyword: string; source: CatalogSource }) {
   const { navigate } = useNavigation();
-  const { data } = useCatalog(signal => catalogApi.bestMatch(keyword, signal), `best:${keyword}`);
+  const { data } = useCatalog(signal => catalogApi.bestMatch(keyword, signal, source), `best:${source}:${keyword}`);
   const cards: ReactNode[] = [];
   if (data?.artist) {
     const artist = data.artist;
-    cards.push(<MatchCard key="artist" kind="歌手" seed={`a:${artist.id}`} cover={artist.avatar} round title={artist.name} meta={[artist.alias, artist.songCount ? `${artist.songCount} 首歌曲` : ''].filter(Boolean).join(' · ')} onClick={() => navigate({ name: 'artist', id: artist.id, title: artist.name })} />);
+    cards.push(<MatchCard key="artist" kind="歌手" seed={`a:${artist.id}`} cover={artist.avatar} round title={artist.name} meta={[artist.alias, artist.songCount ? `${artist.songCount} 首歌曲` : ''].filter(Boolean).join(' · ')} onClick={() => navigate({ name: 'artist', id: artist.id, source, title: artist.name })} />);
   }
   if (data?.album) {
     const album = data.album;
-    cards.push(<MatchCard key="album" kind="专辑" seed={`al:${album.id}`} cover={album.cover} title={album.name} meta={album.artist} onClick={() => navigate({ name: 'album', id: album.id, title: album.name })} />);
+    cards.push(<MatchCard key="album" kind="专辑" seed={`al:${album.id}`} cover={album.cover} title={album.name} meta={album.artist} onClick={() => navigate({ name: 'album', id: album.id, source, title: album.name })} />);
   }
   if (data?.playlist) {
     const playlist = data.playlist;
-    cards.push(<MatchCard key="playlist" kind="歌单" seed={`p:${playlist.id}`} cover={playlist.cover} title={playlist.name} meta={playlist.trackCount ? `${playlist.trackCount} 首` : undefined} onClick={() => navigate({ name: 'playlist', id: playlist.id, title: playlist.name })} />);
+    cards.push(<MatchCard key="playlist" kind="歌单" seed={`p:${playlist.id}`} cover={playlist.cover} title={playlist.name} meta={playlist.trackCount ? `${playlist.trackCount} 首` : undefined} onClick={() => navigate({ name: 'playlist', id: playlist.id, source, title: playlist.name })} />);
   }
 
   return (

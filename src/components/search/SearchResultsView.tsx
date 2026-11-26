@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo } from 'react';
+import { FilterRow } from '@/components/common/FilterRow';
 import { ErrorState } from '@/components/common/AsyncState';
 import { Tabs } from '@/components/common/Tabs';
 import { useNavigation } from '@/components/layout/navigation';
@@ -9,10 +10,14 @@ import { CardGrid } from '@/components/music/CardGrid';
 import { PlaylistCard } from '@/components/music/PlaylistCard';
 import { SongTable } from '@/components/music/SongTable';
 import { CollapsingHeader, Page, StickyBar } from '@/components/scroll';
-import { ListFooter } from '@/components/ui';
+import { ListFooter, toast } from '@/components/ui';
 import { MvCardGrid } from '@/components/mv/MvGrid';
-import { catalogApi, mvApi, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogTrack, type MvSummary, type SearchType } from '@/lib/catalog-client';
+import { catalogApi, mvApi, type CatalogAlbum, type CatalogArtist, type CatalogPlaylist, type CatalogSource, type CatalogTrack, type MvSummary, type SearchType } from '@/lib/catalog-client';
 import { useInfiniteList, useReachEnd } from '@/lib/hooks';
+import { isSource, SOURCE_NAMES } from '@/server/music/ids';
+import { usePlayer } from '@/components/player/player-store';
+import { fetchCollectionTracks, type CollectionRef } from '@/lib/collection-tracks';
+import { QUEUE_LIMIT } from '@/lib/me-client';
 import { useSettings } from '@/lib/settings';
 import { MV_FEATURES } from '@/server/music/mv-features';
 import { toTrack } from '@/lib/to-track';
@@ -31,64 +36,83 @@ const allTabs: Array<{ type: SearchTab; label: string }> = [
 const PAGE: Record<SearchTab, number> = { song: 50, playlist: 30, album: 30, artist: 30, mv: 24 };
 type Item = CatalogTrack | CatalogPlaylist | CatalogAlbum | CatalogArtist | MvSummary;
 
-export function SearchResultsView({ keyword, type }: { keyword: string; type: SearchTab }) {
-  const { replace, navigate } = useNavigation();
-  const platform = useSettings().catalogSource;
-  const tabs = allTabs.filter(tab => tab.type !== 'mv' || MV_FEATURES[platform].search);
+const sourceOptions = Object.entries(SOURCE_NAMES).map(([id, label]) => ({ id, label }));
+type SearchProps = { keyword: string; type: SearchTab; source?: CatalogSource };
+
+export function SearchResultsView({ keyword, type, source: selectedSource }: SearchProps) {
+  const { navigate, replace } = useNavigation();
+  const preferred = useSettings().catalogSource;
+  const source = selectedSource ?? preferred;
+  const player = usePlayer();
+  const tabs = allTabs.filter(tab => tab.type !== 'mv' || MV_FEATURES[source].search);
+  const limit = PAGE[type];
   const loadPage = useCallback(async (offset: number, signal: AbortSignal) => {
     const result = type === 'mv'
-      ? await mvApi.search(keyword, offset, PAGE.mv, signal)
-      : await catalogApi.search(keyword, type, offset, PAGE[type], signal);
+      ? await mvApi.search(keyword, offset, limit, signal, source)
+      : await catalogApi.search(keyword, type, offset, limit, signal, source);
     return { items: result.items as Item[], total: result.total, hasMore: result.hasMore };
-  }, [keyword, type]);
-  const list = useInfiniteList(`${type}:${keyword}`, loadPage);
-  const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore, type]);
+  }, [keyword, type, limit, source]);
+  const list = useInfiniteList(`${source}:${type}:${keyword}`, loadPage);
+  const sentinel = useReachEnd(list.loadMore, [list.items.length, list.hasMore, source, type]);
   const label = allTabs.find(tab => tab.type === type)!.label;
-  const songs = useMemo(() => (type === 'song' ? (list.items as CatalogTrack[]).map(toTrack) : []), [list.items, type]);
+  const items = list.items;
+  const songs = useMemo(() => type === 'song' ? (items as CatalogTrack[]).map(toTrack) : [], [items, type]);
+
+  const playCollection = async (kind: CollectionRef['kind'], id: string) => {
+    try {
+      const tracks = await fetchCollectionTracks({ kind, id, source }, [], QUEUE_LIMIT);
+      if (tracks.length) player.play(tracks[0], tracks);
+      else toast.info('暂无可播放的歌曲');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '歌曲加载失败');
+    }
+  };
 
   return (
     <Page gap="sm">
       <CollapsingHeader
         title={<>搜索 <span className={styles.keyword}>“{keyword}”</span></>}
-        subtitle={list.loading ? '正在搜索…' : `找到 ${list.total.toLocaleString('zh-CN')} 个${label}结果`}
+        subtitle={list.loading ? '正在搜索…' : list.error && !items.length ? undefined : `找到 ${list.total.toLocaleString('zh-CN')} 个${label}结果`}
       />
       <StickyBar compactTitle={`“${keyword}”`}>
-        <Tabs items={tabs.map(tab => tab.label)} value={label} onChange={next => replace({ name: 'search', keyword, type: tabs.find(tab => tab.label === next)!.type })} label="结果类型" />
+        <Tabs items={tabs.map(tab => tab.label)} value={label} onChange={next => replace({ name: 'search', keyword, source: selectedSource, type: tabs.find(tab => tab.label === next)!.type })} label="结果类型" />
       </StickyBar>
-
-      {type === 'song' && <BestMatch keyword={keyword} />}
+      <FilterRow label="搜索源" options={sourceOptions} value={source} allowAll={false} onChange={next => {
+        if (isSource(next) && next !== source) replace({ name: 'search', keyword, type, source: next });
+      }} />
+      {type === 'song' && <BestMatch keyword={keyword} source={source} />}
 
       {list.error && !list.items.length ? <ErrorState message={list.error} onRetry={list.retry} /> : (
         <>
           {type === 'song' && (
-            <SongTable tracks={songs} loading={list.loading} animateFrom={Math.max(0, list.items.length - PAGE.song)} emptyText={`没有找到与“${keyword}”相关的歌曲`} />
+            <SongTable tracks={songs} loading={list.loading} animateFrom={Math.max(0, list.items.length - limit)} emptyText={`没有找到与“${keyword}”相关的歌曲`} />
           )}
           {type === 'playlist' && (
             <CardGrid loading={list.loading}>
-              {(list.items as CatalogPlaylist[]).map(playlist => (
-                <PlaylistCard key={playlist.id} playlist={playlist} subtitle={[playlist.trackCount ? `${playlist.trackCount}首` : '', playlist.creator].filter(Boolean).join(' · ')} onOpen={() => navigate({ name: 'playlist', id: playlist.id, title: playlist.name })} />
+              {(items as CatalogPlaylist[]).map(playlist => (
+                <PlaylistCard key={playlist.id} playlist={playlist} subtitle={[playlist.trackCount ? `${playlist.trackCount}首` : '', playlist.creator].filter(Boolean).join(' · ')} onOpen={() => navigate({ name: 'playlist', id: playlist.id, source, title: playlist.name })} onPlay={() => void playCollection('playlist', playlist.id)} />
               ))}
             </CardGrid>
           )}
           {type === 'album' && (
             <CardGrid loading={list.loading}>
-              {(list.items as CatalogAlbum[]).map(album => (
-                <PlaylistCard key={album.id} playlist={{ id: album.id, source: album.source, name: album.name, cover: album.cover, trackCount: album.trackCount }} subtitle={album.artist} onOpen={() => navigate({ name: 'album', id: album.id, title: album.name })} />
+              {(items as CatalogAlbum[]).map(album => (
+                <PlaylistCard key={album.id} playlist={{ id: album.id, source: album.source, name: album.name, cover: album.cover, trackCount: album.trackCount }} subtitle={album.artist} onOpen={() => navigate({ name: 'album', id: album.id, source, title: album.name })} onPlay={() => void playCollection('album', album.id)} />
               ))}
             </CardGrid>
           )}
           {type === 'artist' && (
             <CardGrid loading={list.loading} variant="artist">
-              {(list.items as CatalogArtist[]).map(artist => <ArtistCard key={artist.id} artist={artist} />)}
+              {(items as CatalogArtist[]).map(artist => <ArtistCard key={artist.id} artist={artist} />)}
             </CardGrid>
           )}
-          {type === 'mv' && <MvCardGrid items={list.items as MvSummary[]} loading={list.loading} />}
+          {type === 'mv' && <MvCardGrid items={items as MvSummary[]} loading={list.loading} />}
           {!list.loading && !list.items.length && type !== 'song' && <p className={styles.empty}>没有找到与“{keyword}”相关的{label}</p>}
         </>
       )}
 
       <div ref={sentinel}>
-        <ListFooter error={list.error} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText="没有更多结果了" />
+        <ListFooter error={items.length ? list.error : undefined} onRetry={list.retry} loading={list.loadingMore} done={!list.loading && !list.hasMore && list.items.length > 0} doneText="没有更多结果了" />
       </div>
     </Page>
   );

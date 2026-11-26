@@ -12,7 +12,7 @@ export function ArtistCard({ artist }: { artist: CatalogArtist }) {
   const { navigate } = useNavigation();
   const meta = [artist.songCount ? `${artist.songCount} 首歌曲` : '', artist.albumCount ? `${artist.albumCount} 张专辑` : ''].filter(Boolean).join(' · ');
   return (
-    <motion.button type="button" className={styles.artist} variants={riseItem} aria-label={`查看歌手：${artist.name}`} onClick={() => navigate({ name: 'artist', id: artist.id, title: artist.name })}>
+    <motion.button type="button" className={styles.artist} variants={riseItem} aria-label={`查看歌手：${artist.name}`} onClick={() => navigate({ name: 'artist', id: artist.id, source: artist.source, title: artist.name })}>
       <span className={styles.avatar}>
         <Cover seed={`${artist.source}:artist:${artist.id}`} src={artist.avatar} className={styles.cover} radius={999} />
         <span className={styles.scrim} aria-hidden />

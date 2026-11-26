@@ -29,7 +29,8 @@ export function SearchBox() {
   const items = useRef<PanelItem[]>([]);
   const setItems = useCallback((list: PanelItem[]) => { items.current = list; }, []);
 
-  const discovery = useCatalog(catalogApi.searchDiscovery, 'search-discovery');
+  const source = route.name === 'search' ? route.source : undefined;
+  const discovery = useCatalog(signal => catalogApi.searchDiscovery(signal, source), `search-discovery:${source ?? 'current'}`);
   const placeholder = discovery.data?.placeholder;
 
   // Keep the box in sync when navigation lands on a new search keyword
@@ -63,16 +64,16 @@ export function SearchBox() {
     setQuery(text);
     setOpen(false);
     input.current?.blur();
-    navigate({ name: 'search', keyword: text, type: 'song' });
+    navigate({ name: 'search', keyword: text, type: 'song', source });
   };
 
   const activate = (item: PanelItem) => {
     switch (item.kind) {
       case 'keyword': submit(item.keyword); break;
       case 'song': player.play(toTrack(item.track)); setOpen(false); break;
-      case 'artist': setOpen(false); navigate({ name: 'artist', id: item.artist.id, title: item.artist.name }); break;
-      case 'album': setOpen(false); navigate({ name: 'album', id: item.album.id, title: item.album.name }); break;
-      case 'playlist': setOpen(false); navigate({ name: 'playlist', id: item.playlist.id, title: item.playlist.name }); break;
+      case 'artist': setOpen(false); navigate({ name: 'artist', id: item.artist.id, source: item.artist.source, title: item.artist.name }); break;
+      case 'album': setOpen(false); navigate({ name: 'album', id: item.album.id, source: item.album.source, title: item.album.name }); break;
+      case 'playlist': setOpen(false); navigate({ name: 'playlist', id: item.playlist.id, source: item.playlist.source, title: item.playlist.name }); break;
     }
   };
 
@@ -123,6 +124,7 @@ export function SearchBox() {
         {open && (
           <SearchPanel
             keyword={keyword}
+            source={source}
             discovery={discovery}
             active={active}
             onHover={setActive}

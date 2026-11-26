@@ -89,7 +89,7 @@ export const commentsApi = {
 export const mvApi = {
   /** Browsable lists of the selected platform. */
   browse: (kind: MvBrowseKind, area: MvArea, offset: number, limit: number, signal?: AbortSignal) => get<MvPage>('mvs', { kind, area, offset, limit }, signal),
-  search: (keyword: string, offset: number, limit: number, signal?: AbortSignal) => get<MvPage>('mvs', { kind: 'search', keyword, offset, limit }, signal),
+  search: (keyword: string, offset: number, limit: number, signal?: AbortSignal, from?: CatalogSource) => get<MvPage>('mvs', { kind: 'search', keyword, offset, limit }, signal, from),
   artist: (artistId: string, offset: number, limit: number, signal?: AbortSignal, from?: CatalogSource) => get<MvPage>('mvs', { kind: 'artist', id: artistId, offset, limit }, signal, from),
   /** Playable video: by song (its official MV) or by an id from an MV list. */
   video: (target: { songId?: string; mvId?: string }, from: CatalogSource, signal?: AbortSignal) =>
@@ -109,16 +109,16 @@ export const catalogApi = {
     get<PlaylistPage>('playlists', { ...query, limit: query.limit ?? 24 }, signal),
   playlist: (id: string, offset = 0, limit = 50, signal?: AbortSignal, from?: CatalogSource, reverse?: boolean) => get<CollectionDetail>('playlist', { id, offset, limit, reverse: reverse ? 1 : undefined }, signal, from),
   album: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<CollectionDetail>('album', { id }, signal, from),
-  search: (keyword: string, type: SearchType, offset = 0, limit = 30, signal?: AbortSignal) => get<SearchResult>('search', { keyword, type, offset, limit }, signal),
-  suggest: (keyword: string, signal?: AbortSignal) => get<SearchSuggestion>('search/suggest', { keyword }, signal),
-  bestMatch: (keyword: string, signal?: AbortSignal) => get<BestMatch>('search/best', { keyword }, signal),
+  search: (keyword: string, type: SearchType, offset = 0, limit = 30, signal?: AbortSignal, from?: CatalogSource) => get<SearchResult>('search', { keyword, type, offset, limit }, signal, from),
+  suggest: (keyword: string, signal?: AbortSignal, from?: CatalogSource) => get<SearchSuggestion>('search/suggest', { keyword }, signal, from),
+  bestMatch: (keyword: string, signal?: AbortSignal, from?: CatalogSource) => get<BestMatch>('search/best', { keyword }, signal, from),
   artist: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<ArtistInfo>('artist', { id, section: 'info' }, signal, from),
   artistBiography: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<ArtistBiography>('artist', { id, section: 'biography' }, signal, from),
   artistSongs: (id: string, offset = 0, limit = 50, signal?: AbortSignal, from?: CatalogSource) => get<{ items: CatalogTrack[]; total: number; hasMore: boolean }>('artist', { id, section: 'songs', offset, limit }, signal, from),
   artistAlbums: (id: string, offset = 0, limit = 30, signal?: AbortSignal, from?: CatalogSource) => get<{ items: CatalogAlbum[]; total: number; hasMore: boolean }>('artist', { id, section: 'albums', offset, limit }, signal, from),
   /** Playlist behind pasted share text (long link or short link); the platform is part of the answer. */
   sharedPlaylist: (text: string, signal?: AbortSignal) => get<{ source: CatalogSource; id: string }>('share', { text }, signal),
-  searchDiscovery: (signal?: AbortSignal) => get<SearchDiscovery>('search/hot', {}, signal),
+  searchDiscovery: (signal?: AbortSignal, from?: CatalogSource) => get<SearchDiscovery>('search/hot', {}, signal, from),
   songSource: (id: string, signal?: AbortSignal, quality?: AudioQuality, from?: CatalogSource) => get<SongSource>('song', { id, section: 'url', quality }, signal, from),
   lyrics: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<Lyrics>('song', { id, section: 'lyrics' }, signal, from),
   songStats: (id: string, signal?: AbortSignal, from?: CatalogSource) => get<SongStats>('song', { id, section: 'stats' }, signal, from),
