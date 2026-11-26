@@ -170,11 +170,76 @@
 
 /* Pages stacked vertically; the whole track is translated by the snap gesture. */
 .track {
+  position: relative;
   height: 200%;
   will-change: transform;
+  --switch-zone-height: 40px;
 }
 
 .page {
   height: 50%;
   min-height: 0;
+}
+
+.track[data-page-switch] > .page:first-child {
+  padding-bottom: var(--switch-zone-height);
+}
+
+.track[data-page-switch] > .page:nth-child(2) {
+  padding-top: var(--switch-zone-height);
+}
+
+.switchZone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% 0;
+  display: grid;
+  place-items: center;
+  width: 136px;
+  height: var(--switch-zone-height);
+}
+
+.pageSwitch {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  pointer-events: none;
+  cursor: pointer;
+}
+
+.switchZone:hover .pageSwitch,
+.pageSwitch:focus-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.pageSwitch:hover {
+  background: rgba(255, 255, 255, 0.17);
+}
+
+.pageSwitch:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.pageSwitch[data-up='true'] svg {
+  rotate: 180deg;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .switchZone[data-reduce-motion='false'] .pageSwitch {
+    transition: opacity 150ms ease;
+  }
+
+  .switchZone[data-reduce-motion='false'] svg {
+    transition: rotate 260ms ease-in-out;
+  }
 }

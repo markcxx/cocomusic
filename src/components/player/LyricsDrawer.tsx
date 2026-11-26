@@ -54,6 +54,8 @@ export function LyricsDrawer() {
   // 0 → 1 as the track moves from the lyrics page to the comments page.
   const progress = useTransform(snap.y, value => Math.min(1, Math.max(0, -value / (viewportRef.current?.clientHeight || 1))));
   const compactOpacity = useTransform(progress, [0.4, 0.9], [0, 1]);
+  // Keep one button on the seam, just inside the visible page at either end.
+  const switchY = useTransform(progress, [0, 1], ['-100%', '0%']);
   const onComments = snap.page === 1;
 
   // 封面流: the queue as a shelf of records, grown out of the artwork.
@@ -72,6 +74,8 @@ export function LyricsDrawer() {
   const openFlow = useCallback(() => setFlow(current => (current === 'closed' ? 'open' : current)), []);
   const closeFlow = useCallback(() => setFlow(current => (current === 'open' ? 'closing' : current)), []);
   const flowUp = flow !== 'closed';
+  const showPageSwitch = Boolean(track.songId) && !flowUp;
+  const switchLabel = onComments ? '回到歌词' : '查看评论';
 
   useEffect(() => {
     if (!lyricsOpen) return;
@@ -254,13 +258,26 @@ export function LyricsDrawer() {
           </div>
 
           <div ref={element => { viewportRef.current = element; setViewportElement(element); }} className={styles.viewport}>
-            <motion.div className={styles.track} style={{ y: snap.y }}>
+            <motion.div className={styles.track} style={{ y: snap.y }} data-page-switch={showPageSwitch || undefined}>
               <div className={styles.page} inert={onComments}>
                 <Stage progress={progress} flowActive={flowUp} hideArt={flightHiding || flight?.direction === 'out'} onOpenFlow={onComments ? undefined : openFlow} />
               </div>
               <div className={styles.page} inert={!onComments}>
                 {track.songId && <CommentsPage songId={track.songId} source={track.source} total={stats.commentCount} />}
               </div>
+              {showPageSwitch && (
+                <motion.div className={styles.switchZone} style={{ y: switchY }} data-reduce-motion={reduceMotion}>
+                  <button
+                    type="button"
+                    className={styles.pageSwitch}
+                    onClick={() => goTo(onComments ? 0 : 1)}
+                    aria-label={switchLabel}
+                    data-up={onComments}
+                  >
+                    <ChevronDown size={16} strokeWidth={1.8} aria-hidden />
+                  </button>
+                </motion.div>
+              )}
             </motion.div>
           </div>
 
